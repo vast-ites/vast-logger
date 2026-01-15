@@ -1,0 +1,253 @@
+import React from 'react';
+import { Cpu, HardDrive, Zap, Network } from 'lucide-react';
+
+const StatCard = ({ title, value, unit, icon: Icon, color }) => {
+    const colorMap = {
+        'cyber-cyan': '#00f3ff',
+        'cyber-magenta': '#ff00ff',
+        'cyber-green': '#0aff0a',
+        'cyber-yellow': '#f3ff00',
+    };
+
+    // Static class mapping for Tailwind to detect
+    const textClassMap = {
+        'cyber-cyan': 'text-cyber-cyan',
+        'cyber-magenta': 'text-cyber-magenta',
+        'cyber-green': 'text-cyber-green',
+        'cyber-yellow': 'text-cyber-yellow',
+    };
+
+    const hex = colorMap[color] || '#00f3ff';
+    const textClass = textClassMap[color] || 'text-cyber-cyan';
+
+    return (
+        <div className="glass-panel p-5 rounded-xl relative overflow-hidden group">
+            <div className={`absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity ${textClass}`}>
+                <Icon size={60} />
+            </div>
+            <div className="relative z-10">
+                <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">{title}</h3>
+                <div className="flex items-baseline gap-1">
+                    <span className={`text-3xl font-bold font-mono ${textClass} text-shadow-neon`}>{value}</span>
+                    <span className="text-sm text-gray-500 font-mono">{unit}</span>
+                </div>
+            </div>
+            {/* Animated bar */}
+            <div className="mt-4 h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                    className="h-full relative shadow-[0_0_10px_var(--shadow-color)]"
+                    style={{
+                        width: `${value}%`,
+                        backgroundColor: hex,
+                        '--shadow-color': hex
+                    }}
+                >
+                    <div className="absolute inset-0 bg-white/30 animate-pulse" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const Dashboard = () => {
+    const [metrics, setMetrics] = React.useState({
+        cpu: 0,
+        mem: 0,
+        disk: 0,
+        net_sent_rate: 0,
+        net_recv_rate: 0
+    });
+
+    const [logs, setLogs] = React.useState([]);
+    const [containers, setContainers] = React.useState([]);
+
+    React.useEffect(() => {
+        const fetchTelemetry = async () => {
+            try {
+                // Fetch Metrics
+                const resMetrics = await fetch('http://localhost:8080/api/v1/metrics/system');
+                if (resMetrics.ok) setMetrics(await resMetrics.json());
+
+                // Fetch Logs
+                const resLogs = await fetch('http://localhost:8080/api/v1/logs/stream');
+                if (resLogs.ok) {
+                    const logData = await resLogs.json();
+                    if (Array.isArray(logData)) { // Filter out empty or invalid responses
+                        setLogs(logData);
+                    }
+                }
+
+                // Fetch Containers
+                const resContainers = await fetch('http://localhost:8080/api/v1/metrics/containers');
+                if (resContainers.ok) {
+                    const contData = await resContainers.json();
+                    if (Array.isArray(contData)) {
+                        setContainers(contData);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch telemetry", err);
+            }
+        };
+
+        fetchTelemetry();
+        const interval = setInterval(fetchTelemetry, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Helper to format bytes
+    const formatNetRate = (bytes) => {
+        if (!bytes || bytes <= 0) return "0 B/s";
+        const k = 1024;
+        const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        // Safety check for index
+        if (i < 0) return "0 B/s";
+        if (i >= sizes.length) return parseFloat((bytes / Math.pow(k, sizes.length - 1)).toFixed(1)) + ' ' + sizes[sizes.length - 1];
+
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
+    const totalNetFlow = (metrics.net_sent_rate || 0) + (metrics.net_recv_rate || 0);
+
+    // Alert State
+    const isDDoS = metrics.ddos_status === 'CRITICAL';
+
+    return (
+        <div className="space-y-6">
+
+            {/* DDoS Alert Banner */}
+            {isDDoS && (
+                <div className="bg-red-900/40 border-2 border-red-500 rounded-lg p-6 mb-8 relative overflow-hidden animate-pulse shadow-[0_0_50px_rgba(239,68,68,0.5)]">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-red-500 p-3 rounded-full animate-bounce">
+                            <Zap size={32} className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-red-500 font-display tracking-widest">SECURITY ALERT: HIGH NETWORK LOAD</h2>
+                            <p className="text-red-300 font-mono text-lg">DDoS Traffic Detected: {formatNetRate((metrics.net_recv_rate || 0) * 1024 * 1024)}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Setup Guide */}
+            <div className={`border rounded-lg p-6 mb-8 relative overflow-hidden ${isDDoS ? 'border-red-500/20 bg-red-900/10' : 'border-cyber-cyan/20 bg-cyber-cyan/5'}`}>
+                <div className={`absolute -right-10 -top-10 transform rotate-12 ${isDDoS ? 'text-red-500/10' : 'text-cyber-cyan/10'}`}>
+                    <Zap size={200} />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2 font-display">
+                    {isDDoS ? 'SYSTEM UNDER ATTACK' : 'Zero-Config Agent Active'}
+                </h2>
+                <p className="text-gray-400 mb-4 max-w-2xl">
+                    {isDDoS ? 'Traffic thresholds exceeded. Automatic mitigation protocols recommended.' : 'Receiving deep telemetry from host. Universal log discovery engaged.'}
+                </p>
+                <div className={`p-3 rounded font-mono text-sm border inline-block bg-black/50 ${isDDoS ? 'text-red-500 border-red-500 font-bold' : 'text-cyber-cyan border-cyber-gray'}`}>
+                    Status: {isDDoS ? 'CRITICAL WARN' : 'ONLINE'}
+                </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="CPU Usage" value={metrics.cpu.toFixed(1)} unit="%" icon={Cpu} color="cyber-cyan" />
+                <StatCard title="Memory" value={metrics.mem.toFixed(1)} unit="%" icon={Zap} color="cyber-magenta" />
+                <StatCard title="Disk Usage" value={metrics.disk.toFixed(1)} unit="%" icon={HardDrive} color="cyber-green" />
+                <StatCard title="Net Flow" value={formatNetRate(totalNetFlow)} unit="" icon={Network} color="cyber-yellow" />
+            </div>
+
+            {/* Live Log Stream & Containers */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
+                    <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
+                        <h3 className="font-mono text-sm text-cyber-cyan uppercase">Live Log Stream (Centralized)</h3>
+                        <div className="flex gap-2 text-xs">
+                            <span className="px-2 py-1 bg-cyber-gray rounded text-gray-300">syslog</span>
+                            <span className="px-2 py-1 bg-cyber-gray rounded text-gray-300">auth.log</span>
+                            <span className="px-2 py-1 bg-cyber-gray rounded text-gray-300">kern.log</span>
+                        </div>
+                    </div>
+                    <div className="flex-1 bg-black/40 p-4 font-mono text-xs overflow-auto custom-scrollbar">
+                        <div className="space-y-1">
+                            {logs.length === 0 && (
+                                <div className="text-gray-500 italic p-4">Waiting for incoming logs...</div>
+                            )}
+                            {logs.map((log, i) => {
+                                let levelColor = "text-gray-300";
+                                if (log.level === "ERROR") levelColor = "text-red-500 font-bold";
+                                if (log.level === "WARN") levelColor = "text-cyber-yellow";
+                                if (log.level === "DEBUG") levelColor = "text-gray-500";
+
+                                return (
+                                    <div key={i} className="flex gap-3 text-gray-400 hover:bg-cyber-gray/20 p-0.5 rounded transistion-colors">
+                                        <span className="text-cyber-cyan/60 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                        <span className="text-cyber-magenta shrink-0 w-20 truncate">[{log.host || 'local'}]</span>
+                                        <span className={`shrink-0 w-12 text-center text-xs border border-white/10 rounded px-1 ${levelColor} bg-black/30`}>{log.level || 'INFO'}</span>
+                                        <span className="text-cyber-green shrink-0 truncate w-32" title={log.source_path}>{log.source_path.split('/').pop()}</span>
+                                        <span className={`${levelColor} truncate`}>{log.message}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Container Monitor */}
+                <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
+                    <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
+                        <h3 className="font-mono text-sm text-cyber-cyan uppercase">Active Containers</h3>
+                        <span className="text-xs font-mono text-cyber-green animate-pulse">{containers.length} RUNNING</span>
+                    </div>
+                    <div className="flex-1 bg-black/40 overflow-auto custom-scrollbar">
+                        <table className="w-full text-left font-mono text-xs">
+                            <thead>
+                                <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-black/20">
+                                    <th className="p-3">NAME</th>
+                                    <th className="p-3">IMAGE</th>
+                                    <th className="p-3">STATUS</th>
+                                    <th className="p-3">CPU</th>
+                                    <th className="p-3">MEM</th>
+                                    <th className="p-3">NET I/O</th>
+                                    <th className="p-3">PORTS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {containers.length === 0 ? (
+                                    <tr><td colSpan="7" className="p-4 text-center text-gray-500">No active containers found</td></tr>
+                                ) : (
+                                    containers.map((c, i) => (
+                                        <tr key={i} className="border-b border-cyber-gray/20 hover:bg-cyber-gray/10 transition-colors">
+                                            <td className="p-3 font-bold text-white truncate max-w-[150px]" title={c.name}>{c.name}</td>
+                                            <td className="p-3 text-gray-400 truncate max-w-[150px]" title={c.image}>{c.image}</td>
+                                            <td className="p-3">
+                                                <div className="flex flex-col">
+                                                    <span className={`px-2 py-0.5 rounded w-fit ${c.state === 'running' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-red-500/20 text-red-500'}`}>
+                                                        {c.state.toUpperCase()}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500 mt-0.5">{c.status}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-3 text-cyber-cyan">{c.cpu.toFixed(1)}%</td>
+                                            <td className="p-3 text-cyber-magenta">{Math.round(c.mem / 1024 / 1024)} MB</td>
+                                            <td className="p-3 text-cyber-yellow">
+                                                <div className="flex flex-col text-[10px]">
+                                                    <span>↓ {formatNetRate(c.net_rx)}</span>
+                                                    <span>↑ {formatNetRate(c.net_tx)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-3 text-gray-400 truncate max-w-[150px]" title={c.ports}>
+                                                {c.ports || '-'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Dashboard;

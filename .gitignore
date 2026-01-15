@@ -1,0 +1,47 @@
+# Binaries
+/server/datavast-server
+/agent/datavast-agent
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Logs
+*.log
+wget-log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node (Frontend)
+/web/node_modules/
+/web/dist/
+/web/.env.local
+/web/.env.development.local
+/web/.env.test.local
+/web/.env.production.local
+
+# Go
+/agent/vendor/
+/server/vendor/
+go.work
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker / Infrastructure Data
+/deployment/clickhouse_data/
+/deployment/influxdb_data/
+/deployment/clickhouse_logs/
+
+# Secrets & Keys (Security)
+id_ed25519
+*.pem
+*.key
+.env
