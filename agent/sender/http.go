@@ -30,7 +30,8 @@ func (c *Client) SendMetrics(m *collector.SystemMetrics, containers []collector.
 		"bytes_recv":   m.BytesRecv,
         "net_recv_rate": m.NetRecvRate,
         "ddos_status":   m.DDoSStatus,
-        "containers":   containers,
+        "interfaces":    m.Interfaces,
+        "containers":    containers,
 	}
 
 	data, err := json.Marshal(payload)

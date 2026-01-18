@@ -4,21 +4,33 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const Network = () => {
     const [history, setHistory] = useState([]);
+    const [interfaces, setInterfaces] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchHistory = async () => {
         try {
-            // Fetch last 15 minutes
-            const res = await fetch('http://localhost:8080/api/v1/metrics/history?duration=15m');
+            const res = await fetch('http://localhost:8080/api/v1/metrics/interfaces/history?duration=15m');
             if (res.ok) {
-                const data = await res.json();
-                // Map data for recharts
-                const chartData = data.map((d, i) => ({
-                    time: i, // Simple index for now, or format timestamp
-                    rx: d.net_recv_rate, // already in MB/s
-                    cpu: d.cpu
-                }));
+                const rawData = await res.json();
+
+                // 1. Group by Timestamp
+                const grouped = {};
+                const ifaceSet = new Set();
+
+                rawData.forEach(d => {
+                    const timeKey = new Date(d.time).toLocaleTimeString();
+                    if (!grouped[timeKey]) grouped[timeKey] = { time: timeKey };
+
+                    // Add Interface Data (MB/s)
+                    const rxMB = (d.bytes_recv / (1024 * 1024));
+                    grouped[timeKey][`${d.interface}`] = rxMB;
+                    ifaceSet.add(d.interface);
+                });
+
+                // 2. Convert to Array
+                const chartData = Object.values(grouped);
                 setHistory(chartData);
+                setInterfaces(Array.from(ifaceSet));
             }
         } catch (err) {
             console.error("Failed to fetch history", err);
@@ -29,15 +41,22 @@ const Network = () => {
 
     useEffect(() => {
         fetchHistory();
-        const interval = setInterval(fetchHistory, 5000); // Poll every 5s
+        const interval = setInterval(fetchHistory, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    const colors = ["#00f3ff", "#f3ff00", "#ff0099", "#00ff66", "#ffffff"];
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-cyber-black border border-cyber-cyan p-2 rounded shadow-[0_0_10px_rgba(0,243,255,0.3)]">
-                    <p className="text-cyber-cyan text-xs font-mono">{`Rx: ${payload[0].value.toFixed(2)} MB/s`}</p>
+                    <p className="text-gray-400 text-xs mb-1">{label}</p>
+                    {payload.map((p, i) => (
+                        <p key={i} style={{ color: p.color }} className="text-xs font-mono">
+                            {`${p.name}: ${p.value.toFixed(2)} MB/s`}
+                        </p>
+                    ))}
                 </div>
             );
         }
@@ -49,68 +68,67 @@ const Network = () => {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold font-display text-white flex items-center gap-3">
                     <Globe className="text-cyber-yellow" />
-                    Network Analysis
+                    Network Breakdown
                 </h1>
                 <div className="flex gap-4 text-xs font-mono">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-cyber-yellow/50 rounded-full" />
-                        <span className="text-gray-400">INBOUND TRAFFIC</span>
-                    </div>
+                    {interfaces.map((iface, i) => (
+                        <div key={iface} className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
+                            <span className="text-gray-400 uppercase">{iface}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
             {/* Main Graph */}
             <div className="glass-panel p-6 rounded-xl border border-cyber-gray h-[400px]">
                 <h3 className="text-lg font-bold text-cyber-yellow mb-4 flex items-center gap-2">
-                    <Activity size={18} /> Bandwidth Usage (Last 15m)
+                    <Activity size={18} /> Interface Traffic (Rx)
                 </h3>
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={history}>
                         <defs>
-                            <linearGradient id="colorRx" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#f3ff00" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#f3ff00" stopOpacity={0} />
-                            </linearGradient>
+                            {interfaces.map((iface, i) => (
+                                <linearGradient key={iface} id={`color-${iface}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={colors[i % colors.length]} stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor={colors[i % colors.length]} stopOpacity={0} />
+                                </linearGradient>
+                            ))}
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                         <XAxis dataKey="time" hide />
-                        <YAxis stroke="#666" fontSize={10} tickFormatter={(val) => `${val} MB/s`} />
+                        <YAxis stroke="#666" fontSize={10} tickFormatter={(val) => `${val.toFixed(1)} MB/s`} />
                         <Tooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="rx" stroke="#f3ff00" fillOpacity={1} fill="url(#colorRx)" />
+
+                        {interfaces.map((iface, i) => (
+                            <Area
+                                key={iface}
+                                type="monotone"
+                                dataKey={iface}
+                                stroke={colors[i % colors.length]}
+                                fillOpacity={1}
+                                fill={`url(#color-${iface})`}
+                                stackId="1" // Stacked area chart? Or separate? Stacked shows total better.
+                            />
+                        ))}
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="glass-panel p-6 rounded-xl border border-cyber-gray flex items-center justify-between">
-                    <div>
-                        <p className="text-gray-500 text-xs font-mono mb-1">CURRENT INBOUND</p>
-                        <p className="text-2xl font-bold text-cyber-yellow font-mono">
-                            {history.length > 0 ? history[history.length - 1].rx.toFixed(1) : 0} <span className="text-sm">MB/s</span>
-                        </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="glass-panel p-6 rounded-xl border border-cyber-gray">
+                    <h3 className="text-lg font-bold text-white mb-4">Live Throughput</h3>
+                    <div className="space-y-4">
+                        {interfaces.map((iface, i) => {
+                            const latest = history.length > 0 ? history[history.length - 1][iface] || 0 : 0;
+                            return (
+                                <div key={iface} className="flex items-center justify-between p-3 bg-black/40 rounded border border-gray-800">
+                                    <span className="text-cyber-cyan font-mono">{iface}</span>
+                                    <span className="text-white font-mono text-xl">{latest.toFixed(2)} <span className="text-xs text-gray-500">MB/s</span></span>
+                                </div>
+                            )
+                        })}
                     </div>
-                    <ArrowDown className="text-cyber-yellow opacity-50" size={32} />
-                </div>
-
-                <div className="glass-panel p-6 rounded-xl border border-cyber-gray flex items-center justify-between">
-                    <div>
-                        <p className="text-gray-500 text-xs font-mono mb-1">TOTAL DATA (SESSION)</p>
-                        <p className="text-2xl font-bold text-cyber-cyan font-mono">
-                            -- <span className="text-sm">GB</span>
-                        </p>
-                    </div>
-                    <Activity className="text-cyber-cyan opacity-50" size={32} />
-                </div>
-
-                <div className="glass-panel p-6 rounded-xl border border-cyber-gray flex items-center justify-between">
-                    <div>
-                        <p className="text-gray-500 text-xs font-mono mb-1">ACTIVE CONNECTIONS</p>
-                        <p className="text-2xl font-bold text-white font-mono">
-                            --
-                        </p>
-                    </div>
-                    <Globe className="text-white opacity-50" size={32} />
                 </div>
             </div>
         </div>

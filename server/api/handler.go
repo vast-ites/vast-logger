@@ -22,6 +22,11 @@ type MetricPayload struct {
 	BytesRecv uint64  `json:"bytes_recv"`
     NetRecvRate float64 `json:"net_recv_rate"`
     DDoSStatus  string  `json:"ddos_status"`
+    Interfaces []struct {
+        Name      string  `json:"name"`
+        BytesSent uint64  `json:"bytes_sent"`
+        BytesRecv uint64  `json:"bytes_recv"`
+    } `json:"interfaces"`
     Containers []struct {
         ID          string  `json:"id"`
         Name        string  `json:"name"`
@@ -48,6 +53,11 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
 		return
 	}
     
+    // Store Interfaces
+    for _, iface := range p.Interfaces {
+        h.Metrics.WriteInterfaceMetric(iface.Name, iface.BytesSent, iface.BytesRecv)
+    }
+
     // Store Containers
     for _, cnt := range p.Containers {
         h.Metrics.WriteContainerMetric(
@@ -111,6 +121,7 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         v1.GET("/metrics/history", h.HandleGetHistory)
         v1.GET("/settings", h.HandleGetSettings)
         v1.POST("/settings", h.HandleSaveSettings)
+        v1.GET("/metrics/interfaces/history", h.HandleGetInterfaceHistory)
 	}
 }
 
@@ -176,4 +187,21 @@ func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
     }
 
     c.Status(http.StatusAccepted)
+}
+
+func (h *IngestionHandler) HandleGetInterfaceHistory(c *gin.Context) {
+    duration := c.Query("duration")
+    if duration == "" {
+        duration = "15m"
+    }
+
+    history, err := h.Metrics.GetInterfaceHistory(duration)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    if history == nil {
+        history = []storage.InterfaceMetricData{}
+    }
+    c.JSON(http.StatusOK, history)
 }

@@ -9,6 +9,12 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 )
 
+type InterfaceMetric struct {
+    Name      string  `json:"name"`
+    BytesSent uint64  `json:"bytes_sent"`
+    BytesRecv uint64  `json:"bytes_recv"`
+}
+
 type SystemMetrics struct {
 	CPUPercent  float64 `json:"cpu_percent"`
 	MemoryUsage float64 `json:"memory_usage"`
@@ -17,6 +23,7 @@ type SystemMetrics struct {
 	BytesRecv   uint64  `json:"bytes_recv"`
     NetRecvRate float64 `json:"net_recv_rate"` // MB/s
     DDoSStatus  string  `json:"ddos_status"`   // OK, WARNING, CRITICAL
+    Interfaces  []InterfaceMetric `json:"interfaces"`
 	Timestamp   int64   `json:"timestamp"`
 }
 
@@ -48,11 +55,30 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
 		return nil, err
 	}
 
-	// Network
+	// Network Aggregated
 	netStat, err := net.IOCounters(false)
 	if err != nil {
 		return nil, err
 	}
+    
+    // Network Interfaces
+    netInterfaces, err := net.IOCounters(true)
+    if err != nil {
+        return nil, err
+    }
+    
+    var interfaces []InterfaceMetric
+    for _, iface := range netInterfaces {
+        // Keep all interfaces for visibility including loopback
+        // if iface.Name == "lo" {
+        //    continue
+        // }
+        interfaces = append(interfaces, InterfaceMetric{
+            Name:      iface.Name,
+            BytesSent: iface.BytesSent,
+            BytesRecv: iface.BytesRecv,
+        })
+    }
     
     currentBytesRecv := netStat[0].BytesRecv
     currentTimestamp := time.Now().Unix()
@@ -76,7 +102,7 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
     // Update State
     sc.lastBytesRecv = currentBytesRecv
     sc.lastTimestamp = currentTimestamp
-
+    
 	return &SystemMetrics{
 		CPUPercent:  cpuP[0],
 		MemoryUsage: vMem.UsedPercent,
@@ -85,6 +111,7 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
 		BytesRecv:   currentBytesRecv,
         NetRecvRate: rateMBps,
         DDoSStatus:  status,
+        Interfaces:  interfaces,
 		Timestamp:   currentTimestamp,
 	}, nil
 }

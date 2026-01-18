@@ -161,6 +161,72 @@ func (s *MetricsStore) GetSystemMetricHistory(duration string) ([]SystemMetricDa
 	return history, nil
 }
 
+// WriteInterfaceMetric writes a single interface's metrics to InfluxDB
+func (s *MetricsStore) WriteInterfaceMetric(name string, bytesSent, bytesRecv uint64) error {
+    p := influxdb2.NewPointWithMeasurement("network_interface")
+    p.AddTag("interface", name)
+    p.AddField("bytes_sent", float64(bytesSent))
+    p.AddField("bytes_recv", float64(bytesRecv))
+    p.SetTime(time.Now())
+
+    s.writeAPI.WritePoint(context.Background(), p)
+    return nil
+}
+
+type InterfaceMetricData struct {
+    Interface   string    `json:"interface"`
+    BytesRecv   float64   `json:"bytes_recv"`
+    BytesSent   float64   `json:"bytes_sent"`
+    Time        time.Time `json:"time"`
+}
+
+func (s *MetricsStore) GetInterfaceHistory(duration string) ([]InterfaceMetricData, error) {
+    if duration == "" {
+        duration = "15m"
+    }
+
+    // We want to calculate RATE (bytes/sec) from the Counters (bytes_sent/recv)
+    // using derivative() or just difference() over time?
+    // Actually, agent sends raw counters. InfluxDB derivative() calculates rate of change.
+    // unit: 1s => bytes/second.
+    query := fmt.Sprintf(`
+    from(bucket: "%s")
+    |> range(start: -%s)
+    |> filter(fn: (r) => r["_measurement"] == "network_interface")
+    |> derivative(unit: 1s, nonNegative: true) 
+    |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
+    |> pivot(rowKey:["_time", "interface"], columnKey: ["_field"], valueColumn: "_value")
+    `, s.bucket, duration)
+
+    result, err := s.queryAPI.Query(context.Background(), query)
+    if err != nil {
+        return nil, err
+    }
+    defer result.Close()
+
+    var history []InterfaceMetricData
+
+    for result.Next() {
+        record := result.Record()
+        getFloat := func(k string) float64 {
+            if v, ok := record.ValueByKey(k).(float64); ok { return v }
+            return 0.0
+        }
+        getString := func(k string) string {
+            if v, ok := record.ValueByKey(k).(string); ok { return v }
+            return ""
+        }
+
+        history = append(history, InterfaceMetricData{
+            Interface: getString("interface"),
+            BytesRecv: getFloat("bytes_recv"), // This is now a RATE (B/s) due to derivative
+            BytesSent: getFloat("bytes_sent"), // This is now a RATE (B/s)
+            Time:      record.Time(),
+        })
+    }
+    return history, nil
+}
+
 
 // WriteContainerMetric writes a single container's metrics to InfluxDB
 func (m *MetricsStore) WriteContainerMetric(id, name, image, state, status, ports string, cpu, mem, netRx, netTx float64) error {
