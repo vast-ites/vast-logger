@@ -22,7 +22,10 @@ func main() {
 		log.Fatalf("ClickHouse conn failed: %v", err)
 	}
 
-	// 2. API Setup
+	// 2. Load Config
+    config := storage.NewConfigStore("server-config.json")
+
+	// 3. API Setup
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "*"},
@@ -36,6 +39,7 @@ func main() {
 	handler := &api.IngestionHandler{
 		Metrics: influx,
 		Logs:    clickh,
+        Config:  config,
 	}
 	api.SetupRoutes(r, handler)
 

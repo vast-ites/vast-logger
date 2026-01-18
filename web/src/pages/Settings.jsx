@@ -6,14 +6,49 @@ const Settings = () => {
     const [ddosThreshold, setDdosThreshold] = useState(50);
     const [emailAlerts, setEmailAlerts] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [status, setStatus] = useState("");
 
-    const handleSave = () => {
+    // Load settings on mount
+    React.useEffect(() => {
+        fetch('http://localhost:8080/api/v1/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data) {
+                    setRetention(data.retention_days);
+                    setDdosThreshold(data.ddos_threshold);
+                    setEmailAlerts(data.email_alerts);
+                }
+            })
+            .catch(err => console.error("Failed to load settings:", err));
+    }, []);
+
+    const handleSave = async () => {
         setSaving(true);
-        // Simulate API call
-        setTimeout(() => {
+        setStatus("Saving...");
+
+        try {
+            const res = await fetch('http://localhost:8080/api/v1/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    retention_days: parseInt(retention),
+                    ddos_threshold: parseFloat(ddosThreshold),
+                    email_alerts: emailAlerts
+                })
+            });
+
+            if (res.ok) {
+                setStatus("Saved Successfully!");
+                setTimeout(() => setStatus(""), 2000);
+            } else {
+                setStatus("Error Saving");
+            }
+        } catch (err) {
+            console.error(err);
+            setStatus("Connection Error");
+        } finally {
             setSaving(false);
-            console.log("Settings saved:", { retention, ddosThreshold, emailAlerts });
-        }, 1000);
+        }
     };
 
     return (
@@ -23,14 +58,17 @@ const Settings = () => {
                     <SettingsIcon className="text-gray-400" />
                     System Configuration
                 </h1>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-4 py-2 bg-cyber-cyan/10 border border-cyber-cyan text-cyber-cyan rounded hover:bg-cyber-cyan/20 transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                    <Save size={16} />
-                    {saving ? 'SAVING...' : 'SAVE CHANGES'}
-                </button>
+                <div className="flex items-center gap-4">
+                    {status && <span className="text-cyber-cyan font-mono text-sm animate-pulse">{status}</span>}
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-4 py-2 bg-cyber-cyan/10 border border-cyber-cyan text-cyber-cyan rounded hover:bg-cyber-cyan/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <Save size={16} />
+                        {saving ? 'SAVING...' : 'SAVE CHANGES'}
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -11,6 +11,7 @@ import (
 type IngestionHandler struct {
 	Metrics *storage.MetricsStore
 	Logs    *storage.LogStore
+    Config  *storage.ConfigStore
 }
 
 type MetricPayload struct {
@@ -108,6 +109,8 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         v1.GET("/logs/stream", h.HandleGetLogs)
         v1.GET("/logs/search", h.HandleSearchLogs)
         v1.GET("/metrics/history", h.HandleGetHistory)
+        v1.GET("/settings", h.HandleGetSettings)
+        v1.POST("/settings", h.HandleSaveSettings)
 	}
 }
 
@@ -154,4 +157,23 @@ func (h *IngestionHandler) HandleGetHistory(c *gin.Context) {
         history = []storage.SystemMetricData{}
     }
     c.JSON(http.StatusOK, history)
+}
+
+func (h *IngestionHandler) HandleGetSettings(c *gin.Context) {
+    c.JSON(http.StatusOK, h.Config.Get())
+}
+
+func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
+    var config storage.SystemConfig
+    if err := c.BindJSON(&config); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    if err := h.Config.Save(config); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save config"})
+        return
+    }
+
+    c.Status(http.StatusAccepted)
 }
