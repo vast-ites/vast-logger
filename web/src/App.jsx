@@ -6,6 +6,7 @@ import Logs from './pages/Logs';
 import Infrastructure from './pages/Infrastructure';
 import Network from './pages/Network';
 import Security from './pages/Security';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/infrastructure" element={<Infrastructure />} />
           <Route path="/network" element={<Network />} />
           <Route path="/security" element={<Security />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
