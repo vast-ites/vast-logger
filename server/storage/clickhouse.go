@@ -73,7 +73,128 @@ func NewLogStore(dsn string) (*LogStore, error) {
 		return nil, err
 	}
 
+	// Create Process Table
+	err = conn.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS datavast.processes (
+			timestamp DateTime,
+			host String,
+			pid Int32,
+			name String,
+			username String,
+			cpu_percent Float64,
+			memory_percent Float64,
+			cmdline String
+		) ENGINE = MergeTree()
+		ORDER BY (timestamp, host)
+		TTL timestamp + INTERVAL 1 DAY
+	`)
+	if err != nil {
+		return nil, err
+	}
+
+    // Create Firewall Table
+    err = conn.Exec(context.Background(), `
+        CREATE TABLE IF NOT EXISTS datavast.firewall (
+            timestamp DateTime,
+            host String,
+            rules String
+        ) ENGINE = MergeTree()
+        ORDER BY (timestamp, host)
+        TTL timestamp + INTERVAL 1 DAY
+    `)
+    if err != nil {
+        return nil, err
+    }
+
 	return &LogStore{conn: conn}, nil
+}
+
+// ... InsertLog ...
+
+type ProcessEntry struct {
+    Timestamp     time.Time `json:"timestamp"`
+    Host          string    `json:"host"`
+    PID           int32     `json:"pid"`
+    Name          string    `json:"name"`
+    Username      string    `json:"username"`
+    CPUPercent    float64   `json:"cpu_percent"`
+    MemoryPercent float64   `json:"memory_percent"`
+    Cmdline       string    `json:"cmdline"`
+}
+
+func (s *LogStore) InsertProcesses(entries []ProcessEntry) error {
+    batch, err := s.conn.PrepareBatch(context.Background(), "INSERT INTO datavast.processes")
+    if err != nil {
+        return err
+    }
+    for _, e := range entries {
+        err := batch.Append(
+            e.Timestamp, e.Host, e.PID, e.Name, e.Username, 
+            e.CPUPercent, e.MemoryPercent, e.Cmdline,
+        )
+        if err != nil {
+            return err
+        }
+    }
+    return batch.Send()
+}
+
+func (s *LogStore) GetLatestProcesses(host string) ([]ProcessEntry, error) {
+    // efficient latest query
+    query := `
+        SELECT timestamp, host, pid, name, username, cpu_percent, memory_percent, cmdline
+        FROM datavast.processes
+        WHERE host = ? AND timestamp > now() - INTERVAL 5 MINUTE
+        ORDER BY timestamp DESC
+        LIMIT 50
+    `
+    // Actually we want the full list from the *latest snapshot*. 
+    // Assuming agent sends all in one go or batches closely. 
+    // Better approach: Select * where timestamp = (select max(timestamp) from processes where host=?)
+    
+    query = `
+        SELECT timestamp, host, pid, name, username, cpu_percent, memory_percent, cmdline
+        FROM datavast.processes
+        WHERE host = ? AND timestamp = (
+            SELECT max(timestamp) FROM datavast.processes WHERE host = ?
+        )
+        ORDER BY cpu_percent DESC
+        LIMIT 50
+    `
+    
+    rows, err := s.conn.Query(context.Background(), query, host, host)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    
+    var procs []ProcessEntry
+    for rows.Next() {
+        var p ProcessEntry
+        if err := rows.Scan(&p.Timestamp, &p.Host, &p.PID, &p.Name, &p.Username, &p.CPUPercent, &p.MemoryPercent, &p.Cmdline); err != nil {
+            return nil, err
+        }
+        procs = append(procs, p)
+    }
+    return procs, nil
+}
+
+func (s *LogStore) InsertFirewall(timestamp time.Time, host, rules string) error {
+     return s.conn.Exec(context.Background(), `
+        INSERT INTO datavast.firewall (timestamp, host, rules) VALUES (?, ?, ?)
+     `, timestamp, host, rules)
+}
+
+func (s *LogStore) GetLatestFirewall(host string) (string, error) {
+    var rules string
+    err := s.conn.QueryRow(context.Background(), `
+        SELECT rules FROM datavast.firewall 
+        WHERE host = ? ORDER BY timestamp DESC LIMIT 1
+    `, host).Scan(&rules)
+    if err != nil {
+        return "", err
+    }
+    return rules, nil
 }
 
 func (s *LogStore) InsertLog(entry LogEntry) error {

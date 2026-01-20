@@ -234,8 +234,8 @@ order:ASC|DESC">
                         <div className="font-mono text-xs">
                             {currentLogs.map((log, i) => (
                                 <div key={i} className="flex gap-4 p-2 hover:bg-white/5 border-b border-white/5 transition-colors items-start">
-                                    <span className="text-gray-500 shrink-0 w-32">
-                                        {new Date(log.timestamp).toLocaleTimeString()}
+                                    <span className="text-gray-500 shrink-0 w-40 font-mono text-[11px]">
+                                        {new Date(log.timestamp).toLocaleString('sv')}
                                     </span>
                                     <div className={`shrink-0 w-20 flex items-center justify-center gap-1 px-1 py-0.5 rounded border text-[10px] font-bold ${getLevelClass(log.level)}`}>
                                         {getLevelIcon(log.level)}

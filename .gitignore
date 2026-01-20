@@ -45,3 +45,16 @@ id_ed25519
 *.pem
 *.key
 .env
+
+# Binaries
+datavast-agent
+datavast-server-bin
+server/server
+server/main
+server.log
+agent.log
+*.log
+
+# Temp
+_deployment_temp
+web/dist

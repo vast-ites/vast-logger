@@ -145,9 +145,40 @@ func main() {
         sysCol = collector.NewSystemCollector()
         fmt.Println(">> Starting System Metrics Collector (1s interval)...")
     }
+    
+    // Initialize Enhanced Collectors (Process/Firewall)
+    procCol := collector.NewProcessCollector()
+    fwCol := collector.NewFirewallCollector()
+    fmt.Println(">> Starting Enhanced Telemetry (30s interval)...")
 
 	ticker := time.NewTicker(1 * time.Second)
+    slowTicker := time.NewTicker(30 * time.Second) // For heavy tasks
 	defer ticker.Stop()
+    defer slowTicker.Stop()
+
+    // Initial hydration
+    go func() {
+        if procs, err := procCol.Collect(); err == nil { senderClient.SendProcesses(procs) }
+        if fw, err := fwCol.Collect(); err == nil { senderClient.SendFirewall(fw) }
+    }()
+
+    go func() {
+        for range slowTicker.C {
+            // Collect Processes
+            if procs, err := procCol.Collect(); err == nil {
+                if err := senderClient.SendProcesses(procs); err != nil {
+                     log.Printf("Failed to send processes: %v", err)
+                }
+            }
+            
+            // Collect Firewall
+            if fw, err := fwCol.Collect(); err == nil {
+                if err := senderClient.SendFirewall(fw); err != nil {
+                    log.Printf("Failed to send firewall: %v", err)
+                }
+            }
+        }
+    }()
 
 	for range ticker.C {
         var metrics *collector.SystemMetrics

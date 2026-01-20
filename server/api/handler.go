@@ -155,7 +155,83 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             secure.POST("/mfa/enable", h.HandleEnableMFA)
             secure.POST("/mfa/disable", h.HandleDisableMFA)
         }
+        
+        // Ingest Extensions
+        v1.POST("/ingest/processes", h.HandleIngestProcesses)
+        v1.POST("/ingest/firewall", h.HandleIngestFirewall)
+        
+        // Get Extensions
+        v1.GET("/processes", h.HandleGetProcesses)
+        v1.GET("/firewall", h.HandleGetFirewall)
 	}
+}
+
+func (h *IngestionHandler) HandleIngestProcesses(c *gin.Context) {
+    var req struct {
+        Host      string                  `json:"host"`
+        Processes []storage.ProcessEntry  `json:"processes"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    
+    // Enrich with timestamp/host if missing in items
+    ts := time.Now()
+    for i := range req.Processes {
+        if req.Processes[i].Timestamp.IsZero() {
+            req.Processes[i].Timestamp = ts
+        }
+        if req.Processes[i].Host == "" {
+            req.Processes[i].Host = req.Host
+        }
+    }
+    
+    if err := h.Logs.InsertProcesses(req.Processes); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert processes"})
+        return
+    }
+    c.Status(http.StatusAccepted)
+}
+
+func (h *IngestionHandler) HandleIngestFirewall(c *gin.Context) {
+    var req struct {
+        Host  string `json:"host"`
+        Rules string `json:"rules"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    
+    if err := h.Logs.InsertFirewall(time.Now(), req.Host, req.Rules); err != nil {
+         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert firewall rules"})
+         return
+    }
+    c.Status(http.StatusAccepted)
+}
+
+func (h *IngestionHandler) HandleGetProcesses(c *gin.Context) {
+    host := c.Query("host")
+    procs, err := h.Logs.GetLatestProcesses(host)
+    if err != nil {
+         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+         return
+    }
+    if procs == nil {
+        procs = []storage.ProcessEntry{}
+    }
+    c.JSON(http.StatusOK, procs)
+}
+
+func (h *IngestionHandler) HandleGetFirewall(c *gin.Context) {
+    host := c.Query("host")
+    rules, err := h.Logs.GetLatestFirewall(host)
+    if err != nil {
+         // Return empty if not found, don't error 500
+         rules = ""
+    }
+    c.JSON(http.StatusOK, gin.H{"rules": rules})
 }
 
 func (h *IngestionHandler) HandleGetLogs(c *gin.Context) {

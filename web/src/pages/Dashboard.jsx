@@ -64,6 +64,7 @@ const Dashboard = () => {
 
     const [logs, setLogs] = React.useState([]);
     const [containers, setContainers] = React.useState([]);
+    const [processes, setProcesses] = React.useState([]);
 
     React.useEffect(() => {
         const fetchTelemetry = async () => {
@@ -98,13 +99,22 @@ const Dashboard = () => {
                         setContainers(contData);
                     }
                 }
+
+                // Fetch Processes
+                const resProc = await fetch(`/api/v1/processes${params}`);
+                if (resProc.ok) {
+                    const procData = await resProc.json();
+                    if (Array.isArray(procData)) setProcesses(procData);
+                }
+
             } catch (err) {
                 console.error("Failed to fetch telemetry", err);
             }
         };
 
         fetchTelemetry();
-        const interval = setInterval(fetchTelemetry, refreshInterval);
+        const interval = setInterval(fetchTelemetry, refreshInterval > 5000 ? refreshInterval : 5000); // Poll processes slower? No, keep sync for now but maybe throttle backend. 
+        // Actually main loop is controlled by refreshInterval. 5s is fine.
         return () => clearInterval(interval);
     }, [selectedHost, refreshInterval]);
 
@@ -193,9 +203,7 @@ const Dashboard = () => {
                     <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
                         <h3 className="font-mono text-sm text-cyber-cyan uppercase">Live Log Stream (Centralized)</h3>
                         <div className="flex gap-2 text-xs">
-                            <span className="px-2 py-1 bg-cyber-gray rounded text-gray-300">syslog</span>
-                            <span className="px-2 py-1 bg-cyber-gray rounded text-gray-300">auth.log</span>
-                            <span className="px-2 py-1 bg-cyber-gray rounded text-gray-300">kern.log</span>
+                            <div className="text-[10px] text-gray-500 font-mono">LATEST 50</div>
                         </div>
                     </div>
                     <div className="flex-1 bg-black/40 p-4 font-mono text-xs overflow-auto custom-scrollbar">
@@ -234,29 +242,23 @@ const Dashboard = () => {
                             <thead>
                                 <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-black/20">
                                     <th className="p-3">NAME</th>
-                                    <th className="p-3">IMAGE</th>
                                     <th className="p-3">STATUS</th>
                                     <th className="p-3">CPU</th>
                                     <th className="p-3">MEM</th>
                                     <th className="p-3">NET I/O</th>
-                                    <th className="p-3">PORTS</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {containers.length === 0 ? (
-                                    <tr><td colSpan="7" className="p-4 text-center text-gray-500">No active containers found</td></tr>
+                                    <tr><td colSpan="5" className="p-4 text-center text-gray-500">No active containers found</td></tr>
                                 ) : (
                                     containers.map((c, i) => (
                                         <tr key={i} className="border-b border-cyber-gray/20 hover:bg-cyber-gray/10 transition-colors">
                                             <td className="p-3 font-bold text-white truncate max-w-[150px]" title={c.name}>{c.name}</td>
-                                            <td className="p-3 text-gray-400 truncate max-w-[150px]" title={c.image}>{c.image}</td>
                                             <td className="p-3">
-                                                <div className="flex flex-col">
-                                                    <span className={`px-2 py-0.5 rounded w-fit ${c.state === 'running' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-red-500/20 text-red-500'}`}>
-                                                        {c.state.toUpperCase()}
-                                                    </span>
-                                                    <span className="text-[10px] text-gray-500 mt-0.5">{c.status}</span>
-                                                </div>
+                                                <span className={`px-2 py-0.5 rounded w-fit ${c.state === 'running' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-red-500/20 text-red-500'}`}>
+                                                    {c.state.toUpperCase()}
+                                                </span>
                                             </td>
                                             <td className="p-3 text-cyber-cyan">{c.cpu.toFixed(1)}%</td>
                                             <td className="p-3 text-cyber-magenta">{Math.round(c.mem / 1024 / 1024)} MB</td>
@@ -266,9 +268,6 @@ const Dashboard = () => {
                                                     <span>↑ {formatNetRate(c.net_tx)}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-3 text-gray-400 truncate max-w-[150px]" title={c.ports}>
-                                                {c.ports || '-'}
-                                            </td>
                                         </tr>
                                     ))
                                 )}
@@ -277,6 +276,43 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Top Processes */}
+            <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
+                <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
+                    <h3 className="font-mono text-sm text-cyber-cyan uppercase">Top System Processes (by CPU)</h3>
+                    <span className="text-xs font-mono text-gray-500">{processes.length} Active</span>
+                </div>
+                <div className="flex-1 bg-black/40 overflow-auto custom-scrollbar">
+                    <table className="w-full text-left font-mono text-xs">
+                        <thead>
+                            <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-black/20 sticky top-0 backdrop-blur-md">
+                                <th className="p-3">PID</th>
+                                <th className="p-3">USER</th>
+                                <th className="p-3">NAME</th>
+                                <th className="p-3">CPU %</th>
+                                <th className="p-3">MEM %</th>
+                                <th className="p-3">COMMAND</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {processes.map((p, i) => (
+                                <tr key={i} className="border-b border-cyber-gray/20 hover:bg-cyber-gray/10 transition-colors">
+                                    <td className="p-3 text-gray-400">{p.pid}</td>
+                                    <td className="p-3 text-cyber-green">{p.username}</td>
+                                    <td className="p-3 font-bold text-white">{p.name}</td>
+                                    <td className="p-3 text-cyber-cyan font-bold">{p.cpu_percent.toFixed(1)}%</td>
+                                    <td className="p-3 text-cyber-magenta">{p.memory_percent.toFixed(1)}%</td>
+                                    <td className="p-3 text-gray-500 truncate max-w-md" title={p.cmdline}>
+                                        {p.cmdline}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     );
 };
