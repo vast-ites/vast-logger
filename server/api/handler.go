@@ -2,19 +2,24 @@ package api
 
 import (
 	"net/http"
+    "strconv"
 	"time"
 
 	"github.com/datavast/datavast/server/storage"
+    "github.com/datavast/datavast/server/auth"
 	"github.com/gin-gonic/gin"
+    "github.com/golang-jwt/jwt/v5"
 )
 
 type IngestionHandler struct {
 	Metrics *storage.MetricsStore
 	Logs    *storage.LogStore
     Config  *storage.ConfigStore
+    Auth    *auth.AuthManager
 }
 
 type MetricPayload struct {
+    Hostname  string  `json:"host"`
 	CPU       float64 `json:"cpu_percent"`
 	Mem       float64 `json:"memory_usage"`
 	Disk      float64 `json:"disk_usage"`
@@ -48,20 +53,20 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
 		return
 	}
 
-	if err := h.Metrics.WriteSystemMetric(p.CPU, p.Mem, p.Disk, p.BytesSent, p.BytesRecv, p.NetRecvRate, p.DDoSStatus); err != nil {
+	if err := h.Metrics.WriteSystemMetric(p.Hostname, p.CPU, p.Mem, p.Disk, p.BytesSent, p.BytesRecv, p.NetRecvRate, p.DDoSStatus); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store metric"})
 		return
 	}
     
     // Store Interfaces
     for _, iface := range p.Interfaces {
-        h.Metrics.WriteInterfaceMetric(iface.Name, iface.BytesSent, iface.BytesRecv)
+        h.Metrics.WriteInterfaceMetric(p.Hostname, iface.Name, iface.BytesSent, iface.BytesRecv)
     }
 
     // Store Containers
     for _, cnt := range p.Containers {
         h.Metrics.WriteContainerMetric(
-            cnt.ID, cnt.Name, cnt.Image, cnt.State, cnt.Status, cnt.Ports,
+            p.Hostname, cnt.ID, cnt.Name, cnt.Image, cnt.State, cnt.Status, cnt.Ports,
             cnt.CPUPercent, cnt.MemoryUsage, cnt.NetRx, cnt.NetTx,
         )
     }
@@ -90,7 +95,8 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 }
 
 func (h *IngestionHandler) HandleGetLatestMetrics(c *gin.Context) {
-	data, err := h.Metrics.GetLatestSystemMetrics()
+    host := c.Query("host")
+	data, err := h.Metrics.GetLatestSystemMetrics(host)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -99,7 +105,8 @@ func (h *IngestionHandler) HandleGetLatestMetrics(c *gin.Context) {
 }
 
 func (h *IngestionHandler) HandleGetContainers(c *gin.Context) {
-	metrics, err := h.Metrics.GetLatestContainerMetrics()
+    host := c.Query("host")
+	metrics, err := h.Metrics.GetLatestContainerMetrics(host)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query container metrics"})
 		return
@@ -107,21 +114,47 @@ func (h *IngestionHandler) HandleGetContainers(c *gin.Context) {
 	c.JSON(http.StatusOK, metrics)
 }
 
+func (h *IngestionHandler) HandleGetHosts(c *gin.Context) {
+    hosts, err := h.Metrics.GetHosts()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    if hosts == nil {
+        hosts = []string{}
+    }
+    c.JSON(http.StatusOK, hosts)
+}
+
 func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
 	v1 := r.Group("/api/v1")
 	{
+        // Public / Enrollment
+		v1.POST("/agent/register", h.HandleRegisterAgent)
+
+        // Ingestion (Should be protected eventually)
 		v1.POST("/ingest/metrics", h.HandleMetrics)
 		v1.POST("/ingest/logs", h.HandleLogs)
-        
-        // Query Endpoints
+        v1.GET("/hosts", h.HandleGetHosts) // New Endpoint
         v1.GET("/metrics/system", h.HandleGetLatestMetrics)
         v1.GET("/metrics/containers", h.HandleGetContainers)
         v1.GET("/logs/stream", h.HandleGetLogs)
         v1.GET("/logs/search", h.HandleSearchLogs)
         v1.GET("/metrics/history", h.HandleGetHistory)
-        v1.GET("/settings", h.HandleGetSettings)
-        v1.POST("/settings", h.HandleSaveSettings)
         v1.GET("/metrics/interfaces/history", h.HandleGetInterfaceHistory)
+        v1.GET("/settings", h.HandleGetSettings) // Read-only public
+        
+        v1.POST("/auth/login", h.HandleLogin)
+
+        // Protected
+        secure := v1.Group("/")
+        secure.Use(AuthRequired("admin"))
+        {
+            secure.POST("/settings", h.HandleSaveSettings)
+            secure.POST("/mfa/setup", h.HandleSetupMFA)
+            secure.POST("/mfa/enable", h.HandleEnableMFA)
+            secure.POST("/mfa/disable", h.HandleDisableMFA)
+        }
 	}
 }
 
@@ -139,10 +172,45 @@ func (h *IngestionHandler) HandleGetLogs(c *gin.Context) {
 }
 
 func (h *IngestionHandler) HandleSearchLogs(c *gin.Context) {
-    level := c.Query("level")
-    search := c.Query("search")
+    filter := storage.LogFilter{
+        Level:      c.Query("level"),
+        SearchTerm: c.Query("search"),
+        Host:       c.Query("host"),
+        Service:    c.Query("service"),
+        Order:      c.Query("order"),
+    }
     
-    logs, err := h.Logs.QueryLogs(100, level, search)
+    limitStr := c.Query("limit")
+    filter.Limit = 100
+    if limitStr != "" {
+        if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+            filter.Limit = l
+        }
+    }
+    
+    // Parse Time
+    if beforeStr := c.Query("before"); beforeStr != "" {
+        // Try standardized formats or just ISO
+        if t, err := time.Parse(time.RFC3339, beforeStr); err == nil {
+             filter.Before = t
+        } else if t, err := time.Parse("2006-01-02", beforeStr); err == nil {
+             filter.Before = t
+        } else if t, err := time.Parse("2006-01-02 15:04", beforeStr); err == nil {
+             filter.Before = t
+        }
+    }
+    
+    if afterStr := c.Query("after"); afterStr != "" {
+        if t, err := time.Parse(time.RFC3339, afterStr); err == nil {
+             filter.After = t
+        } else if t, err := time.Parse("2006-01-02", afterStr); err == nil {
+             filter.After = t
+        } else if t, err := time.Parse("2006-01-02 15:04", afterStr); err == nil {
+             filter.After = t
+        }
+    }
+    
+    logs, err := h.Logs.QueryLogs(filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -155,11 +223,12 @@ func (h *IngestionHandler) HandleSearchLogs(c *gin.Context) {
 
 func (h *IngestionHandler) HandleGetHistory(c *gin.Context) {
     duration := c.Query("duration")
+    host := c.Query("host")
     if duration == "" {
         duration = "15m"
     }
 
-    history, err := h.Metrics.GetSystemMetricHistory(duration)
+    history, err := h.Metrics.GetSystemMetricHistory(duration, host)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
@@ -175,13 +244,26 @@ func (h *IngestionHandler) HandleGetSettings(c *gin.Context) {
 }
 
 func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
-    var config storage.SystemConfig
-    if err := c.BindJSON(&config); err != nil {
+    var req struct {
+        RetentionDays int     `json:"retention_days"`
+        DDoSThreshold float64 `json:"ddos_threshold"`
+        EmailAlerts   bool    `json:"email_alerts"`
+    }
+    if err := c.BindJSON(&req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
-    if err := h.Config.Save(config); err != nil {
+    // Get existing config
+    current := h.Config.Get()
+    
+    // Update only allowed fields
+    current.RetentionDays = req.RetentionDays
+    current.DDoSThreshold = req.DDoSThreshold
+    current.EmailAlerts = req.EmailAlerts
+    
+    // Save
+    if err := h.Config.Save(current); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save config"})
         return
     }
@@ -204,4 +286,149 @@ func (h *IngestionHandler) HandleGetInterfaceHistory(c *gin.Context) {
         history = []storage.InterfaceMetricData{}
     }
     c.JSON(http.StatusOK, history)
+}
+
+func (h *IngestionHandler) HandleLogin(c *gin.Context) {
+    var req struct {
+        Password string `json:"password"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+    
+    if !h.Auth.ValidatePassword(req.Password) {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+        return
+    }
+    
+    token, err := h.Auth.GenerateToken()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+        return
+    }
+    
+    c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func (h *IngestionHandler) HandleRegisterAgent(c *gin.Context) {
+    var req struct {
+        APIKey   string `json:"api_key"`
+        Hostname string `json:"hostname"`
+        MFACode  string `json:"mfa_code"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+
+    // 1. Validate System API Key
+    sysKey := h.Config.Get().SystemAPIKey
+    if sysKey == "" || req.APIKey != sysKey {
+        c.JSON(http.StatusForbidden, gin.H{"error": "Invalid API Key"})
+        return
+    }
+
+    // 2. Validate MFA (if enabled)
+    config := h.Config.Get()
+    if config.MFAEnabled {
+        if req.MFACode == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "MFA_REQUIRED", "message": "MFA Code required"})
+            return
+        }
+        if !auth.ValidateMFA(req.MFACode, config.MFASecret) {
+            c.JSON(http.StatusForbidden, gin.H{"error": "Invalid MFA Code"})
+            return
+        }
+    }
+
+    // 3. Generate Agent Secret
+    secret := auth.GenerateRandomString(32) // Reuse existing rand logic or new
+    
+    // 4. Save to Config
+    // Note: ConfigStore.SaveAgentSecret needs to be implemented or we update map directly
+    // Ideally we should add a helper in ConfigStore. For now, doing direct update.
+    cfg := h.Config.Get()
+    cfg.AgentSecrets[req.Hostname] = secret
+    h.Config.Save(cfg)
+
+    c.JSON(http.StatusOK, gin.H{
+        "agent_id": req.Hostname,
+        "secret":   secret,
+    })
+}
+
+// MFA Setup
+func (h *IngestionHandler) HandleSetupMFA(c *gin.Context) {
+    secret, url, err := auth.GenerateMFA("admin@datavast")
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate MFA"})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{
+        "secret": secret,
+        "url":    url,
+    })
+}
+
+func (h *IngestionHandler) HandleEnableMFA(c *gin.Context) {
+    var req struct {
+        Code   string `json:"code"`
+        Secret string `json:"secret"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+
+    if !auth.ValidateMFA(req.Code, req.Secret) {
+        c.JSON(http.StatusForbidden, gin.H{"error": "Invalid Code"})
+        return
+    }
+
+    // Save
+    config := h.Config.Get()
+    config.MFAEnabled = true
+    config.MFASecret = req.Secret
+    h.Config.Save(config)
+
+    c.JSON(http.StatusOK, gin.H{"message": "MFA Enabled"})
+}
+
+func (h *IngestionHandler) HandleDisableMFA(c *gin.Context) {
+     // Verify password via JSON body before disabling? 
+     // For simplicity using JWT Auth check.
+     config := h.Config.Get()
+     config.MFAEnabled = false
+     config.MFASecret = ""
+     h.Config.Save(config)
+     
+     c.JSON(http.StatusOK, gin.H{"message": "MFA Disabled"})
+}
+
+// Middleware
+func AuthRequired(role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+        tokenString := c.GetHeader("Authorization")
+        if tokenString == "" {
+             c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No token provided"})
+             return
+        }
+        
+        // Remove Bearer prefix if present
+        if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+            tokenString = tokenString[7:]
+        }
+        
+        token, err := jwt.ParseWithClaims(tokenString, &auth.Claims{}, func(token *jwt.Token) (interface{}, error) {
+			return auth.JwtSecret, nil
+		})
+
+		if err != nil || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			return
+		}
+
+		c.Next()
+	}
 }

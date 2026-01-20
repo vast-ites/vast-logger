@@ -49,7 +49,11 @@ const StatCard = ({ title, value, unit, icon: Icon, color }) => {
     );
 };
 
+import { useHost } from '../contexts/HostContext';
+
 const Dashboard = () => {
+    const { selectedHost } = useHost();
+    const [refreshInterval, setRefreshInterval] = React.useState(2000);
     const [metrics, setMetrics] = React.useState({
         cpu: 0,
         mem: 0,
@@ -64,21 +68,30 @@ const Dashboard = () => {
     React.useEffect(() => {
         const fetchTelemetry = async () => {
             try {
+                const params = selectedHost ? `?host=${selectedHost}` : '';
+
                 // Fetch Metrics
-                const resMetrics = await fetch('http://localhost:8080/api/v1/metrics/system');
+                const resMetrics = await fetch(`/api/v1/metrics/system${params}`);
                 if (resMetrics.ok) setMetrics(await resMetrics.json());
 
                 // Fetch Logs
-                const resLogs = await fetch('http://localhost:8080/api/v1/logs/stream');
-                if (resLogs.ok) {
-                    const logData = await resLogs.json();
-                    if (Array.isArray(logData)) { // Filter out empty or invalid responses
-                        setLogs(logData);
-                    }
+                const logParams = selectedHost ? `?host=${selectedHost}` : '';
+                const resLogs = await fetch(`/api/v1/logs/search${logParams}`); // Use search instead of stream for consistency with host filter? 
+                // Wait, Logs.jsx uses /logs/search. Dashboard uses /logs/stream. 
+                // /logs/stream just gets recent logs. I should probably update /logs/stream to support host too?
+                // Or just use /logs/search on Dashboard too? /logs/stream allows simple tailing. 
+                // Let's stick to /logs/stream but I need to ensure backend supports ?host on stream endpoint.
+                // In Handler.go step 2985, I did NOT update HandleGetLogs (stream) to use host.
+                // Converting Dashboard to use /logs/search is safer given my changes.
+                // Actually, let's just use /logs/search on Dashboard for now.
+                const resLogsSearch = await fetch(`/api/v1/logs/search${logParams}&limit=50`);
+                if (resLogsSearch.ok) {
+                    const logData = await resLogsSearch.json();
+                    if (Array.isArray(logData)) setLogs(logData);
                 }
 
                 // Fetch Containers
-                const resContainers = await fetch('http://localhost:8080/api/v1/metrics/containers');
+                const resContainers = await fetch(`/api/v1/metrics/containers${params}`);
                 if (resContainers.ok) {
                     const contData = await resContainers.json();
                     if (Array.isArray(contData)) {
@@ -91,9 +104,9 @@ const Dashboard = () => {
         };
 
         fetchTelemetry();
-        const interval = setInterval(fetchTelemetry, 2000);
+        const interval = setInterval(fetchTelemetry, refreshInterval);
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedHost, refreshInterval]);
 
     // Helper to format bytes
     const formatNetRate = (bytes) => {
@@ -131,6 +144,24 @@ const Dashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Refresh Rate Control */}
+            <div className="flex justify-end mb-4">
+                <div className="glass-panel px-4 py-2 rounded-lg flex items-center gap-3">
+                    <span className="text-xs font-mono text-gray-400">REFRESH RATE:</span>
+                    <select
+                        value={refreshInterval}
+                        onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                        className="bg-black/40 border border-cyber-gray rounded px-2 py-1 text-xs text-cyber-cyan focus:outline-none cursor-pointer"
+                    >
+                        <option value={1000}>1s (Realtime)</option>
+                        <option value={2000}>2s (Fast)</option>
+                        <option value={5000}>5s (Normal)</option>
+                        <option value={10000}>10s (Slow)</option>
+                        <option value={30000}>30s (Eco)</option>
+                    </select>
+                </div>
+            </div>
 
             {/* Setup Guide */}
             <div className={`border rounded-lg p-6 mb-8 relative overflow-hidden ${isDDoS ? 'border-red-500/20 bg-red-900/10' : 'border-cyber-cyan/20 bg-cyber-cyan/5'}`}>

@@ -22,15 +22,27 @@ type LogEntry struct {
 	SourcePath  string    `json:"source_path"`
 }
 
-func NewLogStore() (*LogStore, error) {
-	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"127.0.0.1:9000"},
-		Auth: clickhouse.Auth{
-			Database: "default", // Connect to default
-			Username: "datavast",
-			Password: "securepass",
-		},
-	})
+func NewLogStore(dsn string) (*LogStore, error) {
+    var opts *clickhouse.Options
+    var err error
+
+    if dsn != "" {
+        opts, err = clickhouse.ParseDSN(dsn)
+        if err != nil {
+            return nil, fmt.Errorf("invalid dsn: %w", err)
+        }
+    } else {
+        opts = &clickhouse.Options{
+            Addr: []string{"127.0.0.1:9000"},
+            Auth: clickhouse.Auth{
+                Database: "default",
+                Username: "datavast",
+                Password: "securepass",
+            },
+        }
+    }
+
+	conn, err := clickhouse.Open(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -97,27 +109,64 @@ func (s *LogStore) GetRecentLogs(limit int) ([]LogEntry, error) {
 	return logs, nil
 }
 
-func (s *LogStore) QueryLogs(limit int, level string, search string) ([]LogEntry, error) {
-	if limit <= 0 {
-		limit = 100
+type LogFilter struct {
+	Limit      int
+	Level      string
+	Host       string
+	Service    string
+	SearchTerm string
+	Before     time.Time
+	After      time.Time
+	Order      string // "DESC" or "ASC"
+}
+
+func (s *LogStore) QueryLogs(filter LogFilter) ([]LogEntry, error) {
+	if filter.Limit <= 0 {
+		filter.Limit = 100
 	}
 	
 	query := "SELECT timestamp, host, service, level, message, source_path FROM datavast.logs WHERE 1=1"
 	var args []interface{}
 
-	if level != "" && level != "ALL" {
+    if filter.Host != "" {
+        query += " AND host = ?"
+        args = append(args, filter.Host)
+    }
+
+	if filter.Level != "" && filter.Level != "ALL" {
 		query += " AND level = ?"
-		args = append(args, level)
+		args = append(args, filter.Level)
+	}
+	
+	if filter.Service != "" {
+	    query += " AND (service ILIKE ? OR source_path ILIKE ?)"
+	    pattern := "%" + filter.Service + "%"
+	    args = append(args, pattern, pattern)
+	}
+	
+	if !filter.Before.IsZero() {
+	    query += " AND timestamp < ?"
+	    args = append(args, filter.Before)
+	}
+	
+	if !filter.After.IsZero() {
+	    query += " AND timestamp > ?"
+	    args = append(args, filter.After)
 	}
 
-	if search != "" {
-		query += " AND (message ILIKE ? OR source_path ILIKE ?)"
+	if filter.SearchTerm != "" {
+		query += " AND (message ILIKE ? OR source_path ILIKE ? OR host ILIKE ?)"
 		// ILIKE is case insensitive in ClickHouse
-		pattern := "%" + search + "%"
-		args = append(args, pattern, pattern)
+		pattern := "%" + filter.SearchTerm + "%"
+		args = append(args, pattern, pattern, pattern)
 	}
 
-	query += fmt.Sprintf(" ORDER BY timestamp DESC LIMIT %d", limit)
+    order := "DESC"
+    if filter.Order == "ASC" {
+        order = "ASC"
+    }
+
+	query += fmt.Sprintf(" ORDER BY timestamp %s LIMIT %d", order, filter.Limit)
 
 	rows, err := s.conn.Query(context.Background(), query, args...)
 	if err != nil {

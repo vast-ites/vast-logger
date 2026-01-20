@@ -7,7 +7,7 @@ const Infrastructure = () => {
 
     const fetchContainers = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/v1/metrics/containers');
+            const res = await fetch('/api/v1/metrics/containers');
             if (res.ok) {
                 const data = await res.json();
                 setContainers(data || []);

@@ -9,7 +9,7 @@ const Security = () => {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/v1/metrics/history?duration=30m');
+            const res = await fetch('/api/v1/metrics/history?duration=30m');
             if (res.ok) {
                 const data = await res.json();
                 // Map data

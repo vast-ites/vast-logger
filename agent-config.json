@@ -1,0 +1,16 @@
+{
+  "server_url": "http://localhost:8080",
+  "agent_id": "agent-final-test",
+  "agent_secret": "7pTH2^BDRksSPyEYkjQS45OwUWlV$yKj",
+  "collectors": {
+    "system": true,
+    "docker": true,
+    "kubernetes": false,
+    "nginx": false,
+    "apache": false,
+    "pm2": false
+  },
+  "log_config": {
+    "mode": "all"
+  }
+}

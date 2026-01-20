@@ -30,8 +30,9 @@ func NewMetricsStore(url, token, org, bucket string) *MetricsStore {
 	}
 }
 
-func (s *MetricsStore) WriteSystemMetric(cpu, mem, disk float64, sent, recv uint64, recvRate float64, ddosStatus string) error {
+func (s *MetricsStore) WriteSystemMetric(host string, cpu, mem, disk float64, sent, recv uint64, recvRate float64, ddosStatus string) error {
 	p := influxdb2.NewPointWithMeasurement("system")
+    p.AddTag("host", host)
 	p.AddField("cpu_percent", cpu)
 	p.AddField("memory_usage", mem)
 	p.AddField("disk_usage", disk)
@@ -41,7 +42,6 @@ func (s *MetricsStore) WriteSystemMetric(cpu, mem, disk float64, sent, recv uint
     p.AddField("ddos_status", ddosStatus)
 	p.SetTime(time.Now())
 
-    // fmt.Printf("Writing Point: %+v\n", p)
 	return s.writeAPI.WritePoint(context.Background(), p)
 }
 
@@ -54,14 +54,21 @@ type SystemMetricData struct {
     DDoSStatus string `json:"ddos_status"`
 }
 
-func (s *MetricsStore) GetLatestSystemMetrics() (*SystemMetricData, error) {
+func (s *MetricsStore) GetLatestSystemMetrics(host string) (*SystemMetricData, error) {
+    filter := "|> filter(fn: (r) => r[\"_measurement\"] == \"system\")"
+    if host != "" {
+        filter = fmt.Sprintf(`|> filter(fn: (r) => r["_measurement"] == "system" and r["host"] == "%s")`, host)
+    }
+
 	query := fmt.Sprintf(`
 	from(bucket: "%s")
-	|> range(start: -1m)
-	|> filter(fn: (r) => r["_measurement"] == "system")
-	|> last()
+	|> range(start: -5m)
+	%s
 	|> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-	`, s.bucket)
+    |> group()
+    |> sort(columns: ["_time"], desc: true)
+    |> limit(n: 1)
+	`, s.bucket, filter)
 
 	result, err := s.queryAPI.Query(context.Background(), query)
 	if err != nil {
@@ -98,9 +105,14 @@ func (s *MetricsStore) GetLatestSystemMetrics() (*SystemMetricData, error) {
 	return data, nil
 }
 
-func (s *MetricsStore) GetSystemMetricHistory(duration string) ([]SystemMetricData, error) {
+func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMetricData, error) {
     if duration == "" {
         duration = "15m"
+    }
+
+    hostFilter := ""
+    if host != "" {
+        hostFilter = fmt.Sprintf(`r["host"] == "%s" and `, host)
     }
     
     // Downsample using aggregateWindow
@@ -108,10 +120,10 @@ func (s *MetricsStore) GetSystemMetricHistory(duration string) ([]SystemMetricDa
 	from(bucket: "%s")
 	|> range(start: -%s)
 	|> filter(fn: (r) => r["_measurement"] == "system")
-    |> filter(fn: (r) => r["_field"] == "cpu_percent" or r["_field"] == "memory_usage" or r["_field"] == "disk_usage" or r["_field"] == "net_recv_rate" or r["_field"] == "bytes_sent")
+    |> filter(fn: (r) => %s(r["_field"] == "cpu_percent" or r["_field"] == "memory_usage" or r["_field"] == "disk_usage" or r["_field"] == "net_recv_rate" or r["_field"] == "bytes_sent"))
     |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
 	|> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-	`, s.bucket, duration)
+	`, s.bucket, duration, hostFilter)
 
 	result, err := s.queryAPI.Query(context.Background(), query)
 	if err != nil {
@@ -161,9 +173,35 @@ func (s *MetricsStore) GetSystemMetricHistory(duration string) ([]SystemMetricDa
 	return history, nil
 }
 
+// GetHosts returns a list of unique hosts found in the last hour
+func (s *MetricsStore) GetHosts() ([]string, error) {
+    query := fmt.Sprintf(`
+    from(bucket: "%s")
+    |> range(start: -1h)
+    |> filter(fn: (r) => r["_measurement"] == "system")
+    |> keep(columns: ["host"])
+    |> distinct(column: "host")
+    `, s.bucket)
+
+    result, err := s.queryAPI.Query(context.Background(), query)
+    if err != nil {
+        return nil, err
+    }
+    defer result.Close()
+
+    var hosts []string
+    for result.Next() {
+        if h, ok := result.Record().ValueByKey("host").(string); ok {
+            hosts = append(hosts, h)
+        }
+    }
+    return hosts, nil
+}
+
 // WriteInterfaceMetric writes a single interface's metrics to InfluxDB
-func (s *MetricsStore) WriteInterfaceMetric(name string, bytesSent, bytesRecv uint64) error {
+func (s *MetricsStore) WriteInterfaceMetric(host, name string, bytesSent, bytesRecv uint64) error {
     p := influxdb2.NewPointWithMeasurement("network_interface")
+    p.AddTag("host", host)
     p.AddTag("interface", name)
     p.AddField("bytes_sent", float64(bytesSent))
     p.AddField("bytes_recv", float64(bytesRecv))
@@ -229,8 +267,9 @@ func (s *MetricsStore) GetInterfaceHistory(duration string) ([]InterfaceMetricDa
 
 
 // WriteContainerMetric writes a single container's metrics to InfluxDB
-func (m *MetricsStore) WriteContainerMetric(id, name, image, state, status, ports string, cpu, mem, netRx, netTx float64) error {
+func (m *MetricsStore) WriteContainerMetric(host, id, name, image, state, status, ports string, cpu, mem, netRx, netTx float64) error {
     p := influxdb2.NewPointWithMeasurement("containers").
+        AddTag("host", host).
         AddTag("container_id", id).
         AddTag("container_name", name).
         AddTag("image", image).
@@ -262,19 +301,23 @@ type ContainerMetricData struct {
 }
 
 // GetLatestContainerMetrics returns the latest metrics for each active container
-func (m *MetricsStore) GetLatestContainerMetrics() ([]ContainerMetricData, error) {
+func (m *MetricsStore) GetLatestContainerMetrics(host string) ([]ContainerMetricData, error) {
     // Flux query to get the last record for every container in the last 1 minute
-    // We group by container_id and _field to ensure we get the latest value for EACH field,
-    // essentially finding the latest timestamp for the container provided it's active.
-    // This also deduplicates state changes (e.g. running -> restarting) by taking the absolute last.
+    
+    hostFilter := ""
+    if host != "" {
+        hostFilter = fmt.Sprintf(`|> filter(fn: (r) => r["host"] == "%s")`, host)
+    }
+
     query := fmt.Sprintf(`
     from(bucket: "%s")
     |> range(start: -1m)
     |> filter(fn: (r) => r["_measurement"] == "containers")
+    %s
     |> group(columns: ["container_id", "_field"])
     |> last()
     |> pivot(rowKey:["_time", "container_id", "container_name", "image", "state"], columnKey: ["_field"], valueColumn: "_value")
-    `, m.bucket)
+    `, m.bucket, hostFilter)
 
     result, err := m.queryAPI.Query(context.Background(), query)
     if err != nil {
