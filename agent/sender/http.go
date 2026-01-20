@@ -79,6 +79,29 @@ func (c *Client) SendLog(l *collector.LogLine) error {
 	if err != nil {
 		return err
 	}
-
 	return c.post("/ingest/logs", data)
+}
+
+func (c *Client) SendProcesses(procs []collector.ProcessInfo) error {
+    payload := map[string]interface{}{
+        "host":      c.Hostname,
+        "processes": procs,
+    }
+    data, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+    return c.post("/ingest/processes", data)
+}
+
+func (c *Client) SendFirewall(rules string) error {
+    payload := map[string]interface{}{
+        "host":  c.Hostname,
+        "rules": rules,
+    }
+    data, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+    return c.post("/ingest/firewall", data)
 }

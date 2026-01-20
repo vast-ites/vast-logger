@@ -2,14 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Shield, AlertTriangle, Lock, Unlock, Wifi, Zap } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
+import { useHost } from '../contexts/HostContext';
+
 const Security = () => {
+    const { selectedHost } = useHost();
     const [history, setHistory] = useState([]);
     const [currentStatus, setCurrentStatus] = useState('SAFE');
     const [loading, setLoading] = useState(true);
+    const [firewallRules, setFirewallRules] = useState('Loading firewall configuration...');
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch('/api/v1/metrics/history?duration=30m');
+            const params = selectedHost ? `?host=${selectedHost}` : '';
+            const res = await fetch(`/api/v1/metrics/history${params}&duration=30m`); // Assuming history supports host param now
             if (res.ok) {
                 const data = await res.json();
                 // Map data
@@ -29,8 +34,16 @@ const Security = () => {
                     else setCurrentStatus('SAFE');
                 }
             }
+
+            // Fetch Firewall
+            const resFw = await fetch(`/api/v1/firewall${params}`);
+            if (resFw.ok) {
+                const data = await resFw.json();
+                setFirewallRules(data.rules || 'No active firewall rules found or agent not reporting.');
+            }
         } catch (err) {
             console.error("Failed to fetch security history", err);
+            setFirewallRules("Connection Error: Failed to retrieve firewall rules.");
         } finally {
             setLoading(false);
         }
@@ -38,9 +51,9 @@ const Security = () => {
 
     useEffect(() => {
         fetchHistory();
-        const interval = setInterval(fetchHistory, 2000);
+        const interval = setInterval(fetchHistory, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedHost]);
 
     const isCritical = currentStatus === 'CRITICAL';
     const color = isCritical ? '#ef4444' : (currentStatus === 'WARNING' ? '#f3ff00' : '#0aff0a');
@@ -53,7 +66,7 @@ const Security = () => {
                     Security Operations Center
                 </h1>
                 <div className={`px-4 py-1 rounded border font-mono text-sm font-bold flex items-center gap-2 ${isCritical ? 'bg-red-500/20 text-red-500 border-red-500 animate-pulse' :
-                        (currentStatus === 'WARNING' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500' : 'bg-green-500/20 text-green-500 border-green-500')
+                    (currentStatus === 'WARNING' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500' : 'bg-green-500/20 text-green-500 border-green-500')
                     }`}>
                     {isCritical ? <Unlock size={14} /> : <Lock size={14} />}
                     STATUS: {currentStatus}
@@ -102,6 +115,16 @@ const Security = () => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            </div>
+
+            {/* Firewall Rules */}
+            <div className="glass-panel p-6 rounded-xl border border-cyber-gray flex flex-col">
+                <h3 className="text-lg font-bold text-cyber-cyan mb-4 flex items-center gap-2">
+                    <Lock size={18} /> Host Firewall Configuration
+                </h3>
+                <div className="bg-black/50 p-4 rounded font-mono text-xs text-green-400 overflow-auto max-h-96 whitespace-pre custom-scrollbar border border-white/10">
+                    {firewallRules}
                 </div>
             </div>
         </div>
