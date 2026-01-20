@@ -5,14 +5,18 @@ go 1.25.5
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.42.0
 	github.com/gin-contrib/cors v1.7.6
+	github.com/gin-contrib/static v1.1.5
 	github.com/gin-gonic/gin v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
+	github.com/pquerna/otp v1.5.0
 )
 
 require (
 	github.com/ClickHouse/ch-go v0.69.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/bytedance/sonic v1.14.0 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

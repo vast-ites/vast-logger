@@ -28,7 +28,7 @@ func FindLogs() ([]DiscoveredLog, error) {
     }
     
     for _, path := range priorityLogs {
-        if _, err := os.Stat(path); err == nil {
+        if canRead(path) {
              logs = append(logs, DiscoveredLog{
                 Path: path,
                 SourceType: "high_priority_system",
@@ -42,7 +42,7 @@ func FindLogs() ([]DiscoveredLog, error) {
 	procLogs, err := scanProcForOpenLogs()
 	if err == nil {
 		for _, log := range procLogs {
-			if !seen[log.Path] {
+			if !seen[log.Path] && canRead(log.Path) {
 				logs = append(logs, log)
 				seen[log.Path] = true
 			}
@@ -121,6 +121,16 @@ func scanProcForOpenLogs() ([]DiscoveredLog, error) {
 	return results, nil
 }
 
+// Helper to check read permissions
+func canRead(path string) bool {
+    f, err := os.Open(path)
+    if err != nil {
+        return false
+    }
+    f.Close()
+    return true
+}
+
 func scanDirectory(root string) []DiscoveredLog {
 	var results []DiscoveredLog
 	
@@ -137,13 +147,45 @@ func scanDirectory(root string) []DiscoveredLog {
 		}
 
 		if strings.HasSuffix(info.Name(), ".log") {
-			results = append(results, DiscoveredLog{
-				Path:       path,
-				SourceType: "filesystem_scan",
-			})
+            if canRead(path) {
+                results = append(results, DiscoveredLog{
+                    Path:       path,
+                    SourceType: "filesystem_scan",
+                })
+            }
 		}
 		return nil
 	})
 
 	return results
+}
+
+// FindServiceLogs looks for standard service logs
+func FindServiceLogs(service string) []DiscoveredLog {
+    var logs []DiscoveredLog
+    var patterns []string
+    
+    switch service {
+    case "nginx":
+        patterns = []string{"/var/log/nginx/*.log"}
+    case "apache":
+        patterns = []string{"/var/log/apache2/*.log", "/var/log/httpd/*.log"}
+    case "pm2":
+        home, _ := os.UserHomeDir()
+        patterns = []string{filepath.Join(home, ".pm2/logs/*.log")}
+    }
+    
+    for _, pattern := range patterns {
+        matches, _ := filepath.Glob(pattern)
+        for _, path := range matches {
+            if canRead(path) {
+                logs = append(logs, DiscoveredLog{
+                    Path: path,
+                    SourceType: "service_preset:" + service,
+                    ProcessName: service,
+                })
+            }
+        }
+    }
+    return logs
 }

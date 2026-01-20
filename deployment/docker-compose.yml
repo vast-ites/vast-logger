@@ -5,8 +5,8 @@ services:
     image: clickhouse/clickhouse-server
     container_name: datavast-clickhouse
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
     environment:
       - CLICKHOUSE_USER=datavast
       - CLICKHOUSE_PASSWORD=securepass
@@ -22,7 +22,7 @@ services:
     image: influxdb:latest
     container_name: datavast-influxdb
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin

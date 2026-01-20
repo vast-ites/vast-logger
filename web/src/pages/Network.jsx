@@ -9,7 +9,7 @@ const Network = () => {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/v1/metrics/interfaces/history?duration=15m');
+            const res = await fetch('/api/v1/metrics/interfaces/history?duration=15m');
             if (res.ok) {
                 const rawData = await res.json();
 

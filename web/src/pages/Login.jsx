@@ -1,0 +1,99 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Shield, Lock, AlertTriangle } from 'lucide-react';
+
+const Login = () => {
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('role', 'admin');
+                navigate('/settings'); // Redirect to settings or dashboard
+            } else {
+                setError('Access Denied: Invalid Credentials');
+            }
+        } catch (err) {
+            setError('Connection Failure: Server Unreachable');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-cyber-black p-4 relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-800/20 via-black to-black" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyber-cyan to-transparent opacity-50 animate-scan" />
+
+            <div className="max-w-md w-full glass-panel p-8 rounded-xl border border-cyber-gray relative z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <div className="flex flex-col items-center mb-8">
+                    <div className="w-16 h-16 bg-cyber-black rounded-full border border-cyber-cyan flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(0,243,255,0.2)]">
+                        <Shield className="text-cyber-cyan w-8 h-8" />
+                    </div>
+                    <h1 className="text-2xl font-display font-bold text-white tracking-widest">SECURE LOGIN</h1>
+                    <p className="text-gray-500 text-xs font-mono mt-2">RESTRICTED ACCESS ONLY</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-xs font-mono text-cyber-cyan flex items-center gap-2">
+                            <Lock size={12} /> ENTER PASSPHRASE
+                        </label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full bg-black/50 border border-cyber-gray rounded p-3 text-white focus:border-cyber-cyan focus:outline-none focus:ring-1 focus:ring-cyber-cyan font-mono transition-all"
+                            placeholder="••••••••••••"
+                            autoFocus
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="p-3 bg-red-900/20 border border-red-500/50 rounded flex items-center gap-2 text-red-500 text-xs font-mono">
+                            <AlertTriangle size={14} />
+                            {error}
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className={`w-full py-3 px-4 rounded font-bold text-sm tracking-wider transition-all
+                            ${loading
+                                ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                : 'bg-cyber-cyan text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,243,255,0.4)]'
+                            }`}
+                    >
+                        {loading ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
+                    </button>
+                </form>
+
+                <div className="mt-8 pt-6 border-t border-gray-800 text-center">
+                    <p className="text-[10px] text-gray-600 font-mono">
+                        SYSTEM ID: DATAVAST-CORE-V1 <br />
+                        IP: {window.location.hostname}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Login;

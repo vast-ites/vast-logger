@@ -1,6 +1,8 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Activity, Server, Shield, Globe, Terminal, Settings } from 'lucide-react';
+import { useHost } from '../contexts/HostContext';
+import ConnectAgentModal from './ConnectAgentModal';
 
 const SidebarItem = ({ icon: Icon, label, to }) => (
     <NavLink
@@ -17,7 +19,11 @@ const SidebarItem = ({ icon: Icon, label, to }) => (
     </NavLink>
 );
 
-const Layout = ({ children }) => {
+const Layout = () => {
+    const { selectedHost, setSelectedHost, hosts } = useHost();
+    const navigate = useNavigate();
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+
     return (
         <div className="flex h-screen bg-cyber-black text-white selection:bg-cyber-cyan/30">
             {/* Sidebar */}
@@ -59,10 +65,26 @@ const Layout = ({ children }) => {
                 <header className="h-16 border-b border-cyber-gray flex items-center justify-between px-6 bg-cyber-black/80 backdrop-blur-sm z-10">
                     <div className="flex items-center gap-4">
                         <span className="text-cyber-green font-mono text-xs animate-pulse">● SYSTEM STABLE</span>
+
+                        {/* Host Selector */}
+                        <div className="flex items-center gap-2 ml-4 border-l border-gray-700 pl-4">
+                            <span className="text-xs text-gray-500 font-mono uppercase">Target Node:</span>
+                            <select
+                                value={selectedHost}
+                                onChange={(e) => setSelectedHost(e.target.value)}
+                                className="bg-black/50 border border-cyber-cyan/30 rounded px-2 py-1 text-xs font-mono text-cyber-cyan focus:outline-none focus:border-cyber-cyan"
+                            >
+                                <option value="">SELECT SOURCE...</option>
+                                {hosts.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                        </div>
                     </div>
 
                     <div className="flex gap-4">
-                        <button className="px-4 py-1.5 border border-cyber-cyan/30 text-cyber-cyan font-mono text-xs hover:bg-cyber-cyan/10 transition-colors uppercase rounded">
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="px-4 py-1.5 border border-cyber-cyan/30 text-cyber-cyan font-mono text-xs hover:bg-cyber-cyan/10 transition-colors uppercase rounded"
+                        >
                             Add Data Source
                         </button>
                     </div>
@@ -70,9 +92,11 @@ const Layout = ({ children }) => {
 
                 {/* Content Area */}
                 <div className="flex-1 overflow-auto p-6 z-10 custom-scrollbar">
-                    {children}
+                    <Outlet />
                 </div>
             </main>
+
+            <ConnectAgentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </div>
     );
 };
