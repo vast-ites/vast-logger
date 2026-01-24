@@ -58,3 +58,6 @@ agent.log
 # Temp
 _deployment_temp
 web/dist
+
+# Analysis & Reports
+DEPLOYMENT_ANALYSIS.md

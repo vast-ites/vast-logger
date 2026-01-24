@@ -1,53 +1,8 @@
 import React from 'react';
 import { Cpu, HardDrive, Zap, Network } from 'lucide-react';
+import { OverviewCard } from '../components/widgets/OverviewCard';
 
-const StatCard = ({ title, value, unit, icon: Icon, color }) => {
-    const colorMap = {
-        'cyber-cyan': '#00f3ff',
-        'cyber-magenta': '#ff00ff',
-        'cyber-green': '#0aff0a',
-        'cyber-yellow': '#f3ff00',
-    };
 
-    // Static class mapping for Tailwind to detect
-    const textClassMap = {
-        'cyber-cyan': 'text-cyber-cyan',
-        'cyber-magenta': 'text-cyber-magenta',
-        'cyber-green': 'text-cyber-green',
-        'cyber-yellow': 'text-cyber-yellow',
-    };
-
-    const hex = colorMap[color] || '#00f3ff';
-    const textClass = textClassMap[color] || 'text-cyber-cyan';
-
-    return (
-        <div className="glass-panel p-5 rounded-xl relative overflow-hidden group">
-            <div className={`absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity ${textClass}`}>
-                <Icon size={60} />
-            </div>
-            <div className="relative z-10">
-                <h3 className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-1">{title}</h3>
-                <div className="flex items-baseline gap-1">
-                    <span className={`text-3xl font-bold font-mono ${textClass} text-shadow-neon`}>{value}</span>
-                    <span className="text-sm text-gray-500 font-mono">{unit}</span>
-                </div>
-            </div>
-            {/* Animated bar */}
-            <div className="mt-4 h-1 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                    className="h-full relative shadow-[0_0_10px_var(--shadow-color)]"
-                    style={{
-                        width: `${value}%`,
-                        backgroundColor: hex,
-                        '--shadow-color': hex
-                    }}
-                >
-                    <div className="absolute inset-0 bg-white/30 animate-pulse" />
-                </div>
-            </div>
-        </div>
-    );
-};
 
 import { useHost } from '../contexts/HostContext';
 
@@ -59,7 +14,8 @@ const Dashboard = () => {
         mem: 0,
         disk: 0,
         net_sent_rate: 0,
-        net_recv_rate: 0
+        net_recv_rate: 0,
+        process_raw: ""
     });
 
     const [logs, setLogs] = React.useState([]);
@@ -191,10 +147,34 @@ const Dashboard = () => {
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="CPU Usage" value={metrics.cpu.toFixed(1)} unit="%" icon={Cpu} color="cyber-cyan" />
-                <StatCard title="Memory" value={metrics.mem.toFixed(1)} unit="%" icon={Zap} color="cyber-magenta" />
-                <StatCard title="Disk Usage" value={metrics.disk.toFixed(1)} unit="%" icon={HardDrive} color="cyber-green" />
-                <StatCard title="Net Flow" value={formatNetRate(totalNetFlow)} unit="" icon={Network} color="cyber-yellow" />
+                <OverviewCard
+                    label="SYSTEM UPTIME"
+                    value="2.8h"
+                    subValue="↑ 100% vs last hour"
+                    icon={Cpu}
+                    color="cyan"
+                />
+                <OverviewCard
+                    label="AVG CPU LOAD"
+                    value={`${metrics.cpu.toFixed(1)}%`}
+                    subValue="-- vs last hour"
+                    icon={Cpu}
+                    color="green"
+                />
+                <OverviewCard
+                    label="MEMORY USAGE"
+                    value={`${metrics.mem.toFixed(1)}%`}
+                    subValue={`${((metrics.mem / 100) * 16).toFixed(1)} GB (Est)`} // Est based on 16GB avg
+                    icon={Zap}
+                    color="violet"
+                />
+                <OverviewCard
+                    label="DISK USAGE"
+                    value={`${metrics.disk.toFixed(1)}%`}
+                    subValue={`${((metrics.disk / 100) * 200).toFixed(0)} GB (Est)`} // Est based on 200GB avg
+                    icon={HardDrive}
+                    color="green"
+                />
             </div>
 
             {/* Live Log Stream & Containers */}
@@ -277,39 +257,28 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Top Processes */}
+            {/* Top Processes (Live Terminal) */}
             <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
                 <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
-                    <h3 className="font-mono text-sm text-cyber-cyan uppercase">Top System Processes (by CPU)</h3>
-                    <span className="text-xs font-mono text-gray-500">{processes.length} Active</span>
+                    <h3 className="font-mono text-sm text-cyber-cyan uppercase">Live Terminal (top)</h3>
+                    <div className="flex gap-2">
+                        <span className="text-[10px] font-mono text-green-400 animate-pulse">● LIVE</span>
+                    </div>
                 </div>
-                <div className="flex-1 bg-black/40 overflow-auto custom-scrollbar">
-                    <table className="w-full text-left font-mono text-xs">
-                        <thead>
-                            <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-black/20 sticky top-0 backdrop-blur-md">
-                                <th className="p-3">PID</th>
-                                <th className="p-3">USER</th>
-                                <th className="p-3">NAME</th>
-                                <th className="p-3">CPU %</th>
-                                <th className="p-3">MEM %</th>
-                                <th className="p-3">COMMAND</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {processes.map((p, i) => (
-                                <tr key={i} className="border-b border-cyber-gray/20 hover:bg-cyber-gray/10 transition-colors">
-                                    <td className="p-3 text-gray-400">{p.pid}</td>
-                                    <td className="p-3 text-cyber-green">{p.username}</td>
-                                    <td className="p-3 font-bold text-white">{p.name}</td>
-                                    <td className="p-3 text-cyber-cyan font-bold">{p.cpu_percent.toFixed(1)}%</td>
-                                    <td className="p-3 text-cyber-magenta">{p.memory_percent.toFixed(1)}%</td>
-                                    <td className="p-3 text-gray-500 truncate max-w-md" title={p.cmdline}>
-                                        {p.cmdline}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="flex-1 bg-black p-4 overflow-auto custom-scrollbar">
+                    <pre className="font-mono text-[10px] text-green-400 whitespace-pre-wrap leading-snug">
+                        {metrics.process_raw ? metrics.process_raw
+                            .replace(/\\\\n/g, '\n') // Handle double escaped
+                            .replace(/\\n/g, '\n')   // Handle single escaped
+                            .replace(/\\t/g, '\t')   // Handle tabs
+                            : (
+                                <span className="text-gray-500 italic">
+                                    No live terminal data received.<br />
+                                    1. Ensure Host Agent is updated (v2.2+).<br />
+                                    2. Select a specific Host from the Sidebar.
+                                </span>
+                            )}
+                    </pre>
                 </div>
             </div>
 

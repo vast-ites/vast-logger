@@ -43,17 +43,28 @@ func (c *Client) post(endpoint string, data []byte) error {
     return nil
 }
 
-func (c *Client) SendMetrics(m *collector.SystemMetrics, containers []collector.ContainerMetric) error {
+func (c *Client) SendMetrics(m *collector.SystemMetrics, containers []collector.ContainerMetric, processRaw string) error {
 	payload := map[string]interface{}{
         "host":          c.Hostname,
+        "process_raw":   processRaw,
 		"cpu_percent":   m.CPUPercent,
+		"cpu_count":     m.CPUCount,
+        "cpu_physical":  m.CPUPhysical,
+        "cpu_model":     m.CPUModel,
+        "cpu_freq":      m.CPUFreq,
 		"memory_usage":  m.MemoryUsage,
+		"memory_total":  m.MemoryTotal,
+        "swap_usage":    m.SwapUsage,
+        "swap_total":    m.SwapTotal,
 		"disk_usage":    m.DiskUsage,
+		"disk_total":    m.DiskTotal,
+        "partitions":    m.Partitions,
 		"bytes_sent":    m.BytesSent,
 		"bytes_recv":    m.BytesRecv,
         "net_recv_rate": m.NetRecvRate,
-        "ddos_status":   m.DDoSStatus,
+        "net_sent_rate": m.NetSentRate,
         "interfaces":    m.Interfaces,
+		"ddos_status":   m.DDoSStatus,
         "containers":    containers,
 	}
 

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+    "encoding/json"
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -30,16 +31,40 @@ func NewMetricsStore(url, token, org, bucket string) *MetricsStore {
 	}
 }
 
-func (s *MetricsStore) WriteSystemMetric(host string, cpu, mem, disk float64, sent, recv uint64, recvRate float64, ddosStatus string) error {
+func (s *MetricsStore) WriteSystemMetric(
+    host string, 
+    cpu float64, cpuCount int, cpuPhysical int, cpuModel string, cpuFreq float64,
+    mem float64, memTotal uint64, swapUsage float64, swapTotal uint64,
+    disk float64, diskTotal uint64, partitionsJSON string,
+    sent, recv uint64, recvRate, sentRate float64,
+    diskReadRate, diskWriteRate, diskReadIOPS, diskWriteIOPS float64,
+    interfacesJSON string, ddosStatus, processRaw string,
+) error {
 	p := influxdb2.NewPointWithMeasurement("system")
     p.AddTag("host", host)
 	p.AddField("cpu_percent", cpu)
+	p.AddField("cpu_count", cpuCount)
+    p.AddField("cpu_physical", cpuPhysical)
+    p.AddField("cpu_model", cpuModel)
+    p.AddField("cpu_freq", cpuFreq)
 	p.AddField("memory_usage", mem)
+	p.AddField("memory_total", float64(memTotal))
+    p.AddField("swap_usage", swapUsage)
+    p.AddField("swap_total", float64(swapTotal))
 	p.AddField("disk_usage", disk)
+	p.AddField("disk_total", float64(diskTotal))
+    p.AddField("partitions", partitionsJSON)
 	p.AddField("bytes_sent", float64(sent))
 	p.AddField("bytes_recv", float64(recv))
     p.AddField("net_recv_rate", recvRate)
-    p.AddField("ddos_status", ddosStatus)
+    p.AddField("net_sent_rate", sentRate)
+    p.AddField("disk_read_rate", diskReadRate)
+    p.AddField("disk_write_rate", diskWriteRate)
+    p.AddField("disk_read_iops", diskReadIOPS)
+    p.AddField("disk_write_iops", diskWriteIOPS)
+    p.AddField("interfaces", interfacesJSON)
+	p.AddField("ddos_status", ddosStatus)
+    p.AddField("process_raw", processRaw)
 	p.SetTime(time.Now())
 
 	return s.writeAPI.WritePoint(context.Background(), p)
@@ -47,11 +72,27 @@ func (s *MetricsStore) WriteSystemMetric(host string, cpu, mem, disk float64, se
 
 type SystemMetricData struct {
 	CPU      float64 `json:"cpu"`
+    CPUCount int     `json:"cpu_count"`
+    CPUPhysical int  `json:"cpu_physical"`
+    CPUModel string  `json:"cpu_model"`
+    CPUFreq  float64 `json:"cpu_freq"`
 	Mem      float64 `json:"mem"`
+    MemTotal uint64  `json:"mem_total"`
+    SwapUsage float64 `json:"swap_usage"`
+    SwapTotal uint64  `json:"swap_total"`
 	Disk     float64 `json:"disk"`
-	NetSent  float64 `json:"net_sent_rate"` // bytes/sec
-	NetRecv  float64 `json:"net_recv_rate"` // bytes/sec
-    DDoSStatus string `json:"ddos_status"`
+    DiskTotal uint64 `json:"disk_total"`
+    Partitions interface{} `json:"partitions"`
+    NetRecvRate float64 `json:"net_recv_rate"`
+    NetSentRate float64 `json:"net_sent_rate"`
+    DiskReadRate float64 `json:"disk_read_rate"`
+    DiskWriteRate float64 `json:"disk_write_rate"`
+    DiskReadIOPS float64 `json:"disk_read_iops"`
+    DiskWriteIOPS float64 `json:"disk_write_iops"`
+    Interfaces interface{} `json:"interfaces"`
+	DDoSStatus string      `json:"ddos_status"`
+    ProcessRaw string      `json:"process_raw"`
+    Timestamp  time.Time   `json:"timestamp"`
 }
 
 func (s *MetricsStore) GetLatestSystemMetrics(host string) (*SystemMetricData, error) {
@@ -90,19 +131,50 @@ func (s *MetricsStore) GetLatestSystemMetrics(host string) (*SystemMetricData, e
             if v, ok := record.ValueByKey(k).(string); ok { return v }
             return ""
         }
+        getInt := func(k string) int {
+            if v, ok := record.ValueByKey(k).(int64); ok { return int(v) }
+            if v, ok := record.ValueByKey(k).(float64); ok { return int(v) }
+            return 0
+        }
+        getJSON := func(k string) interface{} {
+            str := getString(k)
+            if str == "" { return nil }
+            var out interface{}
+            json.Unmarshal([]byte(str), &out)
+            return out
+        }
 
         data.CPU = getFloat("cpu_percent")
+        data.CPUCount = getInt("cpu_count")
+        data.CPUPhysical = getInt("cpu_physical")
+        data.CPUModel = getString("cpu_model")
+        data.CPUFreq = getFloat("cpu_freq")
         data.Mem = getFloat("memory_usage")
+        data.MemTotal = uint64(getFloat("memory_total"))
+        data.SwapUsage = getFloat("swap_usage")
+        data.SwapTotal = uint64(getFloat("swap_total"))
         data.Disk = getFloat("disk_usage")
-        data.NetRecv = getFloat("net_recv_rate")
+        data.DiskTotal = uint64(getFloat("disk_total"))
+        data.Partitions = getJSON("partitions")
+        data.NetRecvRate = getFloat("net_recv_rate")
+        data.NetSentRate = getFloat("net_sent_rate")
+        data.DiskReadRate = getFloat("disk_read_rate")
+        data.DiskWriteRate = getFloat("disk_write_rate")
+        data.DiskReadIOPS = getFloat("disk_read_iops")
+        data.DiskWriteIOPS = getFloat("disk_write_iops")
+        data.Interfaces = getJSON("interfaces")
         data.DDoSStatus = getString("ddos_status")
-	}
-
-	if result.Err() != nil {
+        data.ProcessRaw = getString("process_raw")
+        data.Timestamp = record.Time()
+        
+        return data, nil
+    }
+    
+    if result.Err() != nil {
 		return nil, result.Err()
 	}
 
-	return data, nil
+    return nil, fmt.Errorf("no data found")
 }
 
 func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMetricData, error) {
@@ -120,7 +192,7 @@ func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMe
 	from(bucket: "%s")
 	|> range(start: -%s)
 	|> filter(fn: (r) => r["_measurement"] == "system")
-    |> filter(fn: (r) => %s(r["_field"] == "cpu_percent" or r["_field"] == "memory_usage" or r["_field"] == "disk_usage" or r["_field"] == "net_recv_rate" or r["_field"] == "bytes_sent"))
+    |> filter(fn: (r) => r["_field"] == "cpu_percent" or r["_field"] == "memory_usage" or r["_field"] == "disk_usage" or r["_field"] == "net_recv_rate" or r["_field"] == "bytes_sent" or r["_field"] == "disk_read_rate" or r["_field"] == "disk_write_rate")
     |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
 	|> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
 	`, s.bucket, duration, hostFilter)
@@ -148,15 +220,10 @@ func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMe
             CPU: getFloat("cpu_percent"),
             Mem: getFloat("memory_usage"),
             Disk: getFloat("disk_usage"),
-            NetRecv: getFloat("net_recv_rate"),
-            NetSent: getFloat("bytes_sent"), // Warning: bytes_sent aggregate might be weird if not rate. 
-            // Actually, net_recv_rate IS a rate. bytes_sent is a counter? 
-            // In agent/collector/system.go: BytesSent is netStat[0].BytesSent (Counter).
-            // We should ideally calculate rate for sent too, but for now let's just use what we have.
-            // Wait, for Network Graph, we need RATE. 
-            // net_recv_rate IS stored as rate.
-            // bytes_sent IS stored as counter. We can't avg a counter easily to get rate without derivative.
-            // Let's stick to NetRecv for now since that's what we focused on for DDoS.
+            NetRecvRate: getFloat("net_recv_rate"),
+            NetSentRate: getFloat("net_sent_rate"), 
+            DiskReadRate: getFloat("disk_read_rate"),
+            DiskWriteRate: getFloat("disk_write_rate"),
             DDoSStatus: getString("ddos_status"), 
             // Note: ddos_status is string, mean() on string won't work? 
             // Flux aggregateWindow on strings usually takes the first or last if not numeric? 

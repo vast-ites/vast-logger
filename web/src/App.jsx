@@ -3,12 +3,16 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Logs from './pages/Logs';
-import Infrastructure from './pages/Infrastructure';
-import Network from './pages/Network';
 import Security from './pages/Security';
 import Settings from './pages/Settings';
 
 import Login from './pages/Login';
+
+import { Servers } from './pages/Servers';
+import { CpuPage } from './pages/Cpu';
+import { MemoryPage } from './pages/Memory';
+import { Storage } from './pages/Storage';
+import { NetworkPage } from './pages/Network';
 
 import { HostProvider } from './contexts/HostContext';
 
@@ -41,22 +45,51 @@ function App() {
                 </PrivateRoute>
               }
             />
-            <Route
-              path="infrastructure"
-              element={
-                <PrivateRoute>
-                  <Infrastructure />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="network"
-              element={
-                <PrivateRoute>
-                  <Network />
-                </PrivateRoute>
-              }
-            />
+
+            {/* Infrastructure Routes */}
+            <Route path="infrastructure">
+              <Route
+                index
+                element={
+                  <PrivateRoute>
+                    <Servers />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="cpu"
+                element={
+                  <PrivateRoute>
+                    <CpuPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="memory"
+                element={
+                  <PrivateRoute>
+                    <MemoryPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="storage"
+                element={
+                  <PrivateRoute>
+                    <Storage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="network"
+                element={
+                  <PrivateRoute>
+                    <NetworkPage />
+                  </PrivateRoute>
+                }
+              />
+            </Route>
+
             <Route
               path="security"
               element={

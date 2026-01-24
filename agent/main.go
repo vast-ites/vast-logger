@@ -21,9 +21,11 @@ import (
 
 func main() {
     setupMode := flag.Bool("setup", false, "Run interactive setup")
+    hostFlag := flag.String("host", "", "Override Hostname")
     flag.Parse()
 
 	fmt.Println("🚀 DataVast Agent Starting... [Sci-Fi Mode]")
+    log.Println(">> DataVast Agent v2.2.0 (Phase 19 - Full Dynamic Metrics)")
     
     // Load Config
     cfg, err := config.LoadConfig()
@@ -47,6 +49,17 @@ func main() {
         }
     } else {
         fmt.Println(">> Loaded Config for Agent:", cfg.AgentID)
+    }
+
+    // Hostname Override / Fallback
+    if *hostFlag != "" {
+        cfg.AgentID = *hostFlag
+        fmt.Println(">> Hostname Overridden via Flag:", cfg.AgentID)
+    } else if cfg.AgentID == "" {
+        // Fallback to OS hostname if no config and no flag
+        h, _ := os.Hostname()
+        cfg.AgentID = h
+        fmt.Println(">> Using OS Hostname:", cfg.AgentID)
     }
 
 	// Default to enabled if not set (first run or legacy config)
@@ -180,6 +193,7 @@ func main() {
         }
     }()
 
+	var dockerErrorCount int
 	for range ticker.C {
         var metrics *collector.SystemMetrics
         if sysCol != nil {
@@ -196,14 +210,18 @@ func main() {
             // Check sender implementation.
         }
         
-        // Collect Docker Metrics
         var containerMetrics []collector.ContainerMetric
         if dockerCol != nil {
             cMetrics, err := dockerCol.GetContainerMetrics()
             if err != nil {
-                log.Printf("Error collecting container metrics: %v", err)
+                // Suppress Spam: Only log connection errors ONCE per session
+				if dockerErrorCount == 0 {
+                	log.Printf("Warning: Error collecting container metrics: %v (silencing future errors)", err)
+				}
+				dockerErrorCount++
             } else {
                 containerMetrics = cMetrics
+				dockerErrorCount = 0 // Reset on success
             }
         }
         
@@ -213,7 +231,19 @@ func main() {
             // If metrics nil, create dummy/empty?
             if metrics == nil { metrics = &collector.SystemMetrics{} }
             
-    		if err := senderClient.SendMetrics(metrics, containerMetrics); err != nil {
+            // Collect Raw Process for Top
+            var processRaw string
+            if procCol != nil {
+                 raw, err := procCol.CollectRaw()
+                 if err == nil {
+                     processRaw = raw
+                 } else {
+                     processRaw = "Error collecting raw process data: " + err.Error()
+                     log.Printf("CollectRaw Error: %v", err)
+                 }
+            }
+            
+    		if err := senderClient.SendMetrics(metrics, containerMetrics, processRaw); err != nil {
     			log.Printf("Failed to send metrics: %v", err)
     		} else {
 // fmt.Printf("\r>> CPU: %.1f%% | Mem: %.1f%% | Containers: %d  ", 

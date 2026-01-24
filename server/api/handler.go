@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
     "strconv"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/datavast/datavast/server/storage"
     "github.com/datavast/datavast/server/auth"
 	"github.com/gin-gonic/gin"
+    "encoding/json"
     "github.com/golang-jwt/jwt/v5"
 )
 
@@ -18,32 +20,80 @@ type IngestionHandler struct {
     Auth    *auth.AuthManager
 }
 
+type PartitionStat struct {
+    MountPoint string  `json:"mount_point"`
+    Fstype     string  `json:"fstype"`
+    Total      uint64  `json:"total"`
+    Used       uint64  `json:"used"`
+}
+
+type InterfaceStat struct {
+    Name        string `json:"name"`
+    IP          string `json:"ip"`
+    MAC         string `json:"mac"`
+    IsUp        bool   `json:"is_up"` 
+    Speed       string `json:"speed"`
+}
+
+// Define ContainerMetric, ProcessMetric, FirewallStatus if they are not already defined elsewhere
+// For this change, I'll assume they are simple aliases or need to be defined.
+// Based on the instruction "I'll define simplified structs inside handler.go matching agent's JSON."
+// but only PartitionStat and InterfaceStat are provided, I will keep the original anonymous struct for Containers
+// and add placeholder types for ProcessMetric and FirewallStatus if they are not defined.
+// However, the provided diff explicitly changes `Containers []struct{...}` to `Containers []ContainerMetric`.
+// To make the code syntactically correct, I will define placeholder structs for `ContainerMetric`, `ProcessMetric`, and `FirewallStatus`.
+
+type ContainerMetric struct {
+    ID          string  `json:"id"`
+    Name        string  `json:"name"`
+    Image       string  `json:"image"`
+    State       string  `json:"state"`
+    Status      string  `json:"status"`
+    Ports       string  `json:"ports"`
+    CPUPercent  float64 `json:"cpu_percent"`
+    MemoryUsage float64 `json:"memory_usage"`
+    NetRx       float64 `json:"net_rx"`
+    NetTx       float64 `json:"net_tx"`
+}
+
+type ProcessMetric struct {
+    // Define fields for process metric
+    // Example: PID int `json:"pid"`, Name string `json:"name"`
+}
+
+type FirewallStatus struct {
+    // Define fields for firewall status
+    // Example: Rules string `json:"rules"`
+}
+
 type MetricPayload struct {
     Hostname  string  `json:"host"`
 	CPU       float64 `json:"cpu_percent"`
+	CPUCount  int     `json:"cpu_count"`
+    CPUPhysical int   `json:"cpu_physical"`
+    CPUModel  string  `json:"cpu_model"`
+    CPUFreq   float64 `json:"cpu_freq"`
 	Mem       float64 `json:"memory_usage"`
+	MemTotal  uint64  `json:"memory_total"`
+    SwapUsage float64 `json:"swap_usage"`
+    SwapTotal uint64  `json:"swap_total"`
 	Disk      float64 `json:"disk_usage"`
+	DiskTotal uint64  `json:"disk_total"`
+    Partitions []PartitionStat `json:"partitions"`
 	BytesSent uint64  `json:"bytes_sent"`
 	BytesRecv uint64  `json:"bytes_recv"`
     NetRecvRate float64 `json:"net_recv_rate"`
-    DDoSStatus  string  `json:"ddos_status"`
-    Interfaces []struct {
-        Name      string  `json:"name"`
-        BytesSent uint64  `json:"bytes_sent"`
-        BytesRecv uint64  `json:"bytes_recv"`
-    } `json:"interfaces"`
-    Containers []struct {
-        ID          string  `json:"id"`
-        Name        string  `json:"name"`
-        Image       string  `json:"image"`
-        State       string  `json:"state"`
-        Status      string  `json:"status"`
-        Ports       string  `json:"ports"`
-        CPUPercent  float64 `json:"cpu_percent"`
-        MemoryUsage float64 `json:"memory_usage"`
-        NetRx       float64 `json:"net_rx"`
-        NetTx       float64 `json:"net_tx"`
-    } `json:"containers"`
+    NetSentRate float64 `json:"net_sent_rate"`
+    DiskReadRate float64 `json:"disk_read_rate"`
+    DiskWriteRate float64 `json:"disk_write_rate"`
+    DiskReadIOPS float64 `json:"disk_read_iops"`
+    DiskWriteIOPS float64 `json:"disk_write_iops"`
+    Interfaces []InterfaceStat `json:"interfaces"`
+	DDoSStatus string  `json:"ddos_status"`
+    Containers []ContainerMetric `json:"containers"`
+	ProcessList []ProcessMetric  `json:"processes"`
+    ProcessRaw  string           `json:"process_raw"`
+    Firewall    *FirewallStatus  `json:"firewall"`
 }
 
 func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
@@ -52,17 +102,27 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// Debug Logging for Capacity Metrics
+    fmt.Printf("DEBUG INGEST [%s]: CPU_Count=%d Phys=%d Freq=%.2f Parts=%d Ifaces=%d\n", 
+        p.Hostname, p.CPUCount, p.CPUPhysical, p.CPUFreq, len(p.Partitions), len(p.Interfaces))
 
-	if err := h.Metrics.WriteSystemMetric(p.Hostname, p.CPU, p.Mem, p.Disk, p.BytesSent, p.BytesRecv, p.NetRecvRate, p.DDoSStatus); err != nil {
+    // Marshal List Metrics to JSON strings for Influx
+    partitionsJSON, _ := json.Marshal(p.Partitions)
+    interfacesJSON, _ := json.Marshal(p.Interfaces)
+
+	if err := h.Metrics.WriteSystemMetric(
+        p.Hostname, 
+        p.CPU, p.CPUCount, p.CPUPhysical, p.CPUModel, p.CPUFreq,
+        p.Mem, p.MemTotal, p.SwapUsage, p.SwapTotal,
+        p.Disk, p.DiskTotal, string(partitionsJSON),
+        p.BytesSent, p.BytesRecv, p.NetRecvRate, p.NetSentRate,
+        p.DiskReadRate, p.DiskWriteRate, p.DiskReadIOPS, p.DiskWriteIOPS,
+        string(interfacesJSON), p.DDoSStatus, p.ProcessRaw,
+    ); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store metric"})
 		return
 	}
     
-    // Store Interfaces
-    for _, iface := range p.Interfaces {
-        h.Metrics.WriteInterfaceMetric(p.Hostname, iface.Name, iface.BytesSent, iface.BytesRecv)
-    }
-
     // Store Containers
     for _, cnt := range p.Containers {
         h.Metrics.WriteContainerMetric(

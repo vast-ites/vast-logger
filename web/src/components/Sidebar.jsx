@@ -1,0 +1,74 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { Activity, Server, Shield, Globe, Terminal, Settings, Cpu, HardDrive, Zap, CircleDashed } from 'lucide-react';
+
+const SidebarItem = ({ icon: Icon, label, path }) => (
+    <NavLink
+        to={path}
+        className={({ isActive }) => `
+            flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all duration-300
+            ${isActive
+                ? 'bg-cyan-900/20 text-cyan-400 border-l-2 border-cyan-400 shadow-[0_0_15px_rgba(0,243,255,0.1)]'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'}
+        `}
+    >
+        <Icon size={18} />
+        <span className="font-mono text-xs font-bold tracking-widest">{label}</span>
+    </NavLink>
+);
+
+export const Sidebar = () => {
+    return (
+        <aside className="w-64 border-r border-white/5 bg-black/40 backdrop-blur-xl p-4 flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-10 px-2 mt-2">
+                <div className="relative group">
+                    <div className="w-8 h-8 rounded bg-gradient-to-tr from-cyan-400 to-violet-500 flex items-center justify-center relative z-10">
+                        <Activity className="text-black" size={20} />
+                    </div>
+                    <div className="absolute inset-0 bg-cyan-400 blur-lg opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div>
+                    <h1 className="text-xl font-bold text-white tracking-widest font-display">
+                        DataVAST
+                    </h1>
+                    <span className="text-[10px] text-cyan-500 font-mono tracking-[0.2em] relative -top-1 block">
+                        OBSERVABILITY
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="mb-6">
+                    <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Overview</h3>
+                    <SidebarItem icon={Activity} label="Dashboard" path="/" />
+                </div>
+
+                <div className="mb-6">
+                    <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Infrastructure</h3>
+                    <SidebarItem icon={Server} label="Servers" path="/infrastructure" />
+                    <SidebarItem icon={Cpu} label="CPU" path="/infrastructure/cpu" />
+                    <SidebarItem icon={CircleDashed} label="Memory" path="/infrastructure/memory" />
+                    <SidebarItem icon={HardDrive} label="Storage" path="/infrastructure/storage" />
+                    <SidebarItem icon={Globe} label="Network" path="/infrastructure/network" />
+                </div>
+
+                <div className="mb-6">
+                    <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Observability</h3>
+                    <SidebarItem icon={Terminal} label="System Logs" path="/logs" />
+                    <SidebarItem icon={Shield} label="Security" path="/security" />
+                </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+                <SidebarItem icon={Settings} label="Settings" path="/settings" />
+                <div className="px-3 mt-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span className="text-[10px] text-gray-500 font-mono">SYSTEM ONLINE</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    );
+};

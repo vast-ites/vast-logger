@@ -1,138 +1,140 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Activity, ArrowUp, ArrowDown, Zap } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Network, ArrowDown, ArrowUp, Shield } from 'lucide-react';
+import { StatCard } from '../components/widgets/StatCard';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { useHost } from '../contexts/HostContext';
 
-const Network = () => {
+export const NetworkPage = () => {
+    const { selectedHost } = useHost();
+    const [metrics, setMetrics] = useState(null);
     const [history, setHistory] = useState([]);
-    const [interfaces, setInterfaces] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchHistory = async () => {
-        try {
-            const res = await fetch('/api/v1/metrics/interfaces/history?duration=15m');
-            if (res.ok) {
-                const rawData = await res.json();
-
-                // 1. Group by Timestamp
-                const grouped = {};
-                const ifaceSet = new Set();
-
-                rawData.forEach(d => {
-                    const timeKey = new Date(d.time).toLocaleTimeString();
-                    if (!grouped[timeKey]) grouped[timeKey] = { time: timeKey };
-
-                    // Add Interface Data (MB/s)
-                    const rxMB = (d.bytes_recv / (1024 * 1024));
-                    grouped[timeKey][`${d.interface}`] = rxMB;
-                    ifaceSet.add(d.interface);
-                });
-
-                // 2. Convert to Array
-                const chartData = Object.values(grouped);
-                setHistory(chartData);
-                setInterfaces(Array.from(ifaceSet));
-            }
-        } catch (err) {
-            console.error("Failed to fetch history", err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
-        fetchHistory();
-        const interval = setInterval(fetchHistory, 5000);
+        const fetchMetrics = async () => {
+            try {
+                const params = selectedHost ? `?host=${selectedHost}` : '';
+                const res = await fetch(`/api/v1/metrics/system${params}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setMetrics(data);
+
+                    const time = new Date().toLocaleTimeString();
+                    setHistory(prev => [...prev.slice(-60), {
+                        time,
+                        rx: (data.net_recv_rate || 0) / 1024, // KB/s
+                        tx: (data.net_sent_rate || 0) / 1024  // KB/s
+                    }]);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchMetrics();
+        const interval = setInterval(fetchMetrics, 2000); // 2s polling
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedHost]);
 
-    const colors = ["#00f3ff", "#f3ff00", "#ff0099", "#00ff66", "#ffffff"];
+    if (!metrics) return <div className="p-10 text-center text-cyan-400 animate-pulse">Scanning Network Topology...</div>;
 
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-cyber-black border border-cyber-cyan p-2 rounded shadow-[0_0_10px_rgba(0,243,255,0.3)]">
-                    <p className="text-gray-400 text-xs mb-1">{label}</p>
-                    {payload.map((p, i) => (
-                        <p key={i} style={{ color: p.color }} className="text-xs font-mono">
-                            {`${p.name}: ${p.value.toFixed(2)} MB/s`}
-                        </p>
-                    ))}
-                </div>
-            );
-        }
-        return null;
+    const formatSpeed = (bytesPerSec) => {
+        if (!bytesPerSec) return '0 B/s';
+        if (bytesPerSec > 1024 * 1024) return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`;
+        if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+        return `${bytesPerSec.toFixed(0)} B/s`;
     };
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold font-display text-white flex items-center gap-3">
-                    <Globe className="text-cyber-yellow" />
-                    Network Breakdown
-                </h1>
-                <div className="flex gap-4 text-xs font-mono">
-                    {interfaces.map((iface, i) => (
-                        <div key={iface} className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
-                            <span className="text-gray-400 uppercase">{iface}</span>
-                        </div>
-                    ))}
-                </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <Network size={24} className="text-cyan-400" /> Network Traffic
+            </h1>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <StatCard label="Active Interfaces" value={(metrics.interfaces || []).filter(i => i.is_up).length} icon={Network} color="cyan" />
+                <StatCard label="Total Download" value={formatSpeed(metrics.net_recv_rate)} icon={ArrowDown} trend="neutral" color="green" />
+                <StatCard label="Total Upload" value={formatSpeed(metrics.net_sent_rate)} icon={ArrowUp} trend="neutral" color="amber" />
+                <StatCard label="Public Access" value="Secured" icon={Shield} trend="neutral" color="violet" />
             </div>
 
-            {/* Main Graph */}
-            <div className="glass-panel p-6 rounded-xl border border-cyber-gray h-[400px]">
-                <h3 className="text-lg font-bold text-cyber-yellow mb-4 flex items-center gap-2">
-                    <Activity size={18} /> Interface Traffic (Rx)
-                </h3>
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={history}>
-                        <defs>
-                            {interfaces.map((iface, i) => (
-                                <linearGradient key={iface} id={`color-${iface}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={colors[i % colors.length]} stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor={colors[i % colors.length]} stopOpacity={0} />
-                                </linearGradient>
-                            ))}
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey="time" hide />
-                        <YAxis stroke="#666" fontSize={10} tickFormatter={(val) => `${val.toFixed(1)} MB/s`} />
-                        <Tooltip content={<CustomTooltip />} />
-
-                        {interfaces.map((iface, i) => (
-                            <Area
-                                key={iface}
-                                type="monotone"
-                                dataKey={iface}
-                                stroke={colors[i % colors.length]}
-                                fillOpacity={1}
-                                fill={`url(#color-${iface})`}
-                                stackId="1" // Stacked area chart? Or separate? Stacked shows total better.
-                            />
-                        ))}
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="glass-panel p-6 rounded-xl border border-cyber-gray">
-                    <h3 className="text-lg font-bold text-white mb-4">Live Throughput</h3>
-                    <div className="space-y-4">
-                        {interfaces.map((iface, i) => {
-                            const latest = history.length > 0 ? history[history.length - 1][iface] || 0 : 0;
-                            return (
-                                <div key={iface} className="flex items-center justify-between p-3 bg-black/40 rounded border border-gray-800">
-                                    <span className="text-cyber-cyan font-mono">{iface}</span>
-                                    <span className="text-white font-mono text-xl">{latest.toFixed(2)} <span className="text-xs text-gray-500">MB/s</span></span>
-                                </div>
-                            )
-                        })}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96">
+                {/* Main Traffic Chart */}
+                <div className="lg:col-span-2 glass-panel p-4 flex flex-col min-h-0">
+                    <h3 className="text-gray-300 font-semibold text-sm mb-4">Total Bandwidth History (KB/s)</h3>
+                    <div className="flex-1 min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={history}>
+                                <defs>
+                                    <linearGradient id="splitRx" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="splitTx" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis hide />
+                                <YAxis hide />
+                                <Tooltip contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }} />
+                                <Area type="monotone" dataKey="rx" stroke="#22c55e" fill="url(#splitRx)" strokeWidth={2} isAnimationActive={false} name="Download" />
+                                <Area type="monotone" dataKey="tx" stroke="#f59e0b" fill="url(#splitTx)" strokeWidth={2} isAnimationActive={false} name="Upload" />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
+
+                {/* Interface List */}
+                <div className="glass-panel p-4 flex flex-col min-h-0">
+                    <h3 className="text-gray-300 font-semibold text-sm mb-4">Interface Status</h3>
+                    <div className="space-y-3 flex-1 overflow-y-auto min-h-0 scrollbar-thin">
+                        {(metrics.interfaces || []).slice(0, 5).map((iface, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full ${iface.is_up ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
+                                    <div className="overflow-hidden">
+                                        <div className="text-xs font-bold text-gray-200 truncate w-20">{iface.name}</div>
+                                        <div className="text-[10px] text-gray-500 font-mono truncate w-20">{iface.ip || "No IP"}</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] text-green-400">{iface.is_up ? "UP" : "DOWN"}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Detailed Table */}
+            <div className="glass-panel overflow-hidden">
+                <table className="w-full text-left text-sm text-gray-400">
+                    <thead className="bg-white/5 text-gray-300 font-semibold border-b border-white/10">
+                        <tr>
+                            <th className="p-4 w-32">Interface</th>
+                            <th className="p-4 w-24">Type</th>
+                            <th className="p-4">IP Address (v4)</th>
+                            <th className="p-4">MAC Address</th>
+                            <th className="p-4 w-24">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {(metrics.interfaces || []).map((iface, idx) => (
+                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                <td className="p-4 font-mono text-cyan-400">{iface.name}</td>
+                                <td className="p-4">{iface.name === "lo" ? "virtual" : "physical"}</td>
+                                <td className="p-4 font-mono">{iface.ip || "-"}</td>
+                                <td className="p-4 font-mono text-gray-500">{iface.mac || "-"}</td>
+                                <td className="p-4">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] border ${iface.is_up ? 'bg-green-500/20 text-green-400 border-green-500/20' : 'bg-red-500/20 text-red-400 border-red-500/20'}`}>
+                                        {iface.is_up ? "UP" : "DOWN"}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 };
-
-export default Network;
