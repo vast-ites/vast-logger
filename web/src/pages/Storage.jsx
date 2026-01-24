@@ -1,0 +1,155 @@
+import React, { useState, useEffect } from 'react';
+import { HardDrive, FileText, ArrowUp, ArrowDown } from 'lucide-react';
+import { StatCard } from '../components/widgets/StatCard';
+import { useHost } from '../contexts/HostContext';
+
+export const Storage = () => {
+    const { selectedHost } = useHost();
+    const [metrics, setMetrics] = useState(null);
+
+    const [history, setHistory] = useState([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const params = selectedHost ? `?host=${selectedHost}` : '';
+
+                // Fetch Latest
+                const res = await fetch(`/api/v1/metrics/system${params}`);
+                if (res.ok) setMetrics(await res.json());
+
+                // Fetch History (15m)
+                const resHist = await fetch(`/api/v1/metrics/history${params}&duration=15m`);
+                if (resHist.ok) setHistory(await resHist.json());
+
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, 5000);
+        return () => clearInterval(interval);
+    }, [selectedHost]);
+
+    if (!metrics) return <div className="p-10 text-center text-amber-400 animate-pulse">Mounting File Systems...</div>;
+
+    // Use data from Agent if available, otherwise fallback
+    // Dynamic Unit Scaling
+    const totalBytes = metrics.disk_total || 0;
+    const usedBytes = metrics.disk_total ? (metrics.disk / 100) * metrics.disk_total : 0;
+
+    // Choose unit based on total size
+    const isTB = totalBytes > 1024 * 1024 * 1024 * 1024;
+    const unitDivisor = isTB ? (1024 * 1024 * 1024 * 1024) : (1024 * 1024 * 1024);
+    const unitLabel = isTB ? "TB" : "GB";
+
+    const totalSizeDisplay = (totalBytes / unitDivisor).toFixed(1);
+    const usedSizeDisplay = (usedBytes / unitDivisor).toFixed(1);
+
+    const usedPercent = metrics.disk || 0;
+
+    return (
+        <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                <HardDrive size={24} className="text-amber-400" /> Disk & Storage
+            </h1>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <StatCard label="Total Storage" value={`${totalSizeDisplay} ${unitLabel}`} icon={HardDrive} color="amber" />
+                <StatCard label="Used Space" value={`${usedSizeDisplay} ${unitLabel}`} subValue={`${usedPercent.toFixed(1)}%`} icon={FileText} trend="neutral" color="cyan" />
+                <StatCard label="Read IOPS" value={(metrics.disk_read_iops || 0).toFixed(0)} icon={ArrowDown} trend="neutral" color="green" />
+                <StatCard label="Write IOPS" value={(metrics.disk_write_iops || 0).toFixed(0)} icon={ArrowUp} trend="neutral" color="red" />
+            </div>
+
+            <div className="glass-panel p-6">
+                <h3 className="text-gray-300 font-semibold mb-6">Real-Time Disk I/O Throughput (MB/s)</h3>
+                <div className="h-64 flex items-end justify-between gap-1">
+                    {(() => {
+                        // Prepare data
+                        const data = history.slice().reverse(); // History comes sorted desc usually? Wait, Query says sort(desc). So reverse to get old->new. 
+                        // Actually Influx query in GetSystemMetricHistory does NOT have sort(). It relies on aggregateWindow which returns time ascending.
+                        // Let's check handler output manually later. Usually aggregateWindow is time ascending.
+
+                        // Wait, previous OverviewCard graphs relied on `metrics.history`? No, OverviewCard doesn't have graphs.
+                        // ResourceChart.jsx takes `data` prop.
+                        // Here we are building a custom bar chart inline.
+
+                        // We need roughly 60 bars. 
+                        // If history is 15m with 10s window -> 90 points.
+                        // We can take last 60.
+                        const viewData = data.slice(-60);
+
+                        // Find Max for scaling
+                        const maxVal = Math.max(...viewData.map(d => (d.disk_read_rate || 0) + (d.disk_write_rate || 0)), 1); // Avoid div/0
+
+                        return viewData.map((d, i) => {
+                            const read = d.disk_read_rate || 0;
+                            const write = d.disk_write_rate || 0;
+                            const total = read + write;
+                            const h = Math.min((total / maxVal) * 100, 100);
+
+                            // Tooltip content
+                            const tooltip = `R: ${read.toFixed(1)} MB/s | W: ${write.toFixed(1)} MB/s`;
+
+                            return (
+                                <div key={i} className="w-full bg-white/5 rounded-t overflow-hidden relative group" style={{ height: `${h}%` }} title={tooltip}>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/50 to-amber-500/50 opacity-80"></div>
+                                </div>
+                            )
+                        });
+                    })()}
+                    {history.length === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                            Waiting for telemetry data...
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="glass-panel p-6">
+                <h3 className="text-gray-300 font-semibold mb-4">Partition Usage</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-gray-400">
+                        <thead className="text-xs uppercase bg-white/5 text-gray-300">
+                            <tr>
+                                <th className="p-3">Mount Point</th>
+                                <th className="p-3">Type</th>
+                                <th className="p-3">Size</th>
+                                <th className="p-3">Used</th>
+                                <th className="p-3">Availability</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {(metrics.partitions || []).map((disk, idx) => {
+                                const sizeGB = disk.total / (1024 * 1024 * 1024);
+                                const usedGB = disk.used / (1024 * 1024 * 1024);
+                                const usage = disk.total > 0 ? ((disk.used / disk.total) * 100) : 0;
+
+                                return (
+                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                        <td className="p-3 font-mono text-white">{disk.mount_point}</td>
+                                        <td className="p-3">{disk.fstype}</td>
+                                        <td className="p-3">{sizeGB.toFixed(0)} GB</td>
+                                        <td className="p-3">{usedGB.toFixed(0)} GB</td>
+                                        <td className="p-3 w-1/3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full ${usage > 80 ? 'bg-red-500' : 'bg-cyan-400'}`}
+                                                        style={{ width: `${Math.min(usage, 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="w-12 text-right">{usage.toFixed(0)}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};

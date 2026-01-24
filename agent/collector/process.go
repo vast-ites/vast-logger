@@ -3,6 +3,7 @@ package collector
 import (
 	"sort"
 	"strings"
+    "os/exec"
 
 	"github.com/shirou/gopsutil/v3/process"
 )
@@ -59,5 +60,24 @@ func (c *ProcessCollector) Collect() ([]ProcessInfo, error) {
 		results = results[:50]
 	}
 
-	return results, nil
+    return results, nil
+}
+
+func (c *ProcessCollector) CollectRaw() (string, error) {
+    // Use top -b -n 1
+    // Hardcoded absolute path to avoid PATH issues in cron/nohup env
+    // Also include TERM environment variable just in case
+    
+    cmd := exec.Command("bash", "-c", "TERM=xterm /usr/bin/top -b -n 1 -w 512 | head -n 20")
+    
+    out, err := cmd.Output()
+    if err != nil {
+        return "", err
+    }
+    
+    if len(out) == 0 {
+         return "No output from top command", nil
+    }
+
+    return string(out), nil
 }
