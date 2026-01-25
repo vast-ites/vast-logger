@@ -67,18 +67,9 @@ export const Storage = () => {
                 <div className="h-64 flex items-end justify-between gap-1">
                     {(() => {
                         // Prepare data
-                        const data = history.slice().reverse(); // History comes sorted desc usually? Wait, Query says sort(desc). So reverse to get old->new. 
-                        // Actually Influx query in GetSystemMetricHistory does NOT have sort(). It relies on aggregateWindow which returns time ascending.
-                        // Let's check handler output manually later. Usually aggregateWindow is time ascending.
-
-                        // Wait, previous OverviewCard graphs relied on `metrics.history`? No, OverviewCard doesn't have graphs.
-                        // ResourceChart.jsx takes `data` prop.
-                        // Here we are building a custom bar chart inline.
-
-                        // We need roughly 60 bars. 
-                        // If history is 15m with 10s window -> 90 points.
-                        // We can take last 60.
-                        const viewData = data.slice(-60);
+                        // History from API is Ascending (Old -> New).
+                        // We want the LATEST 60 points.
+                        const viewData = history.slice(-60);
 
                         // Find Max for scaling
                         const maxVal = Math.max(...viewData.map(d => (d.disk_read_rate || 0) + (d.disk_write_rate || 0)), 1); // Avoid div/0

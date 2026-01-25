@@ -192,7 +192,7 @@ func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMe
 	from(bucket: "%s")
 	|> range(start: -%s)
 	|> filter(fn: (r) => r["_measurement"] == "system")
-    |> filter(fn: (r) => r["_field"] == "cpu_percent" or r["_field"] == "memory_usage" or r["_field"] == "disk_usage" or r["_field"] == "net_recv_rate" or r["_field"] == "bytes_sent" or r["_field"] == "disk_read_rate" or r["_field"] == "disk_write_rate")
+    |> filter(fn: (r) => %s(r["_field"] == "cpu_percent" or r["_field"] == "memory_usage" or r["_field"] == "disk_usage" or r["_field"] == "net_recv_rate" or r["_field"] == "bytes_sent" or r["_field"] == "disk_read_rate" or r["_field"] == "disk_write_rate"))
     |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
 	|> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
 	`, s.bucket, duration, hostFilter)
@@ -225,11 +225,7 @@ func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMe
             DiskReadRate: getFloat("disk_read_rate"),
             DiskWriteRate: getFloat("disk_write_rate"),
             DDoSStatus: getString("ddos_status"), 
-            // Note: ddos_status is string, mean() on string won't work? 
-            // Flux aggregateWindow on strings usually takes the first or last if not numeric? 
-            // pivot might fail if type mismatch? 
-            // Actually aggregateWindow(fn: mean) will drop strings. 
-            // So ddos_status will be missing. That's fine for history graph.
+            Timestamp: record.Time(),
         })
 	}
 

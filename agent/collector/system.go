@@ -2,6 +2,7 @@ package collector
 
 import (
 	"time"
+    "fmt"
     "runtime"
     "strings"
     "net"
@@ -154,6 +155,12 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
              diskWriteRate = (float64(currentWriteBytes - sc.lastDiskWriteBytes) / deltaTime) / (1024 * 1024)
         }
         
+         // DEBUG: Re-enable for diagnosis
+        if (currentTimestamp % 10 == 0) || (diskWriteRate > 0) || (currentWriteBytes > sc.lastDiskWriteBytes) {
+            fmt.Printf("DEBUG: Cur=%d Last=%d Delta=%d Rate=%.2f TimeDelta=%.2f\n", 
+                currentWriteBytes, sc.lastDiskWriteBytes, currentWriteBytes-sc.lastDiskWriteBytes, diskWriteRate, deltaTime)
+        }
+
         // Disk IOPS
         if currentReadCount >= sc.lastDiskReadCount {
             diskReadIOPS = float64(currentReadCount - sc.lastDiskReadCount) / deltaTime
