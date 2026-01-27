@@ -16,7 +16,7 @@ export const MemoryPage = () => {
                 const res = await fetch(`/api/v1/metrics/system${params}`);
                 if (res.ok) {
                     const data = await res.json();
-                    setMetrics(data); // data has .mem (percentage). Need total/used for proper display.
+                    setMetrics(data); // data has .memory_usage (percentage). Need total/used for proper display.
                     // IMPORTANT: Current API only returns percentage (cpu, mem, disk). 
                     // We need to fetch host info/capacity if possible? 
                     // Or cheat: Assume 16GB total for now to show "GB" values as requested by UI.
@@ -43,10 +43,10 @@ export const MemoryPage = () => {
 
     if (!metrics) return <div className="p-10 text-center text-violet-400 animate-pulse">Allocating Memory Blocks...</div>;
 
-    const totalGB = metrics.mem_total ? (metrics.mem_total / (1024 * 1024 * 1024)).toFixed(1) : 16.0;
-    const usedGB = (metrics.mem / 100) * totalGB;
+    const totalGB = metrics.memory_total ? (metrics.memory_total / (1024 * 1024 * 1024)).toFixed(1) : 16.0;
+    const usedGB = (metrics.memory_usage / 100) * totalGB;
     const freeGB = totalGB - usedGB;
-    const usedPercent = metrics.mem.toFixed(1);
+    const usedPercent = metrics.memory_usage.toFixed(1);
 
     const MEM_BREAKDOWN = [
         { name: 'Active', value: usedGB * 0.8, color: '#bc13fe' },

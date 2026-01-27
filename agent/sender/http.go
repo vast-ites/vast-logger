@@ -68,6 +68,7 @@ func (c *Client) SendMetrics(m *collector.SystemMetrics, containers []collector.
         "net_recv_rate": m.NetRecvRate,
         "net_sent_rate": m.NetSentRate,
         "interfaces":    m.Interfaces,
+        "uptime":        m.Uptime,
 		"ddos_status":   m.DDoSStatus,
         "containers":    containers,
 	}

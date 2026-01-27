@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Server, Cpu, HardDrive, Activity, Plus, Terminal, Key, Lock, Monitor, Laptop, Globe } from 'lucide-react';
+import { Server, Cpu, HardDrive, Activity, Plus, Terminal } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import ConnectAgentModal from '../components/ConnectAgentModal';
 
@@ -12,13 +12,6 @@ export const Servers = () => {
         try {
             const res = await fetch('/api/v1/hosts');
             const data = await res.json();
-            // Data is list of strings (hostnames)
-            // We need to fetch details for each, or maybe backend provides details?
-            // Currently endpoint just returns strings: ["host1", "host2"]
-            // We need to fetch metrics for each to get status.
-
-            // For now, construct agent objects from hostnames and current metrics.
-            // This is "expensive" N+1 but fine for small scale.
 
             const detailedAgents = await Promise.all(data.map(async (hostname) => {
                 try {
@@ -34,11 +27,10 @@ export const Servers = () => {
                         hostname,
                         platform: metrics.host_info?.os || 'Linux',
                         arch: metrics.host_info?.arch || 'amd64',
-                        cpu_percent: metrics.cpu || 0,
-                        mem_percent: metrics.mem || 0,
-                        disk_percent: metrics.disk || 0,
+                        cpu_percent: metrics.cpu_percent || 0,
+                        mem_percent: metrics.memory_usage || 0,
+                        disk_percent: metrics.disk_usage || 0,
                         last_seen: metrics.timestamp,
-                        ip: 'unknown', // not in current metrics
                         status: isOnline ? 'ONLINE' : 'OFFLINE'
                     };
                 } catch (e) {

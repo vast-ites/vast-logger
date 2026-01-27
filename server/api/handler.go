@@ -89,6 +89,7 @@ type MetricPayload struct {
     DiskReadIOPS float64 `json:"disk_read_iops"`
     DiskWriteIOPS float64 `json:"disk_write_iops"`
     Interfaces []InterfaceStat `json:"interfaces"`
+    Uptime     uint64      `json:"uptime"`
 	DDoSStatus string  `json:"ddos_status"`
     Containers []ContainerMetric `json:"containers"`
 	ProcessList []ProcessMetric  `json:"processes"`
@@ -118,6 +119,7 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
         p.BytesSent, p.BytesRecv, p.NetRecvRate, p.NetSentRate,
         p.DiskReadRate, p.DiskWriteRate, p.DiskReadIOPS, p.DiskWriteIOPS,
         string(interfacesJSON), p.DDoSStatus, p.ProcessRaw,
+        p.Uptime,
     ); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store metric"})
 		return
