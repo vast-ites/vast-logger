@@ -17,6 +17,9 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+    # Legacy limits for guaranteed enforcement
+    mem_limit: 1536m
+    cpus: 1.5
 
   influxdb:
     image: influxdb:latest
@@ -32,6 +35,8 @@ services:
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
     volumes:
       - ./influxdb_data:/var/lib/influxdb2
+    mem_limit: 512m
+    cpus: 0.5
 
 volumes:
   clickhouse_data:

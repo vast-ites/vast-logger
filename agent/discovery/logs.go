@@ -168,7 +168,10 @@ func scanDirectory(root string) []DiscoveredLog {
         if strings.HasSuffix(name, ".gz") || strings.HasSuffix(name, ".zip") || 
            strings.HasSuffix(name, ".tar") || strings.HasSuffix(name, ".xz") ||
            strings.HasSuffix(name, "utmp") || strings.HasSuffix(name, "wtmp") ||
-           strings.HasSuffix(name, "btmp") || strings.HasSuffix(name, "lastlog") {
+           strings.HasSuffix(name, "btmp") || strings.HasSuffix(name, "lastlog") ||
+           strings.HasSuffix(name, ".1") || strings.HasSuffix(name, ".2") ||
+           strings.HasSuffix(name, ".old") || strings.HasSuffix(name, ".bak") ||
+           strings.Contains(name, "datavast") || strings.Contains(name, "agent.log") {
             return nil
         }
 
