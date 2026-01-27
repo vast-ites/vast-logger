@@ -182,10 +182,53 @@ func (h *IngestionHandler) HandleGetHosts(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
-    if hosts == nil {
-        hosts = []storage.HostMetadata{}
+    
+    // Filter Ignored Hosts
+    cfg := h.Config.Get()
+    ignored := make(map[string]bool)
+    for _, host := range cfg.IgnoredHosts {
+        ignored[host] = true
     }
-    c.JSON(http.StatusOK, hosts)
+    
+    var visibleHosts []storage.HostMetadata
+    if hosts != nil {
+        for _, host := range hosts {
+            if !ignored[host.Hostname] {
+                visibleHosts = append(visibleHosts, host)
+            }
+        }
+    } else {
+        visibleHosts = []storage.HostMetadata{}
+    }
+
+    c.JSON(http.StatusOK, visibleHosts)
+}
+
+func (h *IngestionHandler) HandleDeleteHost(c *gin.Context) {
+    host := c.Query("host")
+    if host == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Host required"})
+        return
+    }
+    
+    // Add to ignored list
+    cfg := h.Config.Get()
+    
+    // Check if already ignored
+    for _, h := range cfg.IgnoredHosts {
+        if h == host {
+             c.Status(http.StatusOK)
+             return
+        }
+    }
+    
+    cfg.IgnoredHosts = append(cfg.IgnoredHosts, host)
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save config"})
+        return
+    }
+    
+    c.Status(http.StatusOK)
 }
 
 func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
@@ -197,7 +240,8 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         // Ingestion (Should be protected eventually)
 		v1.POST("/ingest/metrics", h.HandleMetrics)
 		v1.POST("/ingest/logs", h.HandleLogs)
-        v1.GET("/hosts", h.HandleGetHosts) // New Endpoint
+        v1.GET("/hosts", h.HandleGetHosts) 
+        v1.DELETE("/hosts", h.HandleDeleteHost) // Delete/Ignore host
         v1.GET("/metrics/system", h.HandleGetLatestMetrics)
         v1.GET("/metrics/containers", h.HandleGetContainers)
         v1.GET("/logs/stream", h.HandleGetLogs)

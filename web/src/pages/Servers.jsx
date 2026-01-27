@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Server, Cpu, HardDrive, Activity, Plus, Terminal } from 'lucide-react';
+import { Server, Cpu, HardDrive, Activity, Plus, Terminal, Trash2 } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import ConnectAgentModal from '../components/ConnectAgentModal';
 
@@ -63,6 +63,22 @@ export const Servers = () => {
 
     const onlineCount = agents.filter(a => a.status === 'ONLINE').length;
 
+    const deleteHost = async (hostname) => {
+        if (!confirm(`Are you sure you want to remove ${hostname}? It will be hidden from the dashboard.`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/hosts?host=${hostname}`, { method: 'DELETE' });
+            if (res.ok) {
+                setAgents(prev => prev.filter(a => a.hostname !== hostname));
+            } else {
+                alert("Failed to delete host");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error deleting host");
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -111,13 +127,22 @@ export const Servers = () => {
                     <div key={agent.hostname} className="glass-panel p-6 border border-white/5 relative overflow-hidden group transition-all hover:border-cyan-500/30">
                         <div className={`absolute top-0 right-0 w-24 h-24 bg-${agent.status === 'ONLINE' ? 'green' : 'red'}-500/10 rounded-bl-full -mr-12 -mt-12 transition-all group-hover:scale-110`} />
 
-                        <div className="flex justify-between items-start mb-6 relative">
+                        <div className="flex justify-between items-start mb-6 relative z-10">
                             <div className="flex items-center gap-4">
                                 <div className={`p-3 rounded-lg bg-${agent.status === 'ONLINE' ? 'green' : 'red'}-500/20 text-${agent.status === 'ONLINE' ? 'green' : 'red'}-400`}>
                                     <Terminal size={24} />
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-white">{agent.hostname}</h3>
+                                <div className="group/title relative">
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                        {agent.hostname}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); deleteHost(agent.hostname); }}
+                                            className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-red-500/20 rounded text-red-500 transition-all"
+                                            title="Remove Node"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </h3>
                                     <p className="text-xs text-gray-400 font-mono">{agent.platform}</p>
                                 </div>
                             </div>

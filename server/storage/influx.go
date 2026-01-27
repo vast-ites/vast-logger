@@ -241,8 +241,9 @@ func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMe
 }
 
 type HostMetadata struct {
-    Hostname string `json:"hostname"`
-    IP       string `json:"ip"`
+    Hostname string    `json:"hostname"`
+    IP       string    `json:"ip"`
+    LastSeen time.Time `json:"last_seen"`
 }
 
 // GetHosts returns a list of unique hosts with metadata (IP) found in the last hour
@@ -255,7 +256,7 @@ func (s *MetricsStore) GetHosts() ([]HostMetadata, error) {
     |> filter(fn: (r) => r["_field"] == "interfaces")
     |> group(columns: ["host"])
     |> last()
-    |> keep(columns: ["host", "_value"])
+    |> keep(columns: ["host", "_value", "_time"])
     `, s.bucket)
 
     result, err := s.queryAPI.Query(context.Background(), query)
@@ -301,6 +302,7 @@ func (s *MetricsStore) GetHosts() ([]HostMetadata, error) {
             hosts = append(hosts, HostMetadata{
                 Hostname: host,
                 IP:       ip,
+                LastSeen: result.Record().Time(),
             })
         }
     }
