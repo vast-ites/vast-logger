@@ -14,23 +14,25 @@ const Security = () => {
     const fetchHistory = async () => {
         try {
             const params = selectedHost ? `?host=${selectedHost}` : '';
-            const res = await fetch(`/api/v1/metrics/history${params}&duration=30m`); // Assuming history supports host param now
+            const res = await fetch(`/api/v1/metrics/history${params}&duration=30m`); // Assuming history supports host param
             if (res.ok) {
                 const data = await res.json();
-                // Map data
-                const chartData = data.map((d, i) => ({
-                    time: i,
-                    rx: d.net_recv_rate,
-                    status: d.ddos_status
-                }));
-                setHistory(chartData);
+
+                // Transform for charts
+                const historyData = data.map(d => ({
+                    time: new Date(d.timestamp).toLocaleTimeString(),
+                    ddos_score: d.ddos_status === 'CRITICAL' ? 100 : (d.ddos_status === 'WARNING' ? 50 : 0),
+                    traffic: (d.net_recv_rate || 0) + (d.net_sent_rate || 0)
+                })).reverse();
+
+                setHistory(historyData);
 
                 // Determine current status from latest data point
-                if (chartData.length > 0) {
-                    const last = chartData[chartData.length - 1];
-                    // Fallback logic if string was lost in aggregate
-                    if (last.rx > 50) setCurrentStatus('CRITICAL');
-                    else if (last.rx > 10) setCurrentStatus('WARNING');
+                if (historyData.length > 0) {
+                    const last = historyData[historyData.length - 1];
+                    // Use ddos_score for status
+                    if (last.ddos_score === 100) setCurrentStatus('CRITICAL');
+                    else if (last.ddos_score === 50) setCurrentStatus('WARNING');
                     else setCurrentStatus('SAFE');
                 }
             }

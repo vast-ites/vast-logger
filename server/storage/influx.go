@@ -39,6 +39,7 @@ func (s *MetricsStore) WriteSystemMetric(
     sent, recv uint64, recvRate, sentRate float64,
     diskReadRate, diskWriteRate, diskReadIOPS, diskWriteIOPS float64,
     interfacesJSON string, ddosStatus, processRaw string,
+    uptime uint64,
 ) error {
 	p := influxdb2.NewPointWithMeasurement("system")
     p.AddTag("host", host)
@@ -65,22 +66,23 @@ func (s *MetricsStore) WriteSystemMetric(
     p.AddField("interfaces", interfacesJSON)
 	p.AddField("ddos_status", ddosStatus)
     p.AddField("process_raw", processRaw)
+    p.AddField("uptime", float64(uptime))
 	p.SetTime(time.Now())
 
 	return s.writeAPI.WritePoint(context.Background(), p)
 }
 
 type SystemMetricData struct {
-	CPU      float64 `json:"cpu"`
+	CPU      float64 `json:"cpu_percent"`
     CPUCount int     `json:"cpu_count"`
     CPUPhysical int  `json:"cpu_physical"`
     CPUModel string  `json:"cpu_model"`
     CPUFreq  float64 `json:"cpu_freq"`
-	Mem      float64 `json:"mem"`
-    MemTotal uint64  `json:"mem_total"`
+	Mem      float64 `json:"memory_usage"`
+    MemTotal uint64  `json:"memory_total"`
     SwapUsage float64 `json:"swap_usage"`
     SwapTotal uint64  `json:"swap_total"`
-	Disk     float64 `json:"disk"`
+	Disk     float64 `json:"disk_usage"`
     DiskTotal uint64 `json:"disk_total"`
     Partitions interface{} `json:"partitions"`
     NetRecvRate float64 `json:"net_recv_rate"`
@@ -92,6 +94,7 @@ type SystemMetricData struct {
     Interfaces interface{} `json:"interfaces"`
 	DDoSStatus string      `json:"ddos_status"`
     ProcessRaw string      `json:"process_raw"`
+    Uptime     uint64      `json:"uptime"`
     Timestamp  time.Time   `json:"timestamp"`
 }
 
@@ -165,6 +168,7 @@ func (s *MetricsStore) GetLatestSystemMetrics(host string) (*SystemMetricData, e
         data.Interfaces = getJSON("interfaces")
         data.DDoSStatus = getString("ddos_status")
         data.ProcessRaw = getString("process_raw")
+        data.Uptime = uint64(getFloat("uptime"))
         data.Timestamp = record.Time()
         
         return data, nil

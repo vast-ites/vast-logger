@@ -19,7 +19,7 @@ export const CpuPage = () => {
                     setMetrics(data);
 
                     const time = new Date().toLocaleTimeString();
-                    setHistory(prev => [...prev.slice(-40), { time, load: data.cpu }]);
+                    setHistory(prev => [...prev.slice(-40), { time, load: data.cpu_percent }]);
                 }
             } catch (err) {
                 console.error(err);
@@ -36,10 +36,11 @@ export const CpuPage = () => {
     const coresCount = metrics.cpu_count || 1;
     const physCount = metrics.cpu_physical || "?";
 
-    // Mock Per Core Data (still needed until we send per-core load array)
+    // Mock Per Core Data (Generated deterministically based on index + total load to satify linter)
     const coresLoad = Array.from({ length: coresCount }).map((_, i) => ({
         id: i + 1,
-        load: Math.random() * 20 + (metrics.cpu * 0.8)
+        // Deterministic pseudo-random based on index and load
+        load: Math.min(100, Math.max(0, metrics.cpu_percent + (Math.sin(i * 123.45) * 10)))
     }));
 
     return (
@@ -50,7 +51,7 @@ export const CpuPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <StatCard label="Cores (Phys/Log)" value={`${physCount} / ${coresCount}`} icon={Cpu} color="cyan" />
-                <StatCard label="Current Load" value={`${metrics.cpu.toFixed(1)}%`} icon={Activity} trend="neutral" color="violet" />
+                <StatCard label="Current Load" value={`${metrics.cpu_percent.toFixed(1)}%`} icon={Activity} trend="neutral" color="violet" />
                 <StatCard label="Clock Speed" value={metrics.cpu_freq ? `${metrics.cpu_freq.toFixed(2)} GHz` : "N/A"} icon={Activity} trend="neutral" color="amber" />
                 <StatCard label="Processor" value={metrics.cpu_model || "Scanning..."} icon={Info} trend="neutral" color="green" />
             </div>

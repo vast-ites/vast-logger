@@ -10,11 +10,12 @@ const Dashboard = () => {
     const { selectedHost } = useHost();
     const [refreshInterval, setRefreshInterval] = React.useState(2000);
     const [metrics, setMetrics] = React.useState({
-        cpu: 0,
-        mem: 0,
-        disk: 0,
+        cpu_percent: 0,
+        memory_usage: 0,
+        disk_usage: 0,
         net_sent_rate: 0,
         net_recv_rate: 0,
+        uptime: 0,
         process_raw: ""
     });
 
@@ -26,29 +27,22 @@ const Dashboard = () => {
         const fetchTelemetry = async () => {
             try {
                 const params = selectedHost ? `?host=${selectedHost}` : '';
+                const cacheBuster = `&_t=${Date.now()}`;
 
                 // Fetch Metrics
-                const resMetrics = await fetch(`/api/v1/metrics/system${params}`);
+                const resMetrics = await fetch(`/api/v1/metrics/system${params}${!params ? '?' : ''}${cacheBuster}`);
                 if (resMetrics.ok) setMetrics(await resMetrics.json());
 
                 // Fetch Logs
                 const logParams = selectedHost ? `?host=${selectedHost}` : '';
-                const resLogs = await fetch(`/api/v1/logs/search${logParams}`); // Use search instead of stream for consistency with host filter? 
-                // Wait, Logs.jsx uses /logs/search. Dashboard uses /logs/stream. 
-                // /logs/stream just gets recent logs. I should probably update /logs/stream to support host too?
-                // Or just use /logs/search on Dashboard too? /logs/stream allows simple tailing. 
-                // Let's stick to /logs/stream but I need to ensure backend supports ?host on stream endpoint.
-                // In Handler.go step 2985, I did NOT update HandleGetLogs (stream) to use host.
-                // Converting Dashboard to use /logs/search is safer given my changes.
-                // Actually, let's just use /logs/search on Dashboard for now.
-                const resLogsSearch = await fetch(`/api/v1/logs/search${logParams}&limit=50`);
+                const resLogsSearch = await fetch(`/api/v1/logs/search${logParams}${!logParams ? '?' : ''}&limit=50${cacheBuster}`);
                 if (resLogsSearch.ok) {
                     const logData = await resLogsSearch.json();
                     if (Array.isArray(logData)) setLogs(logData);
                 }
 
                 // Fetch Containers
-                const resContainers = await fetch(`/api/v1/metrics/containers${params}`);
+                const resContainers = await fetch(`/api/v1/metrics/containers${params}${!params ? '?' : ''}${cacheBuster}`);
                 if (resContainers.ok) {
                     const contData = await resContainers.json();
                     if (Array.isArray(contData)) {
@@ -57,7 +51,7 @@ const Dashboard = () => {
                 }
 
                 // Fetch Processes
-                const resProc = await fetch(`/api/v1/processes${params}`);
+                const resProc = await fetch(`/api/v1/processes${params}${!params ? '?' : ''}${cacheBuster}`);
                 if (resProc.ok) {
                     const procData = await resProc.json();
                     if (Array.isArray(procData)) setProcesses(procData);
@@ -69,8 +63,7 @@ const Dashboard = () => {
         };
 
         fetchTelemetry();
-        const interval = setInterval(fetchTelemetry, refreshInterval > 5000 ? refreshInterval : 5000); // Poll processes slower? No, keep sync for now but maybe throttle backend. 
-        // Actually main loop is controlled by refreshInterval. 5s is fine.
+        const interval = setInterval(fetchTelemetry, refreshInterval);
         return () => clearInterval(interval);
     }, [selectedHost, refreshInterval]);
 
@@ -149,29 +142,29 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <OverviewCard
                     label="SYSTEM UPTIME"
-                    value="2.8h"
-                    subValue="↑ 100% vs last hour"
+                    value={metrics.uptime ? `${(metrics.uptime / 3600 / 24).toFixed(1)}d` : "..."}
+                    subValue={metrics.hostname || "local"}
                     icon={Cpu}
                     color="cyan"
                 />
                 <OverviewCard
                     label="AVG CPU LOAD"
-                    value={`${metrics.cpu.toFixed(1)}%`}
-                    subValue="-- vs last hour"
+                    value={`${(metrics.cpu_percent || 0).toFixed(1)}%`}
+                    subValue={`${metrics.cpu_count || 0} Cores`}
                     icon={Cpu}
                     color="green"
                 />
                 <OverviewCard
                     label="MEMORY USAGE"
-                    value={`${metrics.mem.toFixed(1)}%`}
-                    subValue={`${((metrics.mem / 100) * 16).toFixed(1)} GB (Est)`} // Est based on 16GB avg
+                    value={`${(metrics.memory_usage || 0).toFixed(1)}%`}
+                    subValue={`${((metrics.memory_total || 0) / 1024 / 1024 / 1024).toFixed(1)} GB Total`}
                     icon={Zap}
                     color="violet"
                 />
                 <OverviewCard
                     label="DISK USAGE"
-                    value={`${metrics.disk.toFixed(1)}%`}
-                    subValue={`${((metrics.disk / 100) * 200).toFixed(0)} GB (Est)`} // Est based on 200GB avg
+                    value={`${(metrics.disk_usage || 0).toFixed(1)}%`}
+                    subValue={`${((metrics.disk_total || 0) / 1024 / 1024 / 1024).toFixed(1)} GB Total`}
                     icon={HardDrive}
                     color="green"
                 />

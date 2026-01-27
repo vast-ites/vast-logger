@@ -37,7 +37,7 @@ export const Storage = () => {
     // Use data from Agent if available, otherwise fallback
     // Dynamic Unit Scaling
     const totalBytes = metrics.disk_total || 0;
-    const usedBytes = metrics.disk_total ? (metrics.disk / 100) * metrics.disk_total : 0;
+    const usedBytes = metrics.disk_total ? (metrics.disk_usage / 100) * metrics.disk_total : 0;
 
     // Choose unit based on total size
     const isTB = totalBytes > 1024 * 1024 * 1024 * 1024;
@@ -47,7 +47,7 @@ export const Storage = () => {
     const totalSizeDisplay = (totalBytes / unitDivisor).toFixed(1);
     const usedSizeDisplay = (usedBytes / unitDivisor).toFixed(1);
 
-    const usedPercent = metrics.disk || 0;
+    const usedPercent = metrics.disk_usage || 0;
 
     return (
         <div className="space-y-6">

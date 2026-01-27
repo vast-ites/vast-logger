@@ -12,6 +12,7 @@ import (
 	"encoding/json"
     "net/http"
     "bytes"
+    "sync/atomic"
 
 	"github.com/datavast/datavast/agent/collector"
 	"github.com/datavast/datavast/agent/discovery"
@@ -193,21 +194,38 @@ func main() {
         }
     }()
 
+	// 4. Async Process Raw Collection (Decoupled from Main Loop to prevent lag)
+    var atomicProcessRaw atomic.Value
+    atomicProcessRaw.Store("")
+
+    go func() {
+        if procCol == nil { return }
+        for {
+            // Run as fast as possible, but don't hog CPU. 
+            // If top takes 0.2s, this runs ~5Hz. If it takes 1.5s, it runs ~0.6Hz.
+            // Main loop will always pick up the latest available.
+            raw, err := procCol.CollectRaw()
+            if err == nil {
+                atomicProcessRaw.Store(raw)
+            } else {
+               // Log error occasionally?
+               atomicProcessRaw.Store("Error collecting raw process data: " + err.Error()) 
+            }
+            time.Sleep(500 * time.Millisecond) // Slight pause to be polite
+        }
+    }()
+
 	var dockerErrorCount int
 	for range ticker.C {
         var metrics *collector.SystemMetrics
         if sysCol != nil {
+            // This is now fast (cached)
     		m, err := sysCol.Collect()
     		if err != nil {
     			log.Printf("Error collecting metrics: %v", err)
     		} else {
                 metrics = m
             }
-        } else {
-            // Send empty/heartbeat?
-            // For now, if system is disabled, we simulate basic host info or skip?
-            // If metrics is nil, sender might crash? 
-            // Check sender implementation.
         }
         
         var containerMetrics []collector.ContainerMetric
@@ -228,26 +246,13 @@ func main() {
         // Only send if we have data or need heartbeat
         if metrics != nil || len(containerMetrics) > 0 {
     		// Send to Backend
-            // If metrics nil, create dummy/empty?
             if metrics == nil { metrics = &collector.SystemMetrics{} }
             
-            // Collect Raw Process for Top
-            var processRaw string
-            if procCol != nil {
-                 raw, err := procCol.CollectRaw()
-                 if err == nil {
-                     processRaw = raw
-                 } else {
-                     processRaw = "Error collecting raw process data: " + err.Error()
-                     log.Printf("CollectRaw Error: %v", err)
-                 }
-            }
+            // Retrieve latest async raw data
+            processRaw := atomicProcessRaw.Load().(string)
             
     		if err := senderClient.SendMetrics(metrics, containerMetrics, processRaw); err != nil {
     			log.Printf("Failed to send metrics: %v", err)
-    		} else {
-// fmt.Printf("\r>> CPU: %.1f%% | Mem: %.1f%% | Containers: %d  ", 
-            //     metrics.CPUPercent, metrics.MemoryUsage, len(containerMetrics))
     		}
         }
 	}

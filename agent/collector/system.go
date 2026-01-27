@@ -10,6 +10,7 @@ import (
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	gnet "github.com/shirou/gopsutil/v3/net"
 )
@@ -58,6 +59,7 @@ type SystemMetrics struct {
     DiskWriteIOPS float64 `json:"disk_write_iops"`
     Interfaces  []InterfaceStat `json:"interfaces"`
 	DDoSStatus  string  `json:"ddos_status"`   // OK, WARNING, CRITICAL
+    Uptime      uint64  `json:"uptime"`
 	Timestamp   int64   `json:"timestamp"`
 }
 
@@ -69,6 +71,15 @@ type SystemCollector struct {
     lastDiskReadCount uint64
     lastDiskWriteCount uint64
     lastTimestamp int64
+
+    // Caching for heavy operations
+    tickCount       int
+    cachedPartitions []PartitionStat
+    cachedInterfaces []InterfaceStat
+    cachedCPUModel   string
+    cachedCPUFreq    float64
+    cachedCPUCount   int
+    cachedCPUPhys    int
 }
 
 func NewSystemCollector() *SystemCollector {
@@ -188,84 +199,107 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
     sc.lastDiskWriteCount = currentWriteCount
     sc.lastTimestamp = currentTimestamp
     
-	// CPU Count (Logical)
-	cpuCount, _ := cpu.Counts(true)
-    if cpuCount == 0 {
-        cpuCount = runtime.NumCPU()
+    // Increment Tick
+    sc.tickCount++
+    shouldRefreshHeavy := (sc.tickCount % 10 == 0) || (sc.tickCount == 1)
+
+	// CPU Count (Logical) - Static-ish
+    if shouldRefreshHeavy || sc.cachedCPUCount == 0 {
+    	cpuCount, _ := cpu.Counts(true)
+        if cpuCount == 0 { cpuCount = runtime.NumCPU() }
+        sc.cachedCPUCount = cpuCount
     }
 
-    // CPU Physical
-    cpuPhysical, _ := cpu.Counts(false)
-    if cpuPhysical == 0 { cpuPhysical = 1 }
-
-    // CPU Model & Freq
-    cpuModel := "Unknown"
-    cpuFreq := 0.0
-    if info, err := cpu.Info(); err == nil && len(info) > 0 {
-        cpuModel = info[0].ModelName
-        cpuFreq = info[0].Mhz / 1000.0 // Convert to GHz
+    // CPU Physical - Static
+    if shouldRefreshHeavy || sc.cachedCPUPhys == 0 {
+        cpuPhys, _ := cpu.Counts(false)
+        if cpuPhys == 0 { cpuPhys = 1 }
+        sc.cachedCPUPhys = cpuPhys
     }
 
-    // Swap
+    // CPU Model & Freq - Static
+    if shouldRefreshHeavy || sc.cachedCPUModel == "" {
+        cpuModel := "Unknown"
+        cpuFreq := 0.0
+        if info, err := cpu.Info(); err == nil && len(info) > 0 {
+            cpuModel = info[0].ModelName
+            cpuFreq = info[0].Mhz / 1000.0 // Convert to GHz
+        }
+        sc.cachedCPUModel = cpuModel
+        sc.cachedCPUFreq = cpuFreq
+    }
+
+    // Swap (Fast enough)
     vSwap, _ := mem.SwapMemory()
 
-    // Partitions
-    var partitions []PartitionStat
-    if parts, err := disk.Partitions(false); err == nil {
-        for _, p := range parts {
-            if strings.HasPrefix(p.Mountpoint, "/snap") || strings.HasPrefix(p.Mountpoint, "/boot") { continue }
-            if u, err := disk.Usage(p.Mountpoint); err == nil {
-                partitions = append(partitions, PartitionStat{
-                    MountPoint: p.Mountpoint,
-                    Fstype:     p.Fstype,
-                    Total:      u.Total,
-                    Used:       u.Used,
-                })
+	// Uptime (Fast)
+	hostInfo, _ := host.Info()
+	uptime := hostInfo.Uptime
+
+    // Partitions (Heavy IO)
+    if shouldRefreshHeavy {
+        var partitions []PartitionStat
+        if parts, err := disk.Partitions(false); err == nil {
+            for _, p := range parts {
+                if strings.HasPrefix(p.Mountpoint, "/snap") || strings.HasPrefix(p.Mountpoint, "/boot") || 
+                   strings.HasPrefix(p.Mountpoint, "/run") || p.Fstype == "overlay" || p.Fstype == "tmpfs" { continue }
+                if u, err := disk.Usage(p.Mountpoint); err == nil {
+                    partitions = append(partitions, PartitionStat{
+                        MountPoint: p.Mountpoint,
+                        Fstype:     p.Fstype,
+                        Total:      u.Total,
+                        Used:       u.Used,
+                    })
+                }
             }
         }
+        sc.cachedPartitions = partitions
     }
 
-    // Network Interfaces
-    var interfaces []InterfaceStat
-    if ifaces, err := net.Interfaces(); err == nil {
-        for _, i := range ifaces {
-            // Get IP
-            ip := ""
-            if addrs, err := i.Addrs(); err == nil {
-                for _, addr := range addrs {
-                    if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-                        if ipnet.IP.To4() != nil {
-                            ip = ipnet.IP.String()
-                            break
+    // Network Interfaces (Heavy IO)
+    if shouldRefreshHeavy {
+        var interfaces []InterfaceStat
+        if ifaces, err := net.Interfaces(); err == nil {
+            for _, i := range ifaces {
+                // Get IP
+                ip := ""
+                if addrs, err := i.Addrs(); err == nil {
+                    for _, addr := range addrs {
+                        if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+                            if ipnet.IP.To4() != nil {
+                                ip = ipnet.IP.String()
+                                break
+                            }
                         }
                     }
                 }
-            }
-            // If no non-loopback IPv4 found, and it's an up loopback, assign 127.0.0.1
-            if ip == "" && (i.Flags&net.FlagUp) != 0 && (i.Flags&net.FlagLoopback) != 0 { ip = "127.0.0.1" }
+                // If no non-loopback IPv4 found, and it's an up loopback, assign 127.0.0.1
+                if ip == "" && (i.Flags&net.FlagUp) != 0 && (i.Flags&net.FlagLoopback) != 0 { ip = "127.0.0.1" }
 
-            interfaces = append(interfaces, InterfaceStat{
-                Name: i.Name,
-                MAC:  i.HardwareAddr.String(),
-                IP:   ip,
-                IsUp: (i.Flags & net.FlagUp) != 0,
-            })
+                interfaces = append(interfaces, InterfaceStat{
+                    Name: i.Name,
+                    MAC:  i.HardwareAddr.String(),
+                    IP:   ip,
+                    IsUp: (i.Flags & net.FlagUp) != 0,
+                })
+            }
         }
+        sc.cachedInterfaces = interfaces
     }
 
 	return &SystemMetrics{
 		CPUPercent:  cpuP[0],
-		CPUCount:    cpuCount,
-        CPUPhysical: cpuPhysical,
-        CPUModel:    cpuModel,
-        CPUFreq:     cpuFreq,
+		CPUCount:    sc.cachedCPUCount,
+        CPUPhysical: sc.cachedCPUPhys,
+        CPUModel:    sc.cachedCPUModel,
+        CPUFreq:     sc.cachedCPUFreq,
 		MemoryUsage: vMem.UsedPercent,
 		MemoryTotal: vMem.Total,
         SwapUsage:   vSwap.UsedPercent,
         SwapTotal:   vSwap.Total,
 		DiskUsage:   diskStat.UsedPercent,
 		DiskTotal:   diskStat.Total,
-        Partitions:  partitions,
+        Partitions:  sc.cachedPartitions,
 		BytesSent:   currentBytesSent,
 		BytesRecv:   currentBytesRecv,
         NetRecvRate: recvRate,
@@ -274,8 +308,9 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
         DiskWriteRate: diskWriteRate,
         DiskReadIOPS: diskReadIOPS,
         DiskWriteIOPS: diskWriteIOPS,
-        Interfaces:  interfaces,
+        Interfaces:  sc.cachedInterfaces,
 		DDoSStatus:  ddosStatus,
+        Uptime:      uptime,
 		Timestamp:   currentTimestamp,
 	}, nil
 }
