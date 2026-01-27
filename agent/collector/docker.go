@@ -6,13 +6,21 @@ import (
 	"fmt"
 	"math"
 	"strings"
+    "time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
 
 type DockerCollector struct {
-	cli *client.Client
+	cli          *client.Client
+    prevNetStats map[string]netStatState // ContainerID -> State
+}
+
+type netStatState struct {
+    rx uint64
+    tx uint64
+    ts time.Time
 }
 
 type ContainerMetric struct {
@@ -62,7 +70,10 @@ func NewDockerCollector() (*DockerCollector, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DockerCollector{cli: cli}, nil
+	return &DockerCollector{
+        cli: cli,
+        prevNetStats: make(map[string]netStatState),
+    }, nil
 }
 
 func (dc *DockerCollector) GetContainerMetrics() ([]ContainerMetric, error) {
@@ -72,6 +83,7 @@ func (dc *DockerCollector) GetContainerMetrics() ([]ContainerMetric, error) {
 	}
 
 	var metrics []ContainerMetric
+    now := time.Now()
 
 	for _, c := range containers {
 		// Get Stats (streaming implementation, but we just read once)
@@ -93,11 +105,38 @@ func (dc *DockerCollector) GetContainerMetrics() ([]ContainerMetric, error) {
 		cpuPercent := calculateCPUPercentUnix(v.PreCPUStats.CPUUsage.TotalUsage, v.PreCPUStats.SystemUsage, &v)
 		memUsage := float64(v.MemoryStats.Usage)
         
-        // Calculate Net
-        var rx, tx uint64
+        // Calculate Net Total
+        var totalRx, totalTx uint64
         for _, net := range v.Networks {
-            rx += net.RxBytes
-            tx += net.TxBytes
+            totalRx += net.RxBytes
+            totalTx += net.TxBytes
+        }
+        
+        // Calculate Rate
+        var rxRate, txRate float64
+        if prev, ok := dc.prevNetStats[c.ID]; ok {
+            duration := now.Sub(prev.ts).Seconds()
+            if duration > 0 {
+                // Check for restart/reset (if current < prev, assume reset)
+                if totalRx >= prev.rx {
+                    rxRate = float64(totalRx - prev.rx) / duration
+                } else {
+                    rxRate = float64(totalRx) / duration 
+                }
+                
+                if totalTx >= prev.tx {
+                    txRate = float64(totalTx - prev.tx) / duration
+                } else {
+                     txRate = float64(totalTx) / duration
+                }
+            }
+        }
+        
+        // Update State
+        dc.prevNetStats[c.ID] = netStatState{
+            rx: totalRx,
+            tx: totalTx,
+            ts: now,
         }
         
         // Format Ports
@@ -127,8 +166,8 @@ func (dc *DockerCollector) GetContainerMetrics() ([]ContainerMetric, error) {
             Ports:       portStr,
 			CPUPercent:  cpuPercent,
 			MemoryUsage: memUsage,
-            NetRx:       float64(rx),
-            NetTx:       float64(tx),
+            NetRx:       rxRate,
+            NetTx:       txRate,
 		})
 	}
 
