@@ -3,7 +3,10 @@ import { Server, Cpu, HardDrive, Activity, Plus, Terminal, Trash2 } from 'lucide
 import { StatCard } from '../components/widgets/StatCard';
 import ConnectAgentModal from '../components/ConnectAgentModal';
 
+import { useHost } from '../contexts/HostContext';
+
 export const Servers = () => {
+    const { refreshInterval } = useHost();
     const [agents, setAgents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,9 +60,9 @@ export const Servers = () => {
 
     useEffect(() => {
         fetchAgents();
-        const interval = setInterval(fetchAgents, 5000); // 5s refresh
+        const interval = setInterval(fetchAgents, refreshInterval);
         return () => clearInterval(interval);
-    }, []);
+    }, [refreshInterval]);
 
     const onlineCount = agents.filter(a => a.status === 'ONLINE').length;
 

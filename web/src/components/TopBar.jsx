@@ -3,7 +3,7 @@ import { Search, Bell, HelpCircle } from 'lucide-react';
 import { useHost } from '../contexts/HostContext';
 
 export const TopBar = ({ onAddSource }) => {
-    const { selectedHost, setSelectedHost, hosts } = useHost();
+    const { selectedHost, setSelectedHost, hosts, refreshInterval, setRefreshInterval } = useHost();
 
     return (
         <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-black/20 backdrop-blur-sm z-10">
@@ -25,6 +25,24 @@ export const TopBar = ({ onAddSource }) => {
             </div>
 
             <div className="flex items-center gap-6 ml-6">
+                {/* Refresh Rate Selector */}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">REFRESH:</span>
+                    <select
+                        value={refreshInterval}
+                        onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                        className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer border-b border-white/10 pb-0.5 hover:border-cyan-500/50 transition-colors"
+                    >
+                        <option value={1000}>1s (Realtime)</option>
+                        <option value={2000}>2s (Fast)</option>
+                        <option value={5000}>5s (Normal)</option>
+                        <option value={10000}>10s (Slow)</option>
+                        <option value={30000}>30s (Eco)</option>
+                    </select>
+                </div>
+
+                <div className="w-px h-6 bg-white/10"></div>
+
                 {/* Host Selector */}
                 <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-white/5 bg-white/5">
                     <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Source</span>
