@@ -7,6 +7,12 @@ export const HostProvider = ({ children }) => {
     const [selectedHost, setSelectedHost] = useState(() => {
         return localStorage.getItem('datavast_selected_host') || '';
     });
+    // Initialize Refresh Rate from localStorage or default to 2000ms
+    const [refreshInterval, setRefreshInterval] = useState(() => {
+        const saved = localStorage.getItem('datavast_refresh_rate');
+        return saved ? Number(saved) : 2000;
+    });
+
     const [hosts, setHosts] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -16,6 +22,10 @@ export const HostProvider = ({ children }) => {
             localStorage.setItem('datavast_selected_host', selectedHost);
         }
     }, [selectedHost]);
+
+    useEffect(() => {
+        localStorage.setItem('datavast_refresh_rate', refreshInterval);
+    }, [refreshInterval]);
 
     const fetchHosts = async () => {
         setLoading(true);
@@ -48,7 +58,7 @@ export const HostProvider = ({ children }) => {
     }, []);
 
     return (
-        <HostContext.Provider value={{ selectedHost, setSelectedHost, hosts, loading, refreshHosts: fetchHosts }}>
+        <HostContext.Provider value={{ selectedHost, setSelectedHost, hosts, loading, refreshHosts: fetchHosts, refreshInterval, setRefreshInterval }}>
             {children}
         </HostContext.Provider>
     );

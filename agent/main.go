@@ -87,10 +87,14 @@ func main() {
             logs = append(logs, dLogs...)
             
             // Add Enabled Service Logs
-            if cfg.Collectors.Nginx { logs = append(logs, discovery.FindServiceLogs("nginx")...) }
-            if cfg.Collectors.Apache { logs = append(logs, discovery.FindServiceLogs("apache")...) }
             if cfg.Collectors.PM2 { logs = append(logs, discovery.FindServiceLogs("pm2")...) }
         }
+    }
+    
+    // Always append manually selected logs (Custom Paths)
+    for _, path := range cfg.LogConfig.SelectedLogs {
+        logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: "manual_selection"})
+    }
         
         // Dedup
         seen := make(map[string]bool)
@@ -132,11 +136,9 @@ func main() {
     	}()
         
         // Keep definition of senderClient visible for below
-    }
 
-    // Re-declare senderClient if skipped (ugly hack, better refactor later)
-    // Actually simpler: Move senderClient init up.
-    senderClient := sender.NewClient(strings.TrimSuffix(cfg.ServerURL, "/")+"/api/v1", cfg.AgentSecret, cfg.AgentID)
+
+
 
 
 	// 3. Start Metric Loop

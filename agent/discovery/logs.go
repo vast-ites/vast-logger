@@ -19,19 +19,36 @@ func FindLogs() ([]DiscoveredLog, error) {
 	var logs []DiscoveredLog
 	seen := make(map[string]bool)
 
-    // Strategy 0: High Priority System Logs
+    // Strategy 0: High Priority System Logs & Package Managers
     priorityLogs := []string{
+        // Core System
         "/var/log/syslog",
         "/var/log/auth.log",
         "/var/log/kern.log",
+        "/var/log/messages",  // RHEL/CentOS
+        "/var/log/secure",    // RHEL/CentOS
+        "/var/log/maillog",
+        "/var/log/mail.log",
+        "/var/log/dmesg",
+        "/var/log/boot.log",
+        "/var/log/faillog",
+        
+        // Package Managers
         "/var/log/dpkg.log",
+        "/var/log/apt/history.log",
+        "/var/log/apt/term.log",
+        "/var/log/yum.log",
+        "/var/log/dnf.log",
+        "/var/log/dnf.rpm.log",
+        "/var/log/pacman.log",
+        "/var/log/alternatives.log",
     }
     
     for _, path := range priorityLogs {
         if canRead(path) {
              logs = append(logs, DiscoveredLog{
                 Path: path,
-                SourceType: "high_priority_system",
+                SourceType: "system_core",
                 ProcessName: "system",
              })
              seen[path] = true
@@ -49,10 +66,9 @@ func FindLogs() ([]DiscoveredLog, error) {
 		}
 	}
 
-	// Strategy 2: Common paths scanner
-	commonPaths := []string{"/var/log", "/opt", "/home"}
-	for _, root := range commonPaths {
-        // Limit deep scanning for prototype performance
+	// Strategy 2: Common paths scanner (Recursive)
+	commonRoots := []string{"/var/log", "/opt", "/home"}
+	for _, root := range commonRoots {
 		pathLogs := scanDirectory(root)
 		for _, log := range pathLogs {
 			if !seen[log.Path] {
@@ -140,13 +156,24 @@ func scanDirectory(root string) []DiscoveredLog {
 		}
 		if info.IsDir() {
 			// Skip hidden dirs and common noisy dirs
-			if strings.HasPrefix(info.Name(), ".") || info.Name() == "node_modules" {
+			if strings.HasPrefix(info.Name(), ".") || info.Name() == "node_modules" || info.Name() == "vendor" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		if strings.HasSuffix(info.Name(), ".log") {
+        name := info.Name()
+        
+        // Skip compressed/binary/noisy files
+        if strings.HasSuffix(name, ".gz") || strings.HasSuffix(name, ".zip") || 
+           strings.HasSuffix(name, ".tar") || strings.HasSuffix(name, ".xz") ||
+           strings.HasSuffix(name, "utmp") || strings.HasSuffix(name, "wtmp") ||
+           strings.HasSuffix(name, "btmp") || strings.HasSuffix(name, "lastlog") {
+            return nil
+        }
+
+        // Accept .log, .err, .out
+		if strings.HasSuffix(name, ".log") || strings.HasSuffix(name, ".err") || strings.HasSuffix(name, ".out") {
             if canRead(path) {
                 results = append(results, DiscoveredLog{
                     Path:       path,

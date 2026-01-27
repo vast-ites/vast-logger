@@ -7,8 +7,8 @@ import { OverviewCard } from '../components/widgets/OverviewCard';
 import { useHost } from '../contexts/HostContext';
 
 const Dashboard = () => {
-    const { selectedHost } = useHost();
-    const [refreshInterval, setRefreshInterval] = React.useState(2000);
+    const { selectedHost, refreshInterval } = useHost();
+    // const [refreshInterval, setRefreshInterval] = React.useState(2000); // Now global
     const [metrics, setMetrics] = React.useState({
         cpu_percent: 0,
         memory_usage: 0,
@@ -104,23 +104,7 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* Refresh Rate Control */}
-            <div className="flex justify-end mb-4">
-                <div className="glass-panel px-4 py-2 rounded-lg flex items-center gap-3">
-                    <span className="text-xs font-mono text-gray-400">REFRESH RATE:</span>
-                    <select
-                        value={refreshInterval}
-                        onChange={(e) => setRefreshInterval(Number(e.target.value))}
-                        className="bg-black/40 border border-cyber-gray rounded px-2 py-1 text-xs text-cyber-cyan focus:outline-none cursor-pointer"
-                    >
-                        <option value={1000}>1s (Realtime)</option>
-                        <option value={2000}>2s (Fast)</option>
-                        <option value={5000}>5s (Normal)</option>
-                        <option value={10000}>10s (Slow)</option>
-                        <option value={30000}>30s (Eco)</option>
-                    </select>
-                </div>
-            </div>
+
 
             {/* Setup Guide */}
             <div className={`border rounded-lg p-6 mb-8 relative overflow-hidden ${isDDoS ? 'border-red-500/20 bg-red-900/10' : 'border-cyber-cyan/20 bg-cyber-cyan/5'}`}>
