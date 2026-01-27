@@ -8,7 +8,9 @@ import (
 
 	"github.com/datavast/datavast/server/storage"
     "github.com/datavast/datavast/server/auth"
+    "github.com/datavast/datavast/server/alert"
 	"github.com/gin-gonic/gin"
+
     "encoding/json"
     "github.com/golang-jwt/jwt/v5"
 )
@@ -18,6 +20,7 @@ type IngestionHandler struct {
 	Logs    *storage.LogStore
     Config  *storage.ConfigStore
     Auth    *auth.AuthManager
+    Alerts  *alert.AlertService
 }
 
 type PartitionStat struct {
@@ -134,6 +137,11 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
     }
 
 	c.Status(http.StatusAccepted)
+    
+    // Check Alerts
+    if h.Alerts != nil {
+        h.Alerts.CheckAndAlert(p.Hostname, p.NetRecvRate, p.DDoSStatus)
+    }
 }
 
 func (h *IngestionHandler) HandleLogs(c *gin.Context) {
@@ -427,9 +435,15 @@ func (h *IngestionHandler) HandleGetSettings(c *gin.Context) {
 
 func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
     var req struct {
-        RetentionDays int     `json:"retention_days"`
-        DDoSThreshold float64 `json:"ddos_threshold"`
-        EmailAlerts   bool    `json:"email_alerts"`
+        RetentionDays int      `json:"retention_days"`
+        DDoSThreshold float64  `json:"ddos_threshold"`
+        EmailAlerts   bool     `json:"email_alerts"`
+        AlertEmails   []string `json:"alert_emails"`
+        WebhookURLs   []string `json:"webhook_urls"`
+        SMTPServer    string   `json:"smtp_server"`
+        SMTPPort      int      `json:"smtp_port"`
+        SMTPUser      string   `json:"smtp_user"`
+        SMTPPassword  string   `json:"smtp_password"`
     }
     if err := c.BindJSON(&req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -443,6 +457,12 @@ func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
     current.RetentionDays = req.RetentionDays
     current.DDoSThreshold = req.DDoSThreshold
     current.EmailAlerts = req.EmailAlerts
+    current.AlertEmails = req.AlertEmails
+    current.WebhookURLs = req.WebhookURLs
+    current.SMTPServer = req.SMTPServer
+    current.SMTPPort = req.SMTPPort
+    current.SMTPUser = req.SMTPUser
+    current.SMTPPassword = req.SMTPPassword
     
     // Save
     if err := h.Config.Save(current); err != nil {

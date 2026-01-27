@@ -10,11 +10,18 @@ import (
 type SystemConfig struct {
 	RetentionDays  int     `json:"retention_days"`
 	DDoSThreshold  float64 `json:"ddos_threshold"`
-	EmailAlerts    bool    `json:"email_alerts"`
-    AdminPassword  string  `json:"admin_password"`
-    SystemAPIKey   string  `json:"system_api_key"` // For Agent Registration
-    MFAEnabled     bool    `json:"mfa_enabled"`
-    MFASecret      string  `json:"mfa_secret"`     // TOTP Secret
+	EmailAlerts    bool      `json:"email_alerts"`
+    AlertEmails    []string  `json:"alert_emails"`  // List of recipients
+    WebhookURLs    []string  `json:"webhook_urls"`  // List of webhooks
+    SMTPServer     string    `json:"smtp_server"`
+    SMTPPort       int       `json:"smtp_port"`
+    SMTPUser       string    `json:"smtp_user"`
+    SMTPPassword   string    `json:"smtp_password"`
+
+    AdminPassword  string    `json:"admin_password"`
+    SystemAPIKey   string    `json:"system_api_key"` // For Agent Registration
+    MFAEnabled     bool      `json:"mfa_enabled"`
+    MFASecret      string    `json:"mfa_secret"`     // TOTP Secret
     AgentSecrets   map[string]string `json:"agent_secrets"` // Hostname -> Secret
     IgnoredHosts   []string `json:"ignored_hosts"` // List of hosts to hide
 }

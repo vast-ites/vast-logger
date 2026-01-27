@@ -7,6 +7,7 @@ import (
 
 	"github.com/datavast/datavast/server/api"
     "github.com/datavast/datavast/server/auth"
+    "github.com/datavast/datavast/server/alert"
 	"github.com/datavast/datavast/server/storage"
 	"github.com/gin-contrib/cors"
     "github.com/gin-contrib/static"
@@ -39,6 +40,7 @@ func main() {
     // 3. Load Persistent Config
     config := storage.NewConfigStore("server-config.json")
     authMgr := auth.NewAuthManager(config)
+    alertMgr := alert.NewAlertService(config)
 
 	// 3. API Setup
 	r := gin.Default()
@@ -56,6 +58,7 @@ func main() {
 		Logs:    clickh,
         Config:  config,
         Auth:    authMgr,
+        Alerts:  alertMgr,
 	}
 	api.SetupRoutes(r, handler)
 

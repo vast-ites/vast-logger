@@ -18,7 +18,7 @@ services:
         soft: 262144
         hard: 262144
     # Legacy limits for guaranteed enforcement
-    mem_limit: 1536m
+    mem_limit: 2048m
     cpus: 1.5
 
   influxdb:
