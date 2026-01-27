@@ -1,0 +1,13 @@
+[Unit]
+Description=DataVast Backend Server
+After=network.target
+
+[Service]
+ExecStart=/opt/datavast/server
+Restart=always
+User=root
+WorkingDirectory=/opt/datavast
+Environment=GIN_MODE=release
+
+[Install]
+WantedBy=multi-user.target

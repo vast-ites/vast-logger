@@ -240,14 +240,22 @@ func (s *MetricsStore) GetSystemMetricHistory(duration, host string) ([]SystemMe
 	return history, nil
 }
 
-// GetHosts returns a list of unique hosts found in the last hour
-func (s *MetricsStore) GetHosts() ([]string, error) {
+type HostMetadata struct {
+    Hostname string `json:"hostname"`
+    IP       string `json:"ip"`
+}
+
+// GetHosts returns a list of unique hosts with metadata (IP) found in the last hour
+func (s *MetricsStore) GetHosts() ([]HostMetadata, error) {
+    // Get last reported interfaces for each host
     query := fmt.Sprintf(`
     from(bucket: "%s")
     |> range(start: -1h)
     |> filter(fn: (r) => r["_measurement"] == "system")
-    |> keep(columns: ["host"])
-    |> distinct(column: "host")
+    |> filter(fn: (r) => r["_field"] == "interfaces")
+    |> group(columns: ["host"])
+    |> last()
+    |> keep(columns: ["host", "_value"])
     `, s.bucket)
 
     result, err := s.queryAPI.Query(context.Background(), query)
@@ -256,10 +264,44 @@ func (s *MetricsStore) GetHosts() ([]string, error) {
     }
     defer result.Close()
 
-    var hosts []string
+    var hosts []HostMetadata
+    
+    // Struct to parse the JSON string from Influx
+    type ifaceStub struct {
+        Name string `json:"name"`
+        IP   string `json:"ip"`
+    }
+
     for result.Next() {
+        host := ""
         if h, ok := result.Record().ValueByKey("host").(string); ok {
-            hosts = append(hosts, h)
+            host = h
+        }
+        
+        jsonStr := ""
+        if v, ok := result.Record().Value().(string); ok {
+            jsonStr = v
+        }
+
+        ip := "Unknown"
+        if jsonStr != "" {
+            var ifaces []ifaceStub
+            if err := json.Unmarshal([]byte(jsonStr), &ifaces); err == nil {
+                // Find first suitable IP
+                for _, i := range ifaces {
+                     if i.IP != "" && i.IP != "127.0.0.1" && i.IP != "::1" {
+                         ip = i.IP
+                         break
+                     }
+                }
+            }
+        }
+        
+        if host != "" {
+            hosts = append(hosts, HostMetadata{
+                Hostname: host,
+                IP:       ip,
+            })
         }
     }
     return hosts, nil

@@ -34,7 +34,11 @@ export const TopBar = ({ onAddSource }) => {
                         className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer min-w-[120px]"
                     >
                         <option value="">ALL SYSTEMS</option>
-                        {hosts.map(h => <option key={h} value={h}>{h}</option>)}
+                        {hosts.map(h => (
+                            <option key={h.hostname} value={h.hostname}>
+                                {h.hostname} {h.ip && h.ip !== 'Unknown' ? `(${h.ip})` : ''}
+                            </option>
+                        ))}
                     </select>
                 </div>
 

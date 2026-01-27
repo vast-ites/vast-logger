@@ -13,7 +13,8 @@ export const Servers = () => {
             const res = await fetch('/api/v1/hosts');
             const data = await res.json();
 
-            const detailedAgents = await Promise.all(data.map(async (hostname) => {
+            const detailedAgents = await Promise.all(data.map(async (hostObj) => {
+                const hostname = hostObj.hostname;
                 try {
                     const metricsRes = await fetch(`/api/v1/metrics/system?host=${hostname}`);
                     const metrics = await metricsRes.json();

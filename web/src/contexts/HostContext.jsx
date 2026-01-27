@@ -35,7 +35,8 @@ export const HostProvider = ({ children }) => {
     // Initial Auto-Select Logic
     useEffect(() => {
         if (hosts.length > 0 && !selectedHost) {
-            const defaultHost = hosts.includes('fusionpbx') ? 'fusionpbx' : hosts[0];
+            const hostNames = hosts.map(h => h.hostname);
+            const defaultHost = hostNames.includes('fusionpbx') ? 'fusionpbx' : (hosts[0]?.hostname || '');
             setSelectedHost(defaultHost);
         }
     }, [hosts, selectedHost]);
