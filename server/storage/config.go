@@ -16,6 +16,7 @@ type SystemConfig struct {
     MFAEnabled     bool    `json:"mfa_enabled"`
     MFASecret      string  `json:"mfa_secret"`     // TOTP Secret
     AgentSecrets   map[string]string `json:"agent_secrets"` // Hostname -> Secret
+    IgnoredHosts   []string `json:"ignored_hosts"` // List of hosts to hide
 }
 
 type ConfigStore struct {

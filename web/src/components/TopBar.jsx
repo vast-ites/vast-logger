@@ -34,11 +34,17 @@ export const TopBar = ({ onAddSource }) => {
                         className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer min-w-[120px]"
                     >
                         <option value="">ALL SYSTEMS</option>
-                        {hosts.map(h => (
-                            <option key={h.hostname} value={h.hostname}>
-                                {h.hostname} {h.ip && h.ip !== 'Unknown' ? `(${h.ip})` : ''}
-                            </option>
-                        ))}
+                        {hosts.map(h => {
+                            const lastSeen = new Date(h.last_seen).getTime();
+                            const isOffline = (Date.now() - lastSeen) > 60000;
+                            return (
+                                <option key={h.hostname} value={h.hostname} className={isOffline ? 'text-red-400' : 'text-cyan-400'}>
+                                    {isOffline ? '🔴 ' : '🟢 '}
+                                    {h.hostname} {h.ip && h.ip !== 'Unknown' ? `(${h.ip})` : ''}
+                                    {isOffline ? ' [OFFLINE]' : ''}
+                                </option>
+                            );
+                        })}
                     </select>
                 </div>
 
