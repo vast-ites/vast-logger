@@ -183,7 +183,7 @@ func (h *IngestionHandler) HandleGetHosts(c *gin.Context) {
         return
     }
     if hosts == nil {
-        hosts = []string{}
+        hosts = []storage.HostMetadata{}
     }
     c.JSON(http.StatusOK, hosts)
 }
