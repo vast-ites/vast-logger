@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Save, Database, Bell, Shield, Moon, Key, Eye, EyeOff, Copy, QrCode } from 'lucide-react';
-import QRCode from 'react-qr-code';
+import { Settings as SettingsIcon, Save, Database, Bell, Shield, Moon, Key, Eye, EyeOff, Copy } from 'lucide-react';
+
+// import QRCode from 'react-qr-code';
 
 const Settings = () => {
     const [retention, setRetention] = useState(7);
     const [ddosThreshold, setDdosThreshold] = useState(50);
     const [emailAlerts, setEmailAlerts] = useState(true);
+    const [alertEmails, setAlertEmails] = useState([]);
+    const [webhookURLs, setWebhookURLs] = useState([]);
+    const [smtpServer, setSmtpServer] = useState("");
+    const [smtpPort, setSmtpPort] = useState(587);
+    const [smtpUser, setSmtpUser] = useState("");
+    const [smtpPassword, setSmtpPassword] = useState("");
+    const [showSMTP, setShowSMTP] = useState(false);
+
     const [saving, setSaving] = useState(false);
     const [status, setStatus] = useState("");
 
@@ -25,7 +34,14 @@ const Settings = () => {
                 if (data) {
                     setRetention(data.retention_days);
                     setDdosThreshold(data.ddos_threshold);
-                    setEmailAlerts(data.email_alerts);
+                    setEmailAlerts(data.email_alerts || false);
+                    setAlertEmails(data.alert_emails || []);
+                    setWebhookURLs(data.webhook_urls || []);
+                    setSmtpServer(data.smtp_server || "");
+                    setSmtpPort(data.smtp_port || 587);
+                    setSmtpUser(data.smtp_user || "");
+                    setSmtpPassword(data.smtp_password || "");
+
                     setApiKey(data.system_api_key);
                     setMfaEnabled(data.mfa_enabled);
                 }
@@ -35,42 +51,60 @@ const Settings = () => {
 
     const startMfaSetup = async () => {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/mfa/setup', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        setMfaSetup(data);
-        setMfaUrl(data.url);
+        try {
+            const res = await fetch('/api/v1/mfa/setup', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setMfaSetup(data);
+                setMfaUrl(data.url);
+            } else {
+                alert("Failed to setup MFA: " + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const verifyMfa = async () => {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/v1/mfa/enable', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ code: mfaCode, secret: mfaSetup.secret })
-        });
-        if (res.ok) {
-            setMfaEnabled(true);
-            setMfaSetup(null);
-            setStatus("MFA Enabled!");
-        } else {
-            alert("Invalid Code");
+        try {
+            const res = await fetch('/api/v1/mfa/enable', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ code: mfaCode, secret: mfaSetup.secret })
+            });
+            if (res.ok) {
+                setMfaEnabled(true);
+                setMfaSetup(null);
+                setMfaCode("");
+            } else {
+                alert("Invalid Code");
+            }
+        } catch (err) {
+            console.error(err);
         }
     };
 
     const disableMfa = async () => {
-        if (!confirm("Disable MFA? Are you sure?")) return;
+        if (!window.confirm("Are you sure you want to disable MFA?")) return;
         const token = localStorage.getItem('token');
-        await fetch('/api/v1/mfa/disable', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        setMfaEnabled(false);
+        try {
+            const res = await fetch('/api/v1/mfa/disable', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setMfaEnabled(false);
+            }
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const handleSave = async () => {
@@ -88,7 +122,13 @@ const Settings = () => {
                 body: JSON.stringify({
                     retention_days: parseInt(retention),
                     ddos_threshold: parseFloat(ddosThreshold),
-                    email_alerts: emailAlerts
+                    email_alerts: emailAlerts,
+                    alert_emails: alertEmails,
+                    webhook_urls: webhookURLs,
+                    smtp_server: smtpServer,
+                    smtp_port: parseInt(smtpPort),
+                    smtp_user: smtpUser,
+                    smtp_password: smtpPassword
                 })
             });
 
@@ -180,25 +220,159 @@ const Settings = () => {
                     </div>
                 </div>
 
-                {/* Notifications */}
-                <div className="glass-panel p-6 rounded-xl border border-cyber-gray">
+                {/* Notifications & Alerting */}
+                <div className="glass-panel p-6 rounded-xl border border-cyber-gray md:col-span-2">
                     <h3 className="text-lg font-bold text-cyber-yellow mb-4 flex items-center gap-2">
-                        <Bell size={18} /> Notifications
+                        <Bell size={18} /> Alerting Channels
                     </h3>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-gray-300">Email Alerts</span>
-                            <div
-                                onClick={() => setEmailAlerts(!emailAlerts)}
-                                className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${emailAlerts ? 'bg-cyber-green' : 'bg-gray-700'}`}
-                            >
-                                <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${emailAlerts ? 'translate-x-6' : ''}`} />
+
+                    {/* Master Switch */}
+                    <div className="flex items-center justify-between mb-6 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+                        <div>
+                            <span className="text-white font-bold block">Enable Alerting</span>
+                            <span className="text-xs text-gray-400">Master switch for all notifications (Email & Webhooks)</span>
+                        </div>
+                        <div
+                            onClick={() => setEmailAlerts(!emailAlerts)}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${emailAlerts ? 'bg-cyber-green' : 'bg-gray-700'}`}
+                        >
+                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${emailAlerts ? 'translate-x-6' : ''}`} />
+                        </div>
+                    </div>
+
+                    {emailAlerts && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Email Recipients */}
+                            <div className="space-y-4">
+                                <h4 className="text-sm font-bold text-cyber-cyan uppercase tracking-wider">Email Recipients</h4>
+                                <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="email"
+                                            placeholder="admin@example.com"
+                                            className="flex-1 bg-black/50 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-cyber-cyan outline-none"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const val = e.target.value.trim();
+                                                    if (val && !alertEmails.includes(val)) {
+                                                        setAlertEmails([...alertEmails, val]);
+                                                        e.target.value = '';
+                                                    }
+                                                }
+                                            }}
+                                            id="email-input"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const el = document.getElementById('email-input');
+                                                const val = el.value.trim();
+                                                if (val && !alertEmails.includes(val)) {
+                                                    setAlertEmails([...alertEmails, val]);
+                                                    el.value = '';
+                                                }
+                                            }}
+                                            className="bg-cyber-cyan/20 text-cyber-cyan px-3 py-2 rounded hover:bg-cyber-cyan/30 text-sm"
+                                        >
+                                            ADD
+                                        </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {alertEmails.map((email, idx) => (
+                                            <div key={idx} className="flex justify-between items-center bg-gray-800/50 px-3 py-2 rounded text-sm text-gray-300">
+                                                <span>{email}</span>
+                                                <button onClick={() => setAlertEmails(alertEmails.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300">×</button>
+                                            </div>
+                                        ))}
+                                        {alertEmails.length === 0 && <p className="text-xs text-gray-500 italic">No recipients added.</p>}
+                                    </div>
+                                </div>
+
+                                {/* SMTP Settings */}
+                                <div className="mt-6 pt-4 border-t border-gray-700">
+                                    <button
+                                        onClick={() => setShowSMTP(!showSMTP)}
+                                        className="text-xs text-gray-400 flex items-center gap-1 hover:text-white mb-3"
+                                    >
+                                        Configure SMTP Server {showSMTP ? '▲' : '▼'}
+                                    </button>
+
+                                    {showSMTP && (
+                                        <div className="space-y-3 bg-black/30 p-4 rounded border border-gray-700">
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="col-span-2">
+                                                    <label className="text-xs text-gray-500 block mb-1">Server Host</label>
+                                                    <input value={smtpServer} onChange={e => setSmtpServer(e.target.value)} type="text" placeholder="smtp.gmail.com" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-500 block mb-1">Port</label>
+                                                    <input value={smtpPort} onChange={e => setSmtpPort(parseInt(e.target.value) || 587)} type="number" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="text-xs text-gray-500 block mb-1">Username</label>
+                                                    <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} type="text" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-500 block mb-1">Password</label>
+                                                    <input value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} type="password" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Webhooks */}
+                            <div className="space-y-4">
+                                <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Webhook URLs</h4>
+                                <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="https://discord.com/api/webhooks/..."
+                                            className="flex-1 bg-black/50 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-purple-400 outline-none"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const val = e.target.value.trim();
+                                                    if (val && !webhookURLs.includes(val)) {
+                                                        setWebhookURLs([...webhookURLs, val]);
+                                                        e.target.value = '';
+                                                    }
+                                                }
+                                            }}
+                                            id="webhook-input"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const el = document.getElementById('webhook-input');
+                                                const val = el.value.trim();
+                                                if (val && !webhookURLs.includes(val)) {
+                                                    setWebhookURLs([...webhookURLs, val]);
+                                                    el.value = '';
+                                                }
+                                            }}
+                                            className="bg-purple-500/20 text-purple-400 px-3 py-2 rounded hover:bg-purple-500/30 text-sm"
+                                        >
+                                            ADD
+                                        </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {webhookURLs.map((url, idx) => (
+                                            <div key={idx} className="flex justify-between items-center bg-gray-800/50 px-3 py-2 rounded text-sm text-gray-300 break-all">
+                                                <span className="truncate mr-2">{url}</span>
+                                                <button onClick={() => setWebhookURLs(webhookURLs.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300 flex-shrink-0">×</button>
+                                            </div>
+                                        ))}
+                                        {webhookURLs.length === 0 && <p className="text-xs text-gray-500 italic">No webhooks configured.</p>}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        Sends JSON payload for Critical events. Compatible with Slack, Discord, Teams.
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <p className="text-xs text-gray-500">
-                            Receive notifications for Critical Severity logs and DDoS events.
-                        </p>
-                    </div>
+                    )}
                 </div>
                 {/* Agent Enrollment Keys */}
                 <div className="glass-panel p-6 rounded-xl border border-cyber-gray">
@@ -229,7 +403,7 @@ const Settings = () => {
                 {/* MFA Settings */}
                 <div className="glass-panel p-6 rounded-xl border border-cyber-gray">
                     <h3 className="text-lg font-bold text-purple-400 mb-4 flex items-center gap-2">
-                        <QrCode size={18} /> Two-Factor Auth
+                        <Shield size={18} /> Two-Factor Auth
                     </h3>
 
                     {!mfaEnabled && !mfaSetup ? (
@@ -242,7 +416,11 @@ const Settings = () => {
                     ) : !mfaEnabled && mfaSetup ? (
                         <div className="space-y-4">
                             <div className="bg-white p-2 w-fit rounded">
-                                <QRCode value={mfaUrl} size={150} />
+                                {/* QRCode temporarily disabled for stability check */}
+                                {/* <QRCode value={mfaUrl} size={150} /> */}
+                                <div className="w-[150px] h-[150px] bg-gray-200 flex items-center justify-center text-black text-xs text-center">
+                                    QR Code Placeholder
+                                </div>
                             </div>
                             <p className="text-xs text-gray-400">Scan this code with Google Authenticator</p>
                             <div className="flex gap-2">
