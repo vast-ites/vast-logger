@@ -2,7 +2,7 @@ package collector
 
 import (
 	"time"
-    "fmt"
+    
     "runtime"
     "strings"
     "net"
@@ -168,8 +168,7 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
         
          // DEBUG: Re-enable for diagnosis
         if (currentTimestamp % 10 == 0) || (diskWriteRate > 0) || (currentWriteBytes > sc.lastDiskWriteBytes) {
-            fmt.Printf("DEBUG: Cur=%d Last=%d Delta=%d Rate=%.2f TimeDelta=%.2f\n", 
-                currentWriteBytes, sc.lastDiskWriteBytes, currentWriteBytes-sc.lastDiskWriteBytes, diskWriteRate, deltaTime)
+            // The fmt.Printf line was here, now it's gone.
         }
 
         // Disk IOPS
