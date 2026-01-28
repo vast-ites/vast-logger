@@ -13,6 +13,7 @@ import (
     "net/http"
     "bytes"
     "sync/atomic"
+    "context"
 
 	"github.com/datavast/datavast/agent/collector"
 	"github.com/datavast/datavast/agent/discovery"
@@ -152,6 +153,51 @@ func main() {
         } else {
             fmt.Println(">> Docker Collector Initialized")
             dockerCol = dCol
+
+            // --- Docker Log Streaming ---
+            activeStreams := make(map[string]context.CancelFunc)
+            go func() {
+                for {
+                    containers, err := dockerCol.ListRunningContainers()
+                    if err != nil {
+                        // Silent fail or debug log
+                    } else {
+                        seen := make(map[string]bool)
+                        for _, c := range containers {
+                            // Use Full ID for API, Short ID for Map
+                            fullID := c.ID
+                            shortID := fullID[:12]
+                            seen[shortID] = true
+                            
+                            if _, ok := activeStreams[shortID]; !ok {
+                                // New container
+                                ctx, cancel := context.WithCancel(context.Background())
+                                activeStreams[shortID] = cancel
+                                
+                                // Clean name
+                                name := shortID
+                                if len(c.Names) > 0 {
+                                    name = strings.TrimPrefix(c.Names[0], "/")
+                                }
+                                
+                                fmt.Printf(">> Starting Log Streamer for %s (%s)\n", name, shortID)
+                                go func(cid, cname string) {
+                                    dockerCol.StreamLogs(ctx, cid, cname, logChan)
+                                }(fullID, name) 
+                            }
+                        }
+                        
+                        // Cleanup stopped
+                        for id, cancel := range activeStreams {
+                            if !seen[id] {
+                                cancel()
+                                delete(activeStreams, id)
+                            }
+                        }
+                    }
+                    time.Sleep(10 * time.Second)
+                }
+            }()
         }
     }
 

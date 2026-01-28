@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
     "strconv"
 	"time"
@@ -258,6 +259,8 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         v1.GET("/metrics/interfaces/history", h.HandleGetInterfaceHistory)
         v1.GET("/settings", h.HandleGetSettings) // Read-only public
         
+        v1.GET("/logs/services", h.HandleGetServices)
+        
         v1.POST("/auth/login", h.HandleLogin)
 
         // Protected
@@ -278,6 +281,43 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         v1.GET("/processes", h.HandleGetProcesses)
         v1.GET("/firewall", h.HandleGetFirewall)
 	}
+}
+
+func (h *IngestionHandler) HandleGetServices(c *gin.Context) {
+    host := c.Query("host")
+    fmt.Printf("DEBUG: HandleGetServices called for host='%s'\n", host)
+    
+    // 1. Get Services from Logs (Historical)
+    services, err := h.Logs.GetUniqueServices(host)
+    if err != nil {
+        log.Printf("Error getting log services: %v", err)
+        services = []string{}
+    }
+    if services == nil {
+        services = []string{}
+    }
+    
+    // 2. Get Running Containers from Metrics (Live)
+    if host != "" {
+        if containers, err := h.Metrics.GetContainerNames(host); err == nil {
+            log.Printf("DEBUG: Found Active Containers for %s: %v", host, containers)
+            // Merge unique
+            seen := make(map[string]bool)
+            for _, s := range services { seen[s] = true }
+
+            for _, c := range containers {
+                if !seen[c] {
+                    services = append(services, c)
+                    seen[c] = true
+                }
+            }
+        } else {
+             log.Printf("DEBUG: Error getting container names: %v", err)
+        }
+    }
+
+    c.Header("X-Debug", "Active")
+    c.JSON(http.StatusOK, services)
 }
 
 func (h *IngestionHandler) HandleIngestProcesses(c *gin.Context) {

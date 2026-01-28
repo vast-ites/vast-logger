@@ -17,11 +17,19 @@ type Client struct {
 }
 
 func NewClient(backendURL, agentSecret, hostname string) *Client {
+	t := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100, // Critical for reusing connections to backend
+		IdleConnTimeout:     90 * time.Second,
+	}
 	return &Client{
 		BackendURL:  backendURL,
-        AgentSecret: agentSecret,
-        Hostname:    hostname,
-		client:      &http.Client{Timeout: 5 * time.Second},
+		AgentSecret: agentSecret,
+		Hostname:    hostname,
+		client:      &http.Client{
+			Timeout:   5 * time.Second,
+			Transport: t,
+		},
 	}
 }
 
@@ -82,12 +90,16 @@ func (c *Client) SendMetrics(m *collector.SystemMetrics, containers []collector.
 }
 
 func (c *Client) SendLog(l *collector.LogLine) error {
+    service := l.Service
+    if service == "" {
+        service = "agent"
+    }
 	payload := map[string]interface{}{
 		"source_path": l.Path,
 		"message":     l.Content,
 		"timestamp":   l.Timestamp,
 		"host":        c.Hostname,
-		"service":     "agent",     
+		"service":     service,     
 		"level":       l.Level,
 	}
 

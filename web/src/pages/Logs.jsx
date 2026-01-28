@@ -6,6 +6,8 @@ const Logs = () => {
     const { selectedHost } = useHost(); // Use Global Host Context
     const [logs, setLogs] = useState([]);
     const [filterLevel, setFilterLevel] = useState('ALL');
+    const [filterService, setFilterService] = useState('');
+    const [services, setServices] = useState([]);
     const [limit, setLimit] = useState(100);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
@@ -49,6 +51,7 @@ const Logs = () => {
             else if (selectedHost) params.append('host', selectedHost);
 
             if (searchParams.service) params.append('service', searchParams.service);
+            else if (filterService) params.append('service', filterService);
             if (searchParams.before) params.append('before', searchParams.before);
             if (searchParams.after) params.append('after', searchParams.after);
             if (searchParams.order) params.append('order', searchParams.order.toUpperCase());
@@ -78,7 +81,26 @@ const Logs = () => {
         fetchLogs();
         const interval = setInterval(fetchLogs, refreshInterval);
         return () => clearInterval(interval);
-    }, [filterLevel, searchTerm, selectedHost, limit, refreshInterval]);
+    }, [filterLevel, filterService, searchTerm, selectedHost, limit, refreshInterval]);
+
+    // Fetch Services List when host changes
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                let url = '/api/v1/logs/services';
+                if (selectedHost) url += `?host=${selectedHost}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    setServices(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch services", err);
+            }
+        };
+        fetchServices();
+        setFilterService(''); // Reset service filter on host change
+    }, [selectedHost]);
 
     // Pagination Logic
     const indexOfLastLog = currentPage * itemsPerPage;
@@ -176,6 +198,17 @@ order:ASC|DESC">
                         <option value="WARN">WARN</option>
                         <option value="ERROR">ERROR</option>
                         <option value="DEBUG">DEBUG</option>
+                    </select>
+
+                    <select
+                        value={filterService}
+                        onChange={(e) => setFilterService(e.target.value)}
+                        className="bg-black/40 border border-cyber-gray rounded px-4 py-2 text-sm text-white focus:border-cyber-cyan focus:outline-none appearance-none cursor-pointer hover:bg-cyber-gray/20 max-w-[200px]"
+                    >
+                        <option value="">All Services</option>
+                        {services.map(svc => (
+                            <option key={svc} value={svc}>{svc}</option>
+                        ))}
                     </select>
                 </div>
 
