@@ -468,6 +468,41 @@ func (m *MetricsStore) GetLatestContainerMetrics(host string) ([]ContainerMetric
     return metrics, nil
 }
 
+// GetContainerNames returns a list of active container names for a host
+func (m *MetricsStore) GetContainerNames(host string) ([]string, error) {
+    if host == "" { return nil, nil }
+    
+    // Efficient query just for names
+    // Strategy: Filter for cpu_percent (always present), group by name, take 1.
+    query := fmt.Sprintf(`
+    from(bucket: "%s")
+    |> range(start: -5m)
+    |> filter(fn: (r) => r["_measurement"] == "containers")
+    |> filter(fn: (r) => r["host"] == "%s")
+    |> filter(fn: (r) => r["_field"] == "cpu_percent")
+    |> group(columns: ["container_name"])
+    |> limit(n: 1)
+    `, m.bucket, host)
+
+    result, err := m.queryAPI.Query(context.Background(), query)
+    if err != nil {
+        return nil, err
+    }
+    defer result.Close()
+
+    var names []string
+    for result.Next() {
+        // Get tag value
+        if v, ok := result.Record().ValueByKey("container_name").(string); ok {
+             names = append(names, v)
+        }
+    }
+    if result.Err() != nil {
+        return nil, result.Err()
+    }
+    return names, nil
+}
+
 func (s *MetricsStore) Close() {
 	s.client.Close()
 }

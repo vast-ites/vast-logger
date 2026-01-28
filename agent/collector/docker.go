@@ -76,6 +76,10 @@ func NewDockerCollector() (*DockerCollector, error) {
     }, nil
 }
 
+func (dc *DockerCollector) ListRunningContainers() ([]container.Summary, error) {
+    return dc.cli.ContainerList(context.Background(), container.ListOptions{})
+}
+
 func (dc *DockerCollector) GetContainerMetrics() ([]ContainerMetric, error) {
 	containers, err := dc.cli.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {

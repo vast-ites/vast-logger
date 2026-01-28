@@ -306,3 +306,30 @@ func (s *LogStore) QueryLogs(filter LogFilter) ([]LogEntry, error) {
 	return logs, nil
 }
 
+func (s *LogStore) GetUniqueServices(host string) ([]string, error) {
+	query := "SELECT DISTINCT service FROM datavast.logs"
+	var args []interface{}
+	if host != "" {
+		query += " WHERE host = ?"
+		args = append(args, host)
+	}
+	query += " ORDER BY service"
+
+	rows, err := s.conn.Query(context.Background(), query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var services []string
+	for rows.Next() {
+		var svc string
+		if err := rows.Scan(&svc); err != nil {
+			return nil, err
+		}
+		if svc != "" {
+			services = append(services, svc)
+		}
+	}
+	return services, nil
+}

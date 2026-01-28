@@ -11,6 +11,7 @@ type LogLine struct {
 	Path      string
 	Content   string
     Level     string
+    Service   string // "agent", "nginx", "mysql", etc.
 	Timestamp time.Time
 }
 
