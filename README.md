@@ -108,8 +108,8 @@ Open your browser and navigate to:
 - RESTful API (Gin framework)
 - ClickHouse for log storage (high-throughput writes)
 - InfluxDB for time-series metrics
-- WebSocket support for real-time updates
-- Authentication & session management
+- HTTP polling for real-time updates
+- JWT-based authentication with session management
 
 **Frontend**:
 - React 18 with Vite
@@ -149,8 +149,30 @@ Open your browser and navigate to:
    cd agent
    go build -o datavast-agent
    
-   # Create systemd service
+   # Copy binary
+   sudo mkdir -p /opt/datavast
    sudo cp datavast-agent /opt/datavast/
+   
+   # Create systemd service
+   sudo tee /etc/systemd/system/datavast-agent.service << 'EOF'
+[Unit]
+Description=DataVast Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/datavast
+ExecStart=/opt/datavast/datavast-agent
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+   
+   # Enable and start service
+   sudo systemctl daemon-reload
    sudo systemctl enable datavast-agent
    sudo systemctl start datavast-agent
    ```
