@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Terminal, AlertTriangle, Bug, Info, Download, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useHost } from '../contexts/HostContext';
 
 const Logs = () => {
-    const { selectedHost } = useHost(); // Use Global Host Context
+    const { selectedHost, setSelectedHost } = useHost(); // Use Global Host Context
+    const location = useLocation();
     const [logs, setLogs] = useState([]);
     const [filterLevel, setFilterLevel] = useState('ALL');
     const [filterService, setFilterService] = useState('');
@@ -11,6 +13,20 @@ const Logs = () => {
     const [limit, setLimit] = useState(100);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Initialize from URL Params
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const svc = params.get('service');
+        const hst = params.get('host');
+
+        if (hst && setSelectedHost) {
+            setSelectedHost(hst);
+        }
+        if (svc) {
+            setFilterService(svc);
+        }
+    }, [location.search, setSelectedHost]);
 
     // Pagination & Refresh
     const [currentPage, setCurrentPage] = useState(1);
@@ -99,7 +115,7 @@ const Logs = () => {
             }
         };
         fetchServices();
-        setFilterService(''); // Reset service filter on host change
+        // Note: Don't reset filterService here - it would conflict with URL params
     }, [selectedHost]);
 
     // Pagination Logic
