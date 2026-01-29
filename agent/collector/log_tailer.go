@@ -16,7 +16,7 @@ type LogLine struct {
 }
 
 // TailFile starts a goroutine that tails a specific file and sends lines to the channel
-func TailFile(path string, out chan<- LogLine) {
+func TailFile(path string, service string, out chan<- LogLine) {
 	t, err := tail.TailFile(path, tail.Config{
 		Follow: true,
 		ReOpen: true,
@@ -34,6 +34,7 @@ func TailFile(path string, out chan<- LogLine) {
 		for line := range t.Lines {
 			out <- LogLine{
 				Path:      path,
+				Service:   service,
 				Content:   line.Text,
                 Level:     ParseLogLine(line.Text),
 				Timestamp: line.Time,
