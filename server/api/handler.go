@@ -650,16 +650,17 @@ func (h *IngestionHandler) HandleDisableMFA(c *gin.Context) {
 }
 
 // OptionalAuth wraps AuthRequired but makes it optional based on AUTH_ENABLED env var
-// This provides backward compatibility - auth is disabled by default
+// SECURITY: Authentication is ENABLED by default for production
 func OptionalAuth(role string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authEnabled := os.Getenv("AUTH_ENABLED")
-		if authEnabled != "true" {
-			// Auth disabled - allow all requests
+		// Default to TRUE - auth enabled unless explicitly disabled
+		if authEnabled == "false" {
+			// Auth explicitly disabled - allow all requests
 			c.Next()
 			return
 		}
-		// Auth enabled - enforce token check
+		// Auth enabled (default) - enforce token check
 		AuthRequired(role)(c)
 	}
 }
