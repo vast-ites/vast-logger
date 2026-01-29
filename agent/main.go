@@ -77,7 +77,13 @@ func main() {
     if cfg.LogConfig.Mode != "none" {
         if cfg.LogConfig.Mode == "selected" {
             for _, path := range cfg.LogConfig.SelectedLogs {
-                logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: "manual_selection"})
+                sourceType := "manual_selection"
+                if strings.Contains(path, "apache") || strings.Contains(path, "httpd") { sourceType = "apache" }
+                if strings.Contains(path, "nginx") { sourceType = "nginx" }
+                if strings.Contains(path, "pm2") { sourceType = "pm2" }
+                if strings.Contains(path, "mysql") { sourceType = "mysql" }
+                
+                logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: sourceType})
             }
         } else {
             // Auto Discover "all"
@@ -94,7 +100,12 @@ func main() {
     
     // Always append manually selected logs (Custom Paths)
     for _, path := range cfg.LogConfig.SelectedLogs {
-        logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: "manual_selection"})
+        sourceType := "manual_selection"
+        if strings.Contains(path, "apache") || strings.Contains(path, "httpd") { sourceType = "apache" }
+        if strings.Contains(path, "nginx") { sourceType = "nginx" }
+        if strings.Contains(path, "mysql") { sourceType = "mysql" }
+
+        logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: sourceType})
     }
         
         // Dedup
@@ -125,7 +136,7 @@ func main() {
     
     	fmt.Println(">> Starting Log Tailers...")
     	for _, l := range logs {
-    		go collector.TailFile(l.Path, logChan)
+    		go collector.TailFile(l.Path, l.SourceType, logChan)
     	}
     
     	// Log Sender Routine

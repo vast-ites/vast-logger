@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Logs from './pages/Logs';
+import Services from './pages/Services';
 import Security from './pages/Security';
 import Settings from './pages/Settings';
 
@@ -42,6 +43,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Logs />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="services"
+              element={
+                <PrivateRoute>
+                  <Services />
                 </PrivateRoute>
               }
             />
