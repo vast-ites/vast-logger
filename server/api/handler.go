@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+    "os"
     "strconv"
 	"time"
 
@@ -243,43 +244,43 @@ func (h *IngestionHandler) HandleDeleteHost(c *gin.Context) {
 func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
 	v1 := r.Group("/api/v1")
 	{
-        // Public / Enrollment
-		v1.POST("/agent/register", h.HandleRegisterAgent)
-
-        // Ingestion (Should be protected eventually)
-		v1.POST("/ingest/metrics", h.HandleMetrics)
-		v1.POST("/ingest/logs", h.HandleLogs)
-        v1.GET("/hosts", h.HandleGetHosts) 
-        v1.DELETE("/hosts", h.HandleDeleteHost) // Delete/Ignore host
-        v1.GET("/metrics/system", h.HandleGetLatestMetrics)
-        v1.GET("/metrics/containers", h.HandleGetContainers)
-        v1.GET("/logs/stream", h.HandleGetLogs)
-        v1.GET("/logs/search", h.HandleSearchLogs)
-        v1.GET("/metrics/history", h.HandleGetHistory)
-        v1.GET("/metrics/interfaces/history", h.HandleGetInterfaceHistory)
-        v1.GET("/settings", h.HandleGetSettings) // Read-only public
-        
-        v1.GET("/logs/services", h.HandleGetServices)
-        
+        // Public (always accessible)
         v1.POST("/auth/login", h.HandleLogin)
-
-        // Protected
-        secure := v1.Group("/")
-        secure.Use(AuthRequired("admin"))
-        {
-            secure.POST("/settings", h.HandleSaveSettings)
-            secure.POST("/mfa/setup", h.HandleSetupMFA)
-            secure.POST("/mfa/enable", h.HandleEnableMFA)
-            secure.POST("/mfa/disable", h.HandleDisableMFA)
-        }
         
-        // Ingest Extensions
+        // Agent Ingestion (no auth - agents use internal network trust)
+		v1.POST("/agent/register", h.HandleRegisterAgent)
+        v1.POST("/ingest/metrics", h.HandleMetrics)
+	    v1.POST("/ingest/logs", h.HandleLogs)
         v1.POST("/ingest/processes", h.HandleIngestProcesses)
         v1.POST("/ingest/firewall", h.HandleIngestFirewall)
-        
-        // Get Extensions
-        v1.GET("/processes", h.HandleGetProcesses)
-        v1.GET("/firewall", h.HandleGetFirewall)
+
+        // User-facing endpoints (optional auth based on AUTH_ENABLED)
+        userRoutes := v1.Group("/")
+        userRoutes.Use(OptionalAuth("user"))
+        {
+            userRoutes.GET("/hosts", h.HandleGetHosts) 
+            userRoutes.DELETE("/hosts", h.HandleDeleteHost)
+            userRoutes.GET("/metrics/system", h.HandleGetLatestMetrics)
+            userRoutes.GET("/metrics/containers", h.HandleGetContainers)
+            userRoutes.GET("/logs/stream", h.HandleGetLogs)
+            userRoutes.GET("/logs/search", h.HandleSearchLogs)
+            userRoutes.GET("/metrics/history", h.HandleGetHistory)
+            userRoutes.GET("/metrics/interfaces/history", h.HandleGetInterfaceHistory)
+            userRoutes.GET("/settings", h.HandleGetSettings)
+            userRoutes.GET("/logs/services", h.HandleGetServices)
+            userRoutes.GET("/processes", h.HandleGetProcesses)
+            userRoutes.GET("/firewall", h.HandleGetFirewall)
+        }
+
+        // Admin endpoints (always require auth when AUTH_ENABLED=true)
+        adminRoutes := v1.Group("/")
+        adminRoutes.Use(OptionalAuth("admin"))
+        {
+            adminRoutes.POST("/settings", h.HandleSaveSettings)
+            adminRoutes.POST("/mfa/setup", h.HandleSetupMFA)
+            adminRoutes.POST("/mfa/enable", h.HandleEnableMFA)
+            adminRoutes.POST("/mfa/disable", h.HandleDisableMFA)
+        }
 	}
 }
 
@@ -646,6 +647,21 @@ func (h *IngestionHandler) HandleDisableMFA(c *gin.Context) {
      h.Config.Save(config)
      
      c.JSON(http.StatusOK, gin.H{"message": "MFA Disabled"})
+}
+
+// OptionalAuth wraps AuthRequired but makes it optional based on AUTH_ENABLED env var
+// This provides backward compatibility - auth is disabled by default
+func OptionalAuth(role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authEnabled := os.Getenv("AUTH_ENABLED")
+		if authEnabled != "true" {
+			// Auth disabled - allow all requests
+			c.Next()
+			return
+		}
+		// Auth enabled - enforce token check
+		AuthRequired(role)(c)
+	}
 }
 
 // Middleware
