@@ -28,9 +28,30 @@ export const HostProvider = ({ children }) => {
     }, [refreshInterval]);
 
     const fetchHosts = async () => {
+        // PERF: Don't fetch if no token (avoid 401 loop on login page)
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
-            const res = await fetch('/api/v1/hosts');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+            const res = await fetch('/api/v1/hosts', { headers });
+
+            if (res.status === 401) {
+                // Only redirect if NOT already on login page to prevent loops
+                if (window.location.pathname !== '/login') {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
+                return;
+            }
+
             if (res.ok) {
                 const data = await res.json();
                 setHosts(data);

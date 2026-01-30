@@ -21,6 +21,7 @@ const Services = () => {
 
                 // fetch hosts
                 const hostsRes = await fetch('/api/v1/hosts', { headers });
+                if (hostsRes.status === 401) { window.location.href = '/login'; return; }
                 const hostsData = await hostsRes.json();
 
                 // fetch services from ALL hosts and build service objects with host info

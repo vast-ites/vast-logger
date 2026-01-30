@@ -76,7 +76,16 @@ const Logs = () => {
 
             params.append('limit', limit);
 
-            const res = await fetch(`/api/v1/logs/search?${params.toString()}`);
+            params.append('limit', limit);
+
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` })
+            };
+
+            const res = await fetch(`/api/v1/logs/search?${params.toString()}`, { headers });
+            if (res.status === 401) { window.location.href = '/login'; return; }
             if (res.ok) {
                 const data = await res.json();
                 setLogs(data);
@@ -105,7 +114,16 @@ const Logs = () => {
             try {
                 let url = '/api/v1/logs/services';
                 if (selectedHost) url += `?host=${selectedHost}`;
-                const res = await fetch(url);
+
+                const token = localStorage.getItem('token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                };
+
+                const res = await fetch(url, { headers });
+
+                if (res.status === 401) return; // Don't redirect on background fetch, maybe just fail silent
                 if (res.ok) {
                     const data = await res.json();
                     setServices(data);

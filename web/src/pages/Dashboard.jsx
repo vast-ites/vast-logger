@@ -26,23 +26,30 @@ const Dashboard = () => {
     React.useEffect(() => {
         const fetchTelemetry = async () => {
             try {
+                const token = localStorage.getItem('token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                };
+
                 const params = selectedHost ? `?host=${selectedHost}` : '';
                 const cacheBuster = `&_t=${Date.now()}`;
 
                 // Fetch Metrics
-                const resMetrics = await fetch(`/api/v1/metrics/system${params}${!params ? '?' : ''}${cacheBuster}`);
+                const resMetrics = await fetch(`/api/v1/metrics/system${params}${!params ? '?' : ''}${cacheBuster}`, { headers });
+                if (resMetrics.status === 401) { window.location.href = '/login'; return; }
                 if (resMetrics.ok) setMetrics(await resMetrics.json());
 
                 // Fetch Logs
                 const logParams = selectedHost ? `?host=${selectedHost}` : '';
-                const resLogsSearch = await fetch(`/api/v1/logs/search${logParams}${!logParams ? '?' : ''}&limit=50${cacheBuster}`);
+                const resLogsSearch = await fetch(`/api/v1/logs/search${logParams}${!logParams ? '?' : ''}&limit=50${cacheBuster}`, { headers });
                 if (resLogsSearch.ok) {
                     const logData = await resLogsSearch.json();
                     if (Array.isArray(logData)) setLogs(logData);
                 }
 
                 // Fetch Containers
-                const resContainers = await fetch(`/api/v1/metrics/containers${params}${!params ? '?' : ''}${cacheBuster}`);
+                const resContainers = await fetch(`/api/v1/metrics/containers${params}${!params ? '?' : ''}${cacheBuster}`, { headers });
                 if (resContainers.ok) {
                     const contData = await resContainers.json();
                     if (Array.isArray(contData)) {
@@ -51,7 +58,7 @@ const Dashboard = () => {
                 }
 
                 // Fetch Processes
-                const resProc = await fetch(`/api/v1/processes${params}${!params ? '?' : ''}${cacheBuster}`);
+                const resProc = await fetch(`/api/v1/processes${params}${!params ? '?' : ''}${cacheBuster}`, { headers });
                 if (resProc.ok) {
                     const procData = await resProc.json();
                     if (Array.isArray(procData)) setProcesses(procData);

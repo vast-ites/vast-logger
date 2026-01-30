@@ -24,7 +24,8 @@ const Login = () => {
                 const data = await res.json();
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('role', 'admin');
-                navigate('/settings'); // Redirect to settings or dashboard
+                // Force reload to ensure HostContext picks up the new token immediately
+                window.location.href = '/';
             } else {
                 setError('Access Denied: Invalid Credentials');
             }
