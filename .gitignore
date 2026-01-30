@@ -1,8 +1,39 @@
+# Binaries
 datavast-server
+datavast-agent
+datavast-server-bin
+datavast-agent-bin
+server/server
 server/main
-web/dist
-node_modules
-.DS_Store
+server/bin/
+agent/bin/
+agent/datavast-agent
+tools/disk_check
+
+# Logs
 *.log
+wget-log*
+*.out
+
+# Build Artifacts
+web/dist
+web/node_modules
+web/*.tar.gz
+server/*.gz
+server/*_chunk_*
+server/*_part_*
+
+# Sensitive
+id_ed25519
+id_ed25519.pub
+*.key
+*.pem
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Data
 deployment/clickhouse_data/
 deployment/influxdb_data/

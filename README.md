@@ -118,6 +118,22 @@ Open your browser and navigate to:
 - Lucide React for icons
 - Tailwind CSS for styling
 
+**Security**:
+- **Authentication**: JWT-based auth encapsulated in `OptionalAuth` middleware.
+- **Default State**: Secure by default (`AUTH_ENABLED=true`).
+- **Authorization**: Role-based access control (RBAC) foundation.
+- **Frontend Security**: Automatic token injection and session management.
+
+---
+
+## 🔐 Authentication
+
+The platform uses a secure-by-default approach:
+- **Default Credentials**: `admin` / `admin`
+- **Enforcement**: Public API endpoints require a valid JWT token.
+- **Bypass**: Set `AUTH_ENABLED=false` environment variable (NOT recommended for production).
+- **Frontend**: Automatically handles token storage and injection in `HostContext`.
+
 ---
 
 ## 📦 Deployment
