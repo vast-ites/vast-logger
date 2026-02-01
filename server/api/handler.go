@@ -276,6 +276,11 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             userRoutes.GET("/services/:service/access-logs", h.HandleGetAccessLogs)
             userRoutes.GET("/services/:service/geo", h.HandleGetGeoStats)
             userRoutes.GET("/services/:service/top-ips", h.HandleGetTopIPs)
+            
+            // MySQL endpoints
+            userRoutes.GET("/services/mysql/status", h.HandleGetMySQLStatus)
+            userRoutes.GET("/services/mysql/slow-queries", h.HandleGetMySQLSlowQueries)
+            userRoutes.GET("/services/mysql/connections", h.HandleGetMySQLConnections)
         }
 
         // Admin endpoints (always require auth when AUTH_ENABLED=true)
