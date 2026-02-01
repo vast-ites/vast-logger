@@ -5,8 +5,10 @@ import {
     Activity, ArrowRight, Plus
 } from 'lucide-react';
 import AddServiceModal from '../components/AddServiceModal';
+import { useHost } from '../contexts/HostContext';
 
 const Services = () => {
+    const { selectedHost } = useHost();
     const [hosts, setHosts] = useState([]);
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -54,36 +56,25 @@ const Services = () => {
         const lower = name.toLowerCase();
         if (lower.includes('mysql') || lower.includes('postgres') || lower.includes('clickhouse') || lower.includes('mongo') || lower.includes('redis') || lower.includes('influx')) return 'Databases';
         if (lower.includes('nginx') || lower.includes('apache') || lower.includes('caddy') || lower.includes('traefik')) return 'Web Servers';
-        if (lower.includes('docker') || lower.includes('kube') || lower.includes('agent')) return 'Infrastructure';
         return 'Other Services';
     };
 
     const categories = {
-        'Infrastructure': { icon: Server, color: 'text-blue-400', items: [] },
         'Web Servers': { icon: Globe, color: 'text-green-400', items: [] },
         'Databases': { icon: Database, color: 'text-yellow-400', items: [] },
         'Other Services': { icon: Box, color: 'text-gray-400', items: [] }
     };
 
-    // Populate categories
-    // 1. Add Hosts to Infrastructure
-    hosts.forEach(h => {
-        categories['Infrastructure'].items.push({
-            name: h.hostname,
-            type: 'Host',
-            status: 'Online',
-            lastSeen: h.last_seen
-        });
-    });
-
-
-    // 2. Add Discovered Services
+    // Populate categories with discovered services
     // Filter out internal log discovery types
     const internalTypes = ['filesystem_scan', 'process_open_file', 'system_core', 'agent'];
 
     services.forEach(item => {
         // Skip internal types
         if (internalTypes.includes(item.name)) return;
+
+        // Filter by selected host (if a specific host is selected)
+        if (selectedHost && item.host !== selectedHost) return;
 
         const cat = categorizeService(item.name);
         categories[cat].items.push({
