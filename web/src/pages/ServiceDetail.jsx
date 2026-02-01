@@ -5,8 +5,9 @@ import { ArrowLeft } from 'lucide-react';
 // Service-specific components
 import ApacheDetail from './services/ApacheDetail';
 import MySQLDetail from './services/MySQLDetail';
-// import PostgreSQLDetail from './services/PostgreSQLDetail';
-// import RedisDetail from './services/RedisDetail';
+import PostgreSQLDetail from './services/PostgreSQLDetail';
+import RedisDetail from './services/RedisDetail';
+import MongoDBDetail from './services/MongoDBDetail';
 
 const ServiceDetail = () => {
     const { serviceName } = useParams();
@@ -15,13 +16,15 @@ const ServiceDetail = () => {
     const serviceComponents = {
         'apache': ApacheDetail,
         'apache2': ApacheDetail,
-        'nginx': ApacheDetail,  // Reuse for Nginx
+        'nginx': ApacheDetail,
         'httpd': ApacheDetail,
         'mysql': MySQLDetail,
         'mariadb': MySQLDetail,
-        // 'postgresql': PostgreSQLDetail,
-        // 'postgres': PostgreSQLDetail,
-        // 'redis': RedisDetail,
+        'postgresql': PostgreSQLDetail,
+        'postgres': PostgreSQLDetail,
+        'redis': RedisDetail,
+        'mongodb': MongoDBDetail,
+        'mongod': MongoDBDetail,
     };
 
     const Component = serviceComponents[serviceName.toLowerCase()];
