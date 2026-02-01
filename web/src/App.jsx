@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Logs from './pages/Logs';
 import Services from './pages/Services';
+import ServiceDetail from './pages/ServiceDetail';
 import Security from './pages/Security';
 import Settings from './pages/Settings';
 
@@ -51,6 +52,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Services />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="services/:serviceName"
+              element={
+                <PrivateRoute>
+                  <ServiceDetail />
                 </PrivateRoute>
               }
             />

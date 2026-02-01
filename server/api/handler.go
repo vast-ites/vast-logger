@@ -270,6 +270,12 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             userRoutes.GET("/logs/services", h.HandleGetServices)
             userRoutes.GET("/processes", h.HandleGetProcesses)
             userRoutes.GET("/firewall", h.HandleGetFirewall)
+            
+            // Service detail endpoints
+            userRoutes.GET("/services/:service/stats", h.HandleGetServiceStats)
+            userRoutes.GET("/services/:service/access-logs", h.HandleGetAccessLogs)
+            userRoutes.GET("/services/:service/geo", h.HandleGetGeoStats)
+            userRoutes.GET("/services/:service/top-ips", h.HandleGetTopIPs)
         }
 
         // Admin endpoints (always require auth when AUTH_ENABLED=true)

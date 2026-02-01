@@ -109,6 +109,11 @@ func NewLogStore(dsn string) (*LogStore, error) {
 	return &LogStore{conn: conn}, nil
 }
 
+// Query executes a query with parameters
+func (s *LogStore) Query(query string, args ...interface{}) (driver.Rows, error) {
+	return s.conn.Query(context.Background(), query, args...)
+}
+
 // ... InsertLog ...
 
 type ProcessEntry struct {
