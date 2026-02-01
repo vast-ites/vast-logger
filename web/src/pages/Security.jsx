@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Lock, Unlock, Wifi, Zap } from 'lucide-react';
+import { Shield, AlertTriangle, Lock, Unlock, Wifi, Zap, Filter, Ban, Check, Globe, Network } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 import { useHost } from '../contexts/HostContext';
@@ -9,16 +9,128 @@ const Security = () => {
     const [history, setHistory] = useState([]);
     const [currentStatus, setCurrentStatus] = useState('SAFE');
     const [loading, setLoading] = useState(true);
-    const [firewallRules, setFirewallRules] = useState('Loading firewall configuration...');
+    const [firewallData, setFirewallData] = useState([]);
+    const [activeFilter, setActiveFilter] = useState('all');
+
+    const parseFirewallRules = (rawRules) => {
+        if (!rawRules || rawRules === '' || rawRules.includes('unavailable') || rawRules.includes('No firewall data')) {
+            return [];
+        }
+
+        const rules = [];
+        const lines = rawRules.split('\n');
+
+        lines.forEach((line, idx) => {
+            // Skip header lines, empty lines, and chain declarations
+            if (!line.trim() ||
+                line.includes('Chain ') ||
+                line.includes('target ') ||
+                line.includes('prot opt') ||
+                line.startsWith('f2b-') ||
+                line.startsWith('sip-')) {
+                return;
+            }
+
+            // Parse UFW format: "[ 1] ALLOW IN    22"
+            const ufwMatch = line.match(/^\[\s*\d+\]\s+(ALLOW|DENY|REJECT)\s+(IN|OUT)?\s+(.+)/);
+            if (ufwMatch) {
+                const [_, action, direction, details] = ufwMatch;
+                const hasPort = /^\d+/.test(details.trim());
+                const hasIP = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(details);
+
+                rules.push({
+                    id: `ufw-${idx}`,
+                    action: action,
+                    direction: direction || 'ANY',
+                    details: details.trim(),
+                    type: action === 'ALLOW' ? 'allowed' : 'blocked',
+                    resourceType: hasPort ? 'port' : (hasIP ? 'ip' : 'other')
+                });
+                return;
+            }
+
+            // Parse iptables format: "ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0            tcp dpt:22"
+            const iptablesMatch = line.match(/^(ACCEPT|DROP|REJECT)\s+/);
+            if (iptablesMatch) {
+                const action = iptablesMatch[1];
+
+                // Extract source and destination (format: "action prot opt source dest ...")
+                const sourceDestMatch = line.match(/^(?:ACCEPT|DROP|REJECT)\s+(\w+)\s+--\s+(\S+)\s+(\S+)/);
+                const source = sourceDestMatch ? sourceDestMatch[2] : null;
+
+                // Extract port if present (e.g., "tcp dpt:22", "udp dpts:5060:5091")
+                const portMatch = line.match(/dpts?:(\d+(?::\d+)?)/);
+                const port = portMatch ? portMatch[1] : null;
+
+                // Extract protocol
+                const protocolMatch = line.match(/^(ACCEPT|DROP|REJECT)\s+(\w+)/);
+                const protocol = protocolMatch ? protocolMatch[2] : 'all';
+
+                // Extract any descriptive text (DROP rules often have STRING match patterns)
+                const stringMatch = line.match(/STRING match\s+"([^"]+)"/);
+                const pattern = stringMatch ? ` (blocking: ${stringMatch[1]})` : '';
+
+                // Check if it's a state rule (RELATED,ESTABLISHED)
+                const stateMatch = line.match(/state\s+([\w,]+)/);
+                const isStateRule = stateMatch !== null;
+
+                // Check if source is a SPECIFIC IP (not 0.0.0.0/0 or anywhere)
+                const hasSpecificSourceIP = source && source !== '0.0.0.0/0' && source !== 'anywhere' && /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(source);
+
+                let details;
+                let resourceType;
+
+                if (port) {
+                    details = `${protocol.toUpperCase()} port ${port}${pattern}`;
+                    resourceType = 'port';
+                } else if (hasSpecificSourceIP) {
+                    details = `IP ${source}`;
+                    resourceType = 'ip';
+                } else if (stringMatch) {
+                    details = `${protocol.toUpperCase()} pattern: ${stringMatch[1]}`;
+                    resourceType = 'other';
+                } else if (isStateRule) {
+                    details = `${protocol.toUpperCase()} (${stateMatch[1]})`;
+                    resourceType = 'other';
+                } else if (protocol === '1') {
+                    // ICMP
+                    const icmpMatch = line.match(/icmptype\s+(\d+)/);
+                    details = icmpMatch ? `ICMP type ${icmpMatch[1]} (ping)` : `ICMP all`;
+                    resourceType = 'other';
+                } else {
+                    // Skip generic Docker chain rules to avoid clutter
+                    return;
+                }
+
+                rules.push({
+                    id: `ipt-${idx}`,
+                    action: action,
+                    protocol,
+                    details: details,
+                    type: action === 'ACCEPT' ? 'allowed' : 'blocked',
+                    resourceType: resourceType
+                });
+            }
+        });
+
+        return rules;
+    };
 
     const fetchHistory = async () => {
         try {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` })
+            };
+
             const params = selectedHost ? `?host=${selectedHost}` : '';
-            const res = await fetch(`/api/v1/metrics/history${params}&duration=30m`); // Assuming history supports host param
+            const res = await fetch(`/api/v1/metrics/history${params}&duration=30m`, { headers });
+            if (res.status === 401) { window.location.href = '/login'; return; }
+
             if (res.ok) {
                 const data = await res.json();
 
-                // Transform for charts
                 const historyData = data.map(d => ({
                     time: new Date(d.timestamp).toLocaleTimeString(),
                     ddos_score: d.ddos_status === 'CRITICAL' ? 100 : (d.ddos_status === 'WARNING' ? 50 : 0),
@@ -27,10 +139,8 @@ const Security = () => {
 
                 setHistory(historyData);
 
-                // Determine current status from latest data point
                 if (historyData.length > 0) {
                     const last = historyData[historyData.length - 1];
-                    // Use ddos_score for status
                     if (last.ddos_score === 100) setCurrentStatus('CRITICAL');
                     else if (last.ddos_score === 50) setCurrentStatus('WARNING');
                     else setCurrentStatus('SAFE');
@@ -38,14 +148,16 @@ const Security = () => {
             }
 
             // Fetch Firewall
-            const resFw = await fetch(`/api/v1/firewall${params}`);
+            const resFw = await fetch(`/api/v1/firewall${params}`, { headers });
+            if (resFw.status === 401) { window.location.href = '/login'; return; }
+
             if (resFw.ok) {
                 const data = await resFw.json();
-                setFirewallRules(data.rules || 'No active firewall rules found or agent not reporting.');
+                const parsed = parseFirewallRules(data.rules || '');
+                setFirewallData(parsed);
             }
         } catch (err) {
             console.error("Failed to fetch security history", err);
-            setFirewallRules("Connection Error: Failed to retrieve firewall rules.");
         } finally {
             setLoading(false);
         }
@@ -57,8 +169,25 @@ const Security = () => {
         return () => clearInterval(interval);
     }, [selectedHost]);
 
+    const filteredRules = firewallData.filter(rule => {
+        if (activeFilter === 'all') return true;
+        if (activeFilter === 'blocked-ip') return rule.type === 'blocked' && rule.resourceType === 'ip';
+        if (activeFilter === 'allowed-ip') return rule.type === 'allowed' && rule.resourceType === 'ip';
+        if (activeFilter === 'allowed-port') return rule.type === 'allowed' && rule.resourceType === 'port';
+        if (activeFilter === 'blocked-port') return rule.type === 'blocked' && rule.resourceType === 'port';
+        return true;
+    });
+
     const isCritical = currentStatus === 'CRITICAL';
     const color = isCritical ? '#ef4444' : (currentStatus === 'WARNING' ? '#f3ff00' : '#0aff0a');
+
+    const filterTabs = [
+        { id: 'all', label: 'All Rules', icon: Filter, count: firewallData.length },
+        { id: 'blocked-ip', label: 'Blocked IPs', icon: Ban, count: firewallData.filter(r => r.type === 'blocked' && r.resourceType === 'ip').length },
+        { id: 'allowed-ip', label: 'Allowed IPs', icon: Check, count: firewallData.filter(r => r.type === 'allowed' && r.resourceType === 'ip').length },
+        { id: 'allowed-port', label: 'Allowed Ports', icon: Network, count: firewallData.filter(r => r.type === 'allowed' && r.resourceType === 'port').length },
+        { id: 'blocked-port', label: 'Blocked Ports', icon: Ban, count: firewallData.filter(r => r.type === 'blocked' && r.resourceType === 'port').length },
+    ];
 
     return (
         <div className="space-y-6">
@@ -122,12 +251,82 @@ const Security = () => {
 
             {/* Firewall Rules */}
             <div className="glass-panel p-6 rounded-xl border border-cyber-gray flex flex-col">
-                <h3 className="text-lg font-bold text-cyber-cyan mb-4 flex items-center gap-2">
-                    <Lock size={18} /> Host Firewall Configuration
-                </h3>
-                <div className="bg-black/50 p-4 rounded font-mono text-xs text-green-400 overflow-auto max-h-96 whitespace-pre custom-scrollbar border border-white/10">
-                    {firewallRules}
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-cyber-cyan flex items-center gap-2">
+                        <Lock size={18} /> Host Firewall Configuration
+                    </h3>
+                    {firewallData.length > 0 && (
+                        <span className="text-xs text-gray-500">{filteredRules.length} of {firewallData.length} rules</span>
+                    )}
                 </div>
+
+                {/* Filter Tabs */}
+                <div className="flex gap-2 mb-4 overflow-x-auto custom-scrollbar pb-2">
+                    {filterTabs.map(tab => {
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveFilter(tab.id)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-all ${activeFilter === tab.id
+                                    ? 'bg-cyan-500 text-black'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                    }`}
+                            >
+                                <Icon size={14} />
+                                {tab.label}
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${activeFilter === tab.id ? 'bg-black/30' : 'bg-black/50'}`}>
+                                    {tab.count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Rules Table */}
+                {firewallData.length === 0 ? (
+                    <div className="bg-black/50 p-8 rounded text-center text-gray-500 border border-white/10">
+                        <Lock size={48} className="mx-auto mb-3 opacity-20" />
+                        <p className="font-mono text-sm">No firewall data available</p>
+                        <p className="text-xs mt-2">Agents must run with sudo to collect firewall rules</p>
+                    </div>
+                ) : filteredRules.length === 0 ? (
+                    <div className="bg-black/50 p-6 rounded text-center text-gray-500 border border-white/10">
+                        <p className="font-mono text-sm">No rules match selected filter</p>
+                    </div>
+                ) : (
+                    <div className="bg-black/50 rounded overflow-auto max-h-96 custom-scrollbar border border-white/10">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-900/80 sticky top-0">
+                                <tr className="text-left text-gray-400 text-xs font-mono">
+                                    <th className="p-3">Action</th>
+                                    <th className="p-3">Details</th>
+                                    <th className="p-3">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody className="font-mono text-xs">
+                                {filteredRules.map((rule, idx) => (
+                                    <tr key={rule.id} className="border-t border-gray-800 hover:bg-gray-900/50">
+                                        <td className="p-3">
+                                            <span className={`px-2 py-1 rounded font-bold ${rule.type === 'allowed'
+                                                ? 'bg-green-500/20 text-green-400'
+                                                : 'bg-red-500/20 text-red-400'
+                                                }`}>
+                                                {rule.action}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-gray-300">{rule.details}</td>
+                                        <td className="p-3">
+                                            <span className="text-gray-500 uppercase text-[10px]">
+                                                {rule.resourceType}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );
