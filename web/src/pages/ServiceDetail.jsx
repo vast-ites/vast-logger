@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 
 // Service-specific components
 import ApacheDetail from './services/ApacheDetail';
-// import MySQLDetail from './services/MySQLDetail';
+import MySQLDetail from './services/MySQLDetail';
 // import PostgreSQLDetail from './services/PostgreSQLDetail';
 // import RedisDetail from './services/RedisDetail';
 
@@ -17,7 +17,8 @@ const ServiceDetail = () => {
         'apache2': ApacheDetail,
         'nginx': ApacheDetail,  // Reuse for Nginx
         'httpd': ApacheDetail,
-        // 'mysql': MySQLDetail,
+        'mysql': MySQLDetail,
+        'mariadb': MySQLDetail,
         // 'postgresql': PostgreSQLDetail,
         // 'postgres': PostgreSQLDetail,
         // 'redis': RedisDetail,
