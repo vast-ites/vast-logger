@@ -212,13 +212,18 @@ type AccessLogEntry struct {
 	StatusCode  uint16    `json:"status_code"`
 	BytesSent   uint64    `json:"bytes_sent"`
 	UserAgent   string    `json:"user_agent"`
+	Country     string    `json:"country"`
+	Region      string    `json:"region"`
+	City        string    `json:"city"`
+	Latitude    float64   `json:"latitude"`
+	Longitude   float64   `json:"longitude"`
 }
 
 func (s *LogStore) InsertAccessLog(entry AccessLogEntry) error {
 	return s.conn.Exec(context.Background(), `
-		INSERT INTO datavast.access_logs (timestamp, service, host, ip, method, path, status_code, bytes_sent, user_agent)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, entry.Timestamp, entry.Service, entry.Host, entry.IP, entry.Method, entry.Path, entry.StatusCode, entry.BytesSent, entry.UserAgent)
+		INSERT INTO datavast.access_logs (timestamp, service, host, ip, method, path, status_code, bytes_sent, user_agent, country, region, city, latitude, longitude)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, entry.Timestamp, entry.Service, entry.Host, entry.IP, entry.Method, entry.Path, entry.StatusCode, entry.BytesSent, entry.UserAgent, entry.Country, entry.Region, entry.City, entry.Latitude, entry.Longitude)
 }
 
 func (s *LogStore) InsertLog(entry LogEntry) error {

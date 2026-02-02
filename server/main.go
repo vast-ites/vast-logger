@@ -9,6 +9,7 @@ import (
     "github.com/datavast/datavast/server/auth"
     "github.com/datavast/datavast/server/alert"
 	"github.com/datavast/datavast/server/storage"
+	"github.com/datavast/datavast/server/geoip"
 	"github.com/gin-contrib/cors"
     "github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,13 @@ func main() {
     config := storage.NewConfigStore("server-config.json")
     authMgr := auth.NewAuthManager(config)
     alertMgr := alert.NewAlertService(config)
+
+    // Initialize GeoIP
+    if err := geoip.GetInstance().Initialize("GeoLite2-City.mmdb"); err != nil {
+        log.Printf("[WARNING] GeoIP init failed (maps will be empty): %v", err)
+    } else {
+        log.Println("🌍 GeoIP Service Initialized")
+    }
 
 	// 3. API Setup
 	r := gin.Default()

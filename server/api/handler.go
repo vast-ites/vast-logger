@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/datavast/datavast/server/storage"
+    "github.com/datavast/datavast/server/geoip"
     "github.com/datavast/datavast/server/auth"
     "github.com/datavast/datavast/server/alert"
 	"github.com/gin-gonic/gin"
@@ -202,6 +203,15 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 				StatusCode: uint16(status),
 				BytesSent:  uint64(bytesSent),
 				UserAgent:  "Unknown", // Placeholder unless we parse CLF+
+			}
+			
+			// Resolve GeoIP
+			if geoInfo, err := geoip.GetInstance().Lookup(ip); err == nil {
+				accessEntry.Country = geoInfo.Country
+				accessEntry.Region = geoInfo.Region
+				accessEntry.City = geoInfo.City
+				accessEntry.Latitude = geoInfo.Latitude
+				accessEntry.Longitude = geoInfo.Longitude
 			}
 			
 			// Attempt to parse UserAgent if message is longer
