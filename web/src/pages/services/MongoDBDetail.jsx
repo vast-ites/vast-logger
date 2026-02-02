@@ -8,8 +8,8 @@ import RefreshRateSelector from '../../components/service/RefreshRateSelector';
 
 const MongoDBDetail = () => {
     const navigate = useNavigate();
-    const [timeRange, setTimeRange] = useState('1h');
-    const [refreshRate, setRefreshRate] = useState(10);
+    const [timeRange, setTimeRange] = useState('5m');
+    const [refreshRate, setRefreshRate] = useState(1);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
 

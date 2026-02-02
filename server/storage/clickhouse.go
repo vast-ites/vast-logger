@@ -202,6 +202,25 @@ func (s *LogStore) GetLatestFirewall(host string) (string, error) {
     return rules, nil
 }
 
+type AccessLogEntry struct {
+	Timestamp   time.Time `json:"timestamp"`
+	Service     string    `json:"service"`
+	Host        string    `json:"host"`
+	IP          string    `json:"ip"`
+	Method      string    `json:"method"`
+	Path        string    `json:"path"`
+	StatusCode  uint16    `json:"status_code"`
+	BytesSent   uint64    `json:"bytes_sent"`
+	UserAgent   string    `json:"user_agent"`
+}
+
+func (s *LogStore) InsertAccessLog(entry AccessLogEntry) error {
+	return s.conn.Exec(context.Background(), `
+		INSERT INTO datavast.access_logs (timestamp, service, host, ip, method, path, status_code, bytes_sent, user_agent)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, entry.Timestamp, entry.Service, entry.Host, entry.IP, entry.Method, entry.Path, entry.StatusCode, entry.BytesSent, entry.UserAgent)
+}
+
 func (s *LogStore) InsertLog(entry LogEntry) error {
 	return s.conn.Exec(context.Background(), `
 		INSERT INTO datavast.logs (timestamp, host, service, level, message, source_path)

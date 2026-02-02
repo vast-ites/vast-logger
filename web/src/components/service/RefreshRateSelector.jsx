@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react';
 const RefreshRateSelector = ({ value, onChange }) => {
     const rates = [
         { label: 'Off', value: 0 },
+        { label: '1s', value: 1 },
         { label: '5s', value: 5 },
         { label: '10s', value: 10 },
         { label: '30s', value: 30 },
@@ -18,8 +19,8 @@ const RefreshRateSelector = ({ value, onChange }) => {
                     key={rate.value}
                     onClick={() => onChange(rate.value)}
                     className={`px-3 py-1 rounded text-sm transition-colors ${value === rate.value
-                            ? 'bg-cyan-500 text-white'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                        ? 'bg-cyan-500 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-700'
                         }`}
                 >
                     {rate.label}
