@@ -181,6 +181,7 @@ const ApacheDetail = () => {
                         <thead className="bg-white/5 text-gray-400 text-xs uppercase">
                             <tr>
                                 <th className="py-3 px-4 text-left">IP Address</th>
+                                <th className="py-3 px-4 text-left">Source Domain</th>
                                 <th className="py-3 px-4 text-left">Country</th>
                                 <th className="py-3 px-4 text-left">City</th>
                                 <th className="py-3 px-4 text-left">State</th>
@@ -199,6 +200,7 @@ const ApacheDetail = () => {
                                 topIPs.map((ip, i) => (
                                     <tr key={i} className="hover:bg-white/5 transition-colors">
                                         <td className="py-3 px-4 font-mono text-cyan-400">{ip.ip}</td>
+                                        <td className="py-3 px-4 text-gray-300">{ip.domain || '-'}</td>
                                         <td className="py-3 px-4 text-gray-300">{ip.country || 'Unknown'}</td>
                                         <td className="py-3 px-4 text-gray-300">{ip.city || '-'}</td>
                                         <td className="py-3 px-4 text-gray-300">{ip.region || '-'}</td>

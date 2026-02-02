@@ -7,6 +7,7 @@ import (
     "os"
     "strconv"
 	"strings"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -204,6 +205,20 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 				BytesSent:  uint64(bytesSent),
 				UserAgent:  "Unknown", // Placeholder unless we parse CLF+
 			}
+
+            // Extract Domain from SourcePath (e.g. example.com-access.log)
+            filename := filepath.Base(entry.SourcePath)
+            if strings.HasSuffix(filename, "-access.log") {
+                accessEntry.Domain = strings.TrimSuffix(filename, "-access.log")
+            } else if strings.HasSuffix(filename, "access.log") {
+                if filename == "access.log" {
+                     accessEntry.Domain = "default"
+                } else {
+                     accessEntry.Domain = strings.TrimSuffix(filename, "access.log")
+                }
+            } else {
+                accessEntry.Domain = "unknown"
+            }
 			
 			// Resolve GeoIP
 			if geoInfo, err := geoip.GetInstance().Lookup(ip); err == nil {
