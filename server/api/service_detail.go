@@ -263,9 +263,10 @@ func (h *IngestionHandler) HandleGetTopIPs(c *gin.Context) {
 	startTime := time.Now().Add(-dur)
 
 	// Query for top IPs by request count
-	// Use max() instead of any() to prefer non-empty values (fixes flickering when mixing old/new logs)
+	// Query for top IPs by request count
+	// Use argMax to get the LATEST domain and path for that IP
 	query := `
-		SELECT ip, count() as requests, sum(bytes_sent) as bytes, max(country) as country, max(city) as city, max(region) as region, any(domain) as domain
+		SELECT ip, count() as requests, sum(bytes_sent) as bytes, max(country) as country, max(city) as city, max(region) as region, argMax(domain, timestamp) as domain, argMax(path, timestamp) as path
 		FROM datavast.access_logs
 		WHERE service = ? AND timestamp >= ?
 
@@ -288,11 +289,11 @@ func (h *IngestionHandler) HandleGetTopIPs(c *gin.Context) {
 
 	var topIPs []gin.H
 	for rows.Next() {
-	var ip, country, city, region, domain string
+	var ip, country, city, region, domain, path string
 		var requests uint64
 		var bytes uint64
 
-		if err := rows.Scan(&ip, &requests, &bytes, &country, &city, &region, &domain); err == nil {
+		if err := rows.Scan(&ip, &requests, &bytes, &country, &city, &region, &domain, &path); err == nil {
 			topIPs = append(topIPs, gin.H{
 				"ip":       ip,
 				"requests": requests,
@@ -301,6 +302,7 @@ func (h *IngestionHandler) HandleGetTopIPs(c *gin.Context) {
 				"city":     city,
 				"region":   region,
 				"domain":   domain,
+                "path":     path,
 			})
 		}
 	}

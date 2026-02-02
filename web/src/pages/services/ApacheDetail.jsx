@@ -181,7 +181,7 @@ const ApacheDetail = () => {
                         <thead className="bg-white/5 text-gray-400 text-xs uppercase">
                             <tr>
                                 <th className="py-3 px-4 text-left">IP Address</th>
-                                <th className="py-3 px-4 text-left">Source Domain</th>
+                                <th className="py-3 px-4 text-left">Latest URL</th>
                                 <th className="py-3 px-4 text-left">Country</th>
                                 <th className="py-3 px-4 text-left">City</th>
                                 <th className="py-3 px-4 text-left">State</th>
@@ -200,7 +200,21 @@ const ApacheDetail = () => {
                                 topIPs.map((ip, i) => (
                                     <tr key={i} className="hover:bg-white/5 transition-colors">
                                         <td className="py-3 px-4 font-mono text-cyan-400">{ip.ip}</td>
-                                        <td className="py-3 px-4 text-gray-300">{ip.domain || '-'}</td>
+                                        <td className="py-3 px-4 text-gray-300">
+                                            {ip.domain && ip.domain !== 'default' && ip.domain !== 'unknown' ? (
+                                                <a
+                                                    href={`http://${ip.domain}${ip.path || ''}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-cyan-400 hover:text-cyan-300 hover:underline truncate block max-w-[200px]"
+                                                    title={`http://${ip.domain}${ip.path || ''}`}
+                                                >
+                                                    {ip.domain}{ip.path}
+                                                </a>
+                                            ) : (
+                                                <span className="text-gray-500">{ip.domain || '-'}</span>
+                                            )}
+                                        </td>
                                         <td className="py-3 px-4 text-gray-300">{ip.country || 'Unknown'}</td>
                                         <td className="py-3 px-4 text-gray-300">{ip.city || '-'}</td>
                                         <td className="py-3 px-4 text-gray-300">{ip.region || '-'}</td>
