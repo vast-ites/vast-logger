@@ -6,6 +6,8 @@ import (
 	"net/http"
     "os"
     "strconv"
+	"strings"
+	"regexp"
 	"time"
 
 	"github.com/datavast/datavast/server/storage"
@@ -146,6 +148,10 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
     }
 }
 
+
+// Pre-compile regex for performance
+var commonLogFormat = regexp.MustCompile(`^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) ([^"]+)" (\d+) (\d+)`)
+
 func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 	// Simple map for now, will map to LogEntry properly
 	var entry storage.LogEntry
@@ -156,6 +162,68 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 	
 	if entry.Timestamp.IsZero() {
 		entry.Timestamp = time.Now()
+	}
+
+	// Try to detect and parse Apache/Nginx Access Logs
+	// Filter by service name or source path
+	isWebLog := false
+	svc := strings.ToLower(entry.Service)
+	if svc == "apache" || svc == "nginx" || svc == "httpd" || strings.Contains(svc, "web") {
+		isWebLog = true
+	}
+
+	if isWebLog {
+		matches := commonLogFormat.FindStringSubmatch(entry.Message)
+		if len(matches) >= 8 {
+			// Found structured log!
+			ip := matches[1]
+			// tsStr := matches[2] // We rely on Agent timestamp for now, or parse this if needed?
+			// Agent timestamp is usually accurate to when the log was read.
+			method := matches[3]
+			path := matches[4]
+			// matches[5] is Protocol (HTTP/1.1)
+			status, _ := strconv.Atoi(matches[6])
+			bytesSent, _ := strconv.Atoi(matches[7])
+			
+			// User Agent is usually in the next quoted block but our regex captures basic CLF
+			// To capture UserAgent we need extended regex or just keep it simple.
+			// Let's improve regex to catch User-Agent if possible, or leave empty
+			
+			// Extended regex for Combined Log Format: ... "Referer" "User-Agent"
+			// ^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) \S+" (\d+) (\d+) "(.*?)" "(.*?)"
+			
+			accessEntry := storage.AccessLogEntry{
+				Timestamp:  entry.Timestamp,
+				Service:    entry.Service,
+				Host:       entry.Host,
+				IP:         ip,
+				Method:     method,
+				Path:       path,
+				StatusCode: uint16(status),
+				BytesSent:  uint64(bytesSent),
+				UserAgent:  "Unknown", // Placeholder unless we parse CLF+
+			}
+			
+			// Attempt to parse UserAgent if message is longer
+			if parts := strings.Split(entry.Message, "\""); len(parts) >= 6 {
+				// 0: ip... [ts] 
+				// 1: GET / ...
+				// 2: 200 1234 
+				// 3: Referer
+				// 4: 
+				// 5: UserAgent
+				accessEntry.UserAgent = parts[5]
+			}
+
+			if err := h.Logs.InsertAccessLog(accessEntry); err != nil {
+				fmt.Printf("[ERROR] Failed to insert access log: %v\n", err)
+				// Fallback to generic log insertion? No, allow it to fail for now or log error
+			} else {
+				// Successfully stored as structured log
+				c.Status(http.StatusAccepted)
+				return
+			}
+		}
 	}
 
 	if err := h.Logs.InsertLog(entry); err != nil {

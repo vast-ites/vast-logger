@@ -25,6 +25,9 @@ func (h *IngestionHandler) HandleGetServiceStats(c *gin.Context) {
 
 	startTime := time.Now().Add(-dur)
 
+	// Debug logging
+	fmt.Printf("[DEBUG] Service: %s, Duration: %s, StartTime: %v, Now: %v\n", serviceName, duration, startTime, time.Now())
+
 	// Query access logs for stats
 	query := `
 		SELECT 
@@ -39,6 +42,7 @@ func (h *IngestionHandler) HandleGetServiceStats(c *gin.Context) {
 	`
 
 	args := []interface{}{serviceName, startTime}
+	fmt.Printf("[DEBUG] Query args: %v\n", args)
 	if host != "" {
 		query += " AND host = ?"
 		args = append(args, host)
@@ -64,8 +68,9 @@ func (h *IngestionHandler) HandleGetServiceStats(c *gin.Context) {
 	}
 
 	if rows.Next() {
-		var totalReq, totalBytes, s2xx, s3xx, s4xx, s5xx int64
+		var totalReq, totalBytes, s2xx, s3xx, s4xx, s5xx uint64
 		if err := rows.Scan(&totalReq, &totalBytes, &s2xx, &s3xx, &s4xx, &s5xx); err == nil {
+			fmt.Printf("[DEBUG] Scanned results: req=%d, bytes=%d, 2xx=%d, 4xx=%d, 5xx=%d\n", totalReq, totalBytes, s2xx, s4xx, s5xx)
 			stats["total_requests"] = totalReq
 			stats["total_bytes"] = totalBytes
 			stats["status_2xx"] = s2xx
@@ -77,7 +82,11 @@ func (h *IngestionHandler) HandleGetServiceStats(c *gin.Context) {
 			if dur.Seconds() > 0 {
 				stats["requests_per_second"] = float64(totalReq) / dur.Seconds()
 			}
+		} else {
+			fmt.Printf("[DEBUG] Scan error: %v\n", err)
 		}
+	} else {
+		fmt.Printf("[DEBUG] No rows returned from query\n")
 	}
 
 	c.JSON(http.StatusOK, stats)
@@ -185,7 +194,7 @@ func (h *IngestionHandler) HandleGetGeoStats(c *gin.Context) {
 	var countries []gin.H
 	for rows.Next() {
 		var country string
-		var count int64
+		var count uint64
 		if err := rows.Scan(&country, &count); err == nil {
 			countries = append(countries, gin.H{
 				"country": country,
@@ -215,7 +224,7 @@ func (h *IngestionHandler) HandleGetGeoStats(c *gin.Context) {
 		var cities []gin.H
 		for cityRows.Next() {
 			var city, country string
-			var count int64
+			var count uint64
 			if err := cityRows.Scan(&city, &country, &count); err == nil {
 				cities = append(cities, gin.H{
 					"city":    city,
@@ -278,8 +287,8 @@ func (h *IngestionHandler) HandleGetTopIPs(c *gin.Context) {
 	var topIPs []gin.H
 	for rows.Next() {
 		var ip, country string
-		var requests int64
-		var bytes int64
+		var requests uint64
+		var bytes uint64
 
 		if err := rows.Scan(&ip, &requests, &bytes, &country); err == nil {
 			topIPs = append(topIPs, gin.H{

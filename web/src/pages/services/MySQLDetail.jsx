@@ -11,8 +11,8 @@ const MySQLDetail = () => {
     const { serviceName } = useParams();
     const navigate = useNavigate();
 
-    const [timeRange, setTimeRange] = useState('1h');
-    const [refreshRate, setRefreshRate] = useState(10);
+    const [timeRange, setTimeRange] = useState('5m');
+    const [refreshRate, setRefreshRate] = useState(1);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
     const [slowQueries, setSlowQueries] = useState([]);
@@ -192,7 +192,7 @@ const MySQLDetail = () => {
                                 {stats?.threads_connected || 0} / {stats?.max_connections || 0} connections
                             </div>
                             <div className={`mt-4 text-sm font-medium ${connUsagePercent > 80 ? 'text-yellow-400' :
-                                    connUsagePercent > 90 ? 'text-red-400' : 'text-green-400'
+                                connUsagePercent > 90 ? 'text-red-400' : 'text-green-400'
                                 }`}>
                                 {connUsagePercent > 90 ? 'Critical' :
                                     connUsagePercent > 80 ? 'Warning' : 'Healthy'}
