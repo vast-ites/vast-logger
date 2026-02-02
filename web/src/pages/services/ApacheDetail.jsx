@@ -178,30 +178,34 @@ const ApacheDetail = () => {
                 </h3>
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-700">
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">IP Address</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Requests</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Bandwidth</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Country</th>
+                        <thead className="bg-white/5 text-gray-400 text-xs uppercase">
+                            <tr>
+                                <th className="py-3 px-4 text-left">IP Address</th>
+                                <th className="py-3 px-4 text-left">Country</th>
+                                <th className="py-3 px-4 text-left">City</th>
+                                <th className="py-3 px-4 text-left">State</th>
+                                <th className="py-3 px-4 text-left">Requests</th>
+                                <th className="py-3 px-4 text-left">Bandwidth</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-white/10 text-sm">
                             {topIPs.length === 0 ? (
                                 <tr>
-                                    <td colSpan="4" className="text-center py-8 text-gray-500">
-                                        No access log data available
+                                    <td colSpan="6" className="py-4 text-center text-gray-500">
+                                        No recent activity
                                     </td>
                                 </tr>
                             ) : (
-                                topIPs.map((ip, idx) => (
-                                    <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                                topIPs.map((ip, i) => (
+                                    <tr key={i} className="hover:bg-white/5 transition-colors">
                                         <td className="py-3 px-4 font-mono text-cyan-400">{ip.ip}</td>
+                                        <td className="py-3 px-4 text-gray-300">{ip.country || 'Unknown'}</td>
+                                        <td className="py-3 px-4 text-gray-300">{ip.city || '-'}</td>
+                                        <td className="py-3 px-4 text-gray-300">{ip.region || '-'}</td>
                                         <td className="py-3 px-4 text-white">{ip.requests?.toLocaleString()}</td>
                                         <td className="py-3 px-4 text-white">
                                             {(ip.bytes / 1024 / 1024).toFixed(2)} MB
                                         </td>
-                                        <td className="py-3 px-4 text-gray-300">{ip.country || 'Unknown'}</td>
                                     </tr>
                                 ))
                             )}
