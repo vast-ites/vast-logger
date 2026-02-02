@@ -176,6 +176,15 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 
 	if isWebLog {
 		matches := commonLogFormat.FindStringSubmatch(entry.Message)
+        // Check for vhost_combined format (starts with vhost:port then IP)
+        // If standard regex fails, try skipping the first token
+        if len(matches) < 8 {
+            if firstSpace := strings.Index(entry.Message, " "); firstSpace > 0 {
+                trimmed := entry.Message[firstSpace+1:]
+                matches = commonLogFormat.FindStringSubmatch(trimmed)
+            }
+        }
+
 		if len(matches) >= 8 {
 			// Found structured log!
 			ip := matches[1]
