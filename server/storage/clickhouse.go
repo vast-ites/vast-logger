@@ -106,6 +106,31 @@ func NewLogStore(dsn string) (*LogStore, error) {
         return nil, err
     }
 
+	// Create Access Logs Table (for Apache/Nginx web traffic)
+	err = conn.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS datavast.access_logs (
+			timestamp DateTime,
+			service String,
+			host String,
+			ip String,
+			method String,
+			path String,
+			status_code UInt16,
+			bytes_sent UInt64,
+			user_agent String,
+			country String,
+			region String,
+			city String,
+			latitude Float32,
+			longitude Float32,
+			domain String
+		) ENGINE = MergeTree()
+		ORDER BY (timestamp, service, host)
+	`)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LogStore{conn: conn}, nil
 }
 
