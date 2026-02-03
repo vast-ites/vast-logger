@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -119,7 +120,12 @@ func (h *IngestionHandler) HandleGetAccessLogs(c *gin.Context) {
 		args = append(args, host)
 	}
 
-	query += fmt.Sprintf(" ORDER BY timestamp DESC LIMIT %s", limit)
+	// Validate limit to prevent SQL injection
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 1 || limitInt > 1000 {
+		limitInt = 50
+	}
+	query += fmt.Sprintf(" ORDER BY timestamp DESC LIMIT %d", limitInt)
 
 	rows, err := h.Logs.Query(query, args...)
 	if err != nil {
@@ -278,7 +284,12 @@ func (h *IngestionHandler) HandleGetTopIPs(c *gin.Context) {
 		args = append(args, host)
 	}
 
-	query += fmt.Sprintf(" GROUP BY ip ORDER BY requests DESC LIMIT %s", limit)
+	// Validate limit to prevent SQL injection
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 1 || limitInt > 1000 {
+		limitInt = 50
+	}
+	query += fmt.Sprintf(" GROUP BY ip ORDER BY requests DESC LIMIT %d", limitInt)
 
 	rows, err := h.Logs.Query(query, args...)
 	if err != nil {
@@ -444,7 +455,12 @@ func (h *IngestionHandler) HandleGetMySQLSlowQueries(c *gin.Context) {
 		args = append(args, host)
 	}
 
-	query += fmt.Sprintf(" ORDER BY query_time DESC LIMIT %s", limit)
+	// Validate limit to prevent SQL injection
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 1 || limitInt > 1000 {
+		limitInt = 50
+	}
+	query += fmt.Sprintf(" ORDER BY query_time DESC LIMIT %d", limitInt)
 
 	rows, err := h.Logs.Query(query, args...)
 	if err != nil {

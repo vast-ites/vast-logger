@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
-    "os"
+	"math"
+	"os"
 	"time"
 
 	"github.com/datavast/datavast/server/api"
-    "github.com/datavast/datavast/server/auth"
-    "github.com/datavast/datavast/server/alert"
+	"github.com/datavast/datavast/server/auth"
+	"github.com/datavast/datavast/server/alert"
 	"github.com/datavast/datavast/server/storage"
 	"github.com/datavast/datavast/server/geoip"
 	"github.com/gin-contrib/cors"
@@ -15,8 +17,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func connectWithRetry(dsn string, maxRetries int) (*storage.LogStore, error) {
+	var store *storage.LogStore
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		store, err = storage.NewLogStore(dsn)
+		if err == nil {
+			log.Println("✅ ClickHouse Connected!")
+			return store, nil
+		}
+
+		if i < maxRetries-1 {
+			backoff := time.Duration(math.Pow(2, float64(i))) * time.Second
+			log.Printf("⚠️  Connection attempt %d/%d failed: %v", i+1, maxRetries, err)
+			log.Printf("   Retrying in %v...", backoff)
+			time.Sleep(backoff)
+		}
+	}
+
+	return nil, fmt.Errorf("failed after %d retries: %w", maxRetries, err)
+}
+
 func main() {
 	log.Println("🚀 DataVast Backend Starting...")
+
+	// Security warnings
+	if os.Getenv("AUTH_ENABLED") != "true" {
+		log.Println("")
+		log.Println("⚠️  ============== SECURITY WARNING ==============")
+		log.Println("⚠️  Authentication is DISABLED!")
+		log.Println("⚠️  All data is publicly accessible.")
+		log.Println("⚠️  Set AUTH_ENABLED=true in production!")
+		log.Println("⚠️  =============================================")
+		log.Println("")
+	}
 
 	// 1. Secrets & Config
 	influxURL := os.Getenv("INFLUX_URL")
@@ -29,13 +64,14 @@ func main() {
 	}
 	clickhouseDSN := os.Getenv("CLICKHOUSE_DSN")
 
-	// 2. Storage
+	// 2. Storage with retry
 	influx := storage.NewMetricsStore(influxURL, influxToken, "datavast", "metrics")
 	defer influx.Close()
 
-	clickh, err := storage.NewLogStore(clickhouseDSN) // Updated constructor
+	log.Println("🔌 Connecting to ClickHouse...")
+	clickh, err := connectWithRetry(clickhouseDSN, 5)
 	if err != nil {
-		log.Fatalf("ClickHouse conn failed: %v", err)
+		log.Fatalf("❌ ClickHouse connection failed: %v", err)
 	}
 
     // 3. Load Persistent Config

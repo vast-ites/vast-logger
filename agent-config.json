@@ -7,7 +7,7 @@
     "docker": true,
     "kubernetes": false,
     "nginx": false,
-    "apache": false,
+    "apache": true,
     "pm2": false
   },
   "log_config": {
