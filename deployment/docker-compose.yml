@@ -9,7 +9,7 @@ services:
       - "127.0.0.1:9000:9000"
     environment:
       - CLICKHOUSE_USER=datavast
-      - CLICKHOUSE_PASSWORD=securepass
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-securepass}
       - CLICKHOUSE_DB=datavast
     volumes:
       - ./clickhouse_data:/var/lib/clickhouse
@@ -29,10 +29,10 @@ services:
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD:-adminpassword}
       - DOCKER_INFLUXDB_INIT_ORG=datavast
       - DOCKER_INFLUXDB_INIT_BUCKET=metrics
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:-my-super-secret-auth-token}
     volumes:
       - ./influxdb_data:/var/lib/influxdb2
     mem_limit: 512m
