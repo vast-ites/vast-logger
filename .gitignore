@@ -37,3 +37,5 @@ id_ed25519.pub
 # Data
 deployment/clickhouse_data/
 deployment/influxdb_data/
+server/server-config.json
+deployment/.env

@@ -1,0 +1,10 @@
+{
+  "retention_days": 4,
+  "ddos_threshold": 10,
+  "email_alerts": true,
+  "admin_password": "GENERATE_SECURE_PASSWORD_HERE",
+  "system_api_key": "GENERATE_SECURE_API_KEY_HERE",
+  "mfa_enabled": false,
+  "mfa_secret": "GENERATE_MFA_SECRET_IF_ENABLED",
+  "agent_secrets": {}
+}
