@@ -83,10 +83,11 @@ export const Alerts = () => {
 
     const handleSilence = async () => {
         const token = localStorage.getItem('token');
+        const targetHost = silenceHost.trim() === '' ? '*' : silenceHost.trim();
         await fetch('/api/v1/alerts/silence', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rule_id: selectedRule.id, host: silenceHost, duration: silenceDuration })
+            body: JSON.stringify({ rule_id: selectedRule.id, host: targetHost, duration: silenceDuration })
         });
         setShowSilenceModal(false);
         fetchData();
