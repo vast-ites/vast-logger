@@ -629,11 +629,12 @@ func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
 
 func (h *IngestionHandler) HandleGetInterfaceHistory(c *gin.Context) {
     duration := c.Query("duration")
+    host := c.Query("host")
     if duration == "" {
         duration = "15m"
     }
 
-    history, err := h.Metrics.GetInterfaceHistory(duration)
+    history, err := h.Metrics.GetInterfaceHistory(duration, host)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
