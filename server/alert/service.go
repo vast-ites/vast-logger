@@ -40,13 +40,13 @@ func (s *AlertService) CheckAndAlert(host string, netReceiveRate float64, ddosSt
             if ddosStatus == "DDoS" { return 1.0 }
             return 0.0
         }(),
-    })
+    }, "")
 }
 
 // EvaluateRules checks all active rules against the provided metrics
-func (s *AlertService) EvaluateRules(host string, metrics map[string]float64) {
+func (s *AlertService) EvaluateRules(host string, metrics map[string]float64, hostInfo string) {
     cfg := s.Config.Get()
-    cooldown := 5 * time.Minute // Default cooldown
+    cooldown := 1 * time.Minute // 1 Minute Rate Limit
     
     // Create lookup map for channels
     channels := make(map[string]storage.NotificationChannel)
@@ -112,10 +112,11 @@ func (s *AlertService) EvaluateRules(host string, metrics map[string]float64) {
                 "🚨 **Alert Triggered**\n" +
                 "**Rule:** %s\n" +
                 "**Server:** %s\n" +
+                "**IPs:** %s\n" +
                 "**Metric:** %s\n" +
                 "**Value:** %.2f (Threshold: %s %.2f)\n" +
                 "**Time:** %s",
-                rule.Name, host, rule.Metric, val, rule.Operator, rule.Threshold, time.Now().Format(time.RFC1123),
+                rule.Name, host, hostInfo, rule.Metric, val, rule.Operator, rule.Threshold, time.Now().Format(time.RFC1123),
             )
             
             // Log to DB
