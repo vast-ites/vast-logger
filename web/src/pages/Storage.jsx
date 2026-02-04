@@ -13,13 +13,15 @@ export const Storage = () => {
         const fetchData = async () => {
             try {
                 const params = selectedHost ? `?host=${selectedHost}` : '';
+                const token = localStorage.getItem('token');
+                const headers = { 'Authorization': `Bearer ${token}` };
 
                 // Fetch Latest
-                const res = await fetch(`/api/v1/metrics/system${params}`);
+                const res = await fetch(`/api/v1/metrics/system${params}`, { headers });
                 if (res.ok) setMetrics(await res.json());
 
                 // Fetch History (15m)
-                const resHist = await fetch(`/api/v1/metrics/history${params}&duration=15m`);
+                const resHist = await fetch(`/api/v1/metrics/history${params}&duration=15m`, { headers });
                 if (resHist.ok) setHistory(await resHist.json());
 
             } catch (err) {

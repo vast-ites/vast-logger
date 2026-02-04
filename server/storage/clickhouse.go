@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"sync"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -11,6 +12,7 @@ import (
 
 type LogStore struct {
 	conn driver.Conn
+	mu   sync.Mutex
 }
 
 type LogEntry struct {
@@ -136,6 +138,8 @@ func NewLogStore(dsn string) (*LogStore, error) {
 
 // Query executes a query with parameters
 func (s *LogStore) Query(query string, args ...interface{}) (driver.Rows, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.conn.Query(context.Background(), query, args...)
 }
 
@@ -153,23 +157,27 @@ type ProcessEntry struct {
 }
 
 func (s *LogStore) InsertProcesses(entries []ProcessEntry) error {
-    batch, err := s.conn.PrepareBatch(context.Background(), "INSERT INTO datavast.processes")
-    if err != nil {
-        return err
-    }
-    for _, e := range entries {
-        err := batch.Append(
-            e.Timestamp, e.Host, e.PID, e.Name, e.Username, 
-            e.CPUPercent, e.MemoryPercent, e.Cmdline,
-        )
-        if err != nil {
-            return err
-        }
-    }
-    return batch.Send()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	batch, err := s.conn.PrepareBatch(context.Background(), "INSERT INTO datavast.processes")
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		err := batch.Append(
+			e.Timestamp, e.Host, e.PID, e.Name, e.Username, 
+			e.CPUPercent, e.MemoryPercent, e.Cmdline,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return batch.Send()
 }
 
 func (s *LogStore) GetLatestProcesses(host string) ([]ProcessEntry, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
     // efficient latest query
     query := `
         SELECT timestamp, host, pid, name, username, cpu_percent, memory_percent, cmdline
@@ -210,12 +218,16 @@ func (s *LogStore) GetLatestProcesses(host string) ([]ProcessEntry, error) {
 }
 
 func (s *LogStore) InsertFirewall(timestamp time.Time, host, rules string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
      return s.conn.Exec(context.Background(), `
         INSERT INTO datavast.firewall (timestamp, host, rules) VALUES (?, ?, ?)
      `, timestamp, host, rules)
 }
 
 func (s *LogStore) GetLatestFirewall(host string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
     var rules string
     err := s.conn.QueryRow(context.Background(), `
         SELECT rules FROM datavast.firewall 
@@ -246,6 +258,8 @@ type AccessLogEntry struct {
 }
 
 func (s *LogStore) InsertAccessLog(entry AccessLogEntry) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.conn.Exec(context.Background(), `
 		INSERT INTO datavast.access_logs (timestamp, service, host, ip, method, path, status_code, bytes_sent, user_agent, country, region, city, latitude, longitude, domain)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -253,6 +267,8 @@ func (s *LogStore) InsertAccessLog(entry AccessLogEntry) error {
 }
 
 func (s *LogStore) InsertLog(entry LogEntry) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.conn.Exec(context.Background(), `
 		INSERT INTO datavast.logs (timestamp, host, service, level, message, source_path)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -260,6 +276,9 @@ func (s *LogStore) InsertLog(entry LogEntry) error {
 }
 
 func (s *LogStore) GetRecentLogs(limit int) ([]LogEntry, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if limit <= 0 {
 		limit = 50
 	}
@@ -297,6 +316,9 @@ type LogFilter struct {
 }
 
 func (s *LogStore) QueryLogs(filter LogFilter) ([]LogEntry, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if filter.Limit <= 0 {
 		filter.Limit = 100
 	}
@@ -362,29 +384,53 @@ func (s *LogStore) QueryLogs(filter LogFilter) ([]LogEntry, error) {
 }
 
 func (s *LogStore) GetUniqueServices(host string) ([]string, error) {
-	query := "SELECT DISTINCT service FROM datavast.logs"
-	var args []interface{}
-	if host != "" {
-		query += " WHERE host = ?"
-		args = append(args, host)
-	}
-	query += " ORDER BY service"
-
-	rows, err := s.conn.Query(context.Background(), query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	var services []string
-	for rows.Next() {
-		var svc string
-		if err := rows.Scan(&svc); err != nil {
-			return nil, err
+	seen := make(map[string]bool)
+
+	// Helper function to query a table
+	queryTable := func(table string) error {
+		var query string
+		var args []interface{}
+		
+		if host != "" {
+			query = fmt.Sprintf("SELECT DISTINCT service FROM %s WHERE host = ?", table)
+			args = append(args, host)
+		} else {
+			query = fmt.Sprintf("SELECT DISTINCT service FROM %s", table)
 		}
-		if svc != "" {
-			services = append(services, svc)
+
+		rows, err := s.conn.Query(context.Background(), query, args...)
+		if err != nil {
+			return err
 		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var svc string
+			if err := rows.Scan(&svc); err != nil {
+				return err
+			}
+			if svc != "" && !seen[svc] {
+				services = append(services, svc)
+				seen[svc] = true
+			}
+		}
+		return nil
 	}
+
+	// 1. Query generic logs
+	if err := queryTable("datavast.logs"); err != nil {
+		fmt.Printf("[ERROR] Failed to query datavast.logs services: %v\n", err)
+		// Continue to next table even if this fails? better to Log and continue
+	}
+
+	// 2. Query access logs
+	if err := queryTable("datavast.access_logs"); err != nil {
+		fmt.Printf("[ERROR] Failed to query datavast.access_logs services: %v\n", err)
+	}
+
 	return services, nil
 }

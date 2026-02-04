@@ -13,7 +13,10 @@ export const MemoryPage = () => {
         const fetchMetrics = async () => {
             try {
                 const params = selectedHost ? `?host=${selectedHost}` : '';
-                const res = await fetch(`/api/v1/metrics/system${params}`);
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/v1/metrics/system${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 if (res.ok) {
                     const data = await res.json();
                     setMetrics(data); // data has .memory_usage (percentage). Need total/used for proper display.
