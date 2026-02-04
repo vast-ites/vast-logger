@@ -13,19 +13,36 @@ export const Servers = () => {
 
     const fetchAgents = async () => {
         try {
-            const res = await fetch('/api/v1/hosts');
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+
+            const res = await fetch('/api/v1/hosts', { headers });
+            if (!res.ok) throw new Error("Failed to fetch hosts");
+
             const data = await res.json();
+
+            // Handle case where API returns error object instead of array
+            if (!Array.isArray(data)) {
+                console.error("Expected array of hosts, got:", data);
+                setAgents([]);
+                return;
+            }
 
             const detailedAgents = await Promise.all(data.map(async (hostObj) => {
                 const hostname = hostObj.hostname;
                 try {
-                    const metricsRes = await fetch(`/api/v1/metrics/system?host=${hostname}`);
+                    const metricsRes = await fetch(`/api/v1/metrics/system?host=${hostname}`, { headers });
+                    if (!metricsRes.ok) throw new Error("Failed to fetch metrics");
+
                     const metrics = await metricsRes.json();
 
-                    // Determine online status (if metric is recent < 60s)
-                    const lastSeen = new Date(metrics.timestamp).getTime();
-                    const now = new Date().getTime();
-                    const isOnline = (now - lastSeen) < 60000;
+                    // Determine online status (if metric is recent < 5 minutes)
+                    const lastSeen = new Date(metrics.timestamp);
+                    const now = new Date();
+                    const diff = now - lastSeen;
+                    const isOnline = diff < 300000; // 5 minutes in milliseconds
 
                     return {
                         hostname,
@@ -38,6 +55,7 @@ export const Servers = () => {
                         status: isOnline ? 'ONLINE' : 'OFFLINE'
                     };
                 } catch (e) {
+                    console.error('Error fetching metrics for', hostname, e);
                     return {
                         hostname,
                         platform: 'Unknown',
