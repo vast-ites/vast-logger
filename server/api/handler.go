@@ -146,7 +146,21 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
     
     // Check Alerts
     if h.Alerts != nil {
-        h.Alerts.CheckAndAlert(p.Hostname, p.NetRecvRate, p.DDoSStatus)
+        // Build Generic Metric Map
+        m := map[string]float64{
+            "cpu_percent":   p.CPU,
+            "memory_usage":  p.Mem,
+            "disk_usage":    p.Disk,
+            "net_recv_rate": p.NetRecvRate,
+            "net_sent_rate": p.NetSentRate,
+            "swap_usage":    p.SwapUsage,
+            "cpu_freq":      p.CPUFreq,
+            "disk_read_op":  p.DiskReadIOPS,
+            "disk_write_op": p.DiskWriteIOPS,
+        }
+        if p.DDoSStatus == "DDoS" { m["ddos_status"] = 1.0 }
+        
+        h.Alerts.EvaluateRules(p.Hostname, m)
     }
 }
 
@@ -393,6 +407,19 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             adminRoutes.POST("/mfa/setup", h.HandleSetupMFA)
             adminRoutes.POST("/mfa/enable", h.HandleEnableMFA)
             adminRoutes.POST("/mfa/disable", h.HandleDisableMFA)
+            adminRoutes.POST("/mfa/disable", h.HandleDisableMFA)
+            
+            // Alert Management
+            adminRoutes.GET("/alerts/rules", h.HandleGetAlertRules)
+            adminRoutes.POST("/alerts/rules", h.HandleCreateAlertRule)
+            adminRoutes.DELETE("/alerts/rules/:id", h.HandleDeleteAlertRule)
+            
+            adminRoutes.GET("/alerts/channels", h.HandleGetChannels)
+            adminRoutes.POST("/alerts/channels", h.HandleCreateChannel)
+            adminRoutes.DELETE("/alerts/channels/:id", h.HandleDeleteChannel)
+            
+            adminRoutes.POST("/alerts/silence", h.HandleSilenceAlert)
+            adminRoutes.POST("/alerts/unsilence", h.HandleUnsilenceAlert)
         }
 	}
 }
@@ -804,4 +831,138 @@ func AuthRequired(role string) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// -- Alert System Handlers --
+
+func (h *IngestionHandler) HandleGetAlertRules(c *gin.Context) {
+    c.JSON(http.StatusOK, h.Config.Get().AlertRules)
+}
+
+func (h *IngestionHandler) HandleCreateAlertRule(c *gin.Context) {
+    var rule storage.AlertRule
+    if err := c.BindJSON(&rule); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    if rule.ID == "" { rule.ID = fmt.Sprintf("rule_%d", time.Now().UnixNano()) }
+    if rule.Silenced == nil { rule.Silenced = make(map[string]time.Time) }
+    
+    cfg := h.Config.Get()
+    cfg.AlertRules = append(cfg.AlertRules, rule)
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save rule"})
+        return
+    }
+    c.JSON(http.StatusOK, rule)
+}
+
+func (h *IngestionHandler) HandleDeleteAlertRule(c *gin.Context) {
+    id := c.Param("id")
+    cfg := h.Config.Get()
+    newRules := []storage.AlertRule{}
+    for _, r := range cfg.AlertRules {
+        if r.ID != id {
+            newRules = append(newRules, r)
+        }
+    }
+    cfg.AlertRules = newRules
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleGetChannels(c *gin.Context) {
+    c.JSON(http.StatusOK, h.Config.Get().NotificationChannels)
+}
+
+func (h *IngestionHandler) HandleCreateChannel(c *gin.Context) {
+    var ch storage.NotificationChannel
+    if err := c.BindJSON(&ch); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    if ch.ID == "" { ch.ID = fmt.Sprintf("chan_%d", time.Now().UnixNano()) }
+    
+    cfg := h.Config.Get()
+    cfg.NotificationChannels = append(cfg.NotificationChannels, ch)
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save channel"})
+        return
+    }
+    c.JSON(http.StatusOK, ch)
+}
+
+func (h *IngestionHandler) HandleDeleteChannel(c *gin.Context) {
+    id := c.Param("id")
+    cfg := h.Config.Get()
+    newChans := []storage.NotificationChannel{}
+    for _, ch := range cfg.NotificationChannels {
+        if ch.ID != id {
+            newChans = append(newChans, ch)
+        }
+    }
+    cfg.NotificationChannels = newChans
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleSilenceAlert(c *gin.Context) {
+    var req struct {
+        RuleID   string `json:"rule_id"`
+        Host     string `json:"host"`
+        Duration string `json:"duration"` // e.g. "1h"
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    d, err := time.ParseDuration(req.Duration)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid duration format (e.g., 1h, 30m)"})
+        return
+    }
+
+    cfg := h.Config.Get()
+    found := false
+    for i, r := range cfg.AlertRules {
+        if r.ID == req.RuleID {
+            if cfg.AlertRules[i].Silenced == nil {
+                cfg.AlertRules[i].Silenced = make(map[string]time.Time)
+            }
+            cfg.AlertRules[i].Silenced[req.Host] = time.Now().Add(d)
+            found = true
+            break
+        }
+    }
+    
+    if !found {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Rule not found"})
+        return
+    }
+    
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleUnsilenceAlert(c *gin.Context) {
+    var req struct {
+        RuleID string `json:"rule_id"`
+        Host   string `json:"host"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    cfg := h.Config.Get()
+    for i, r := range cfg.AlertRules {
+        if r.ID == req.RuleID {
+            delete(cfg.AlertRules[i].Silenced, req.Host)
+            break
+        }
+    }
+    
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
 }

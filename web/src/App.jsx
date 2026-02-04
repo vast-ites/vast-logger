@@ -15,6 +15,7 @@ import { CpuPage } from './pages/Cpu';
 import { MemoryPage } from './pages/Memory';
 import { Storage } from './pages/Storage';
 import { NetworkPage } from './pages/Network';
+import { Alerts } from './pages/Alerts';
 
 import { HostProvider } from './contexts/HostContext';
 
@@ -113,6 +114,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Security />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="alerts"
+              element={
+                <PrivateRoute>
+                  <Alerts />
                 </PrivateRoute>
               }
             />
