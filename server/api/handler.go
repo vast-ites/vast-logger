@@ -153,6 +153,7 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
             "disk_usage":    p.Disk,
             "net_recv_rate": p.NetRecvRate,
             "net_sent_rate": p.NetSentRate,
+            "net_total_rate": p.NetRecvRate + p.NetSentRate,
             "swap_usage":    p.SwapUsage,
             "cpu_freq":      p.CPUFreq,
             "disk_read_op":  p.DiskReadIOPS,
