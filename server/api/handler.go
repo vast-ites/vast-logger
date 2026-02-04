@@ -146,18 +146,21 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
     
     // Check Alerts
     if h.Alerts != nil {
-        // Build Generic Metric Map
+        // Build Generic Metric Map using Bytes/s for consistency with Thresholds
+        // Agent sends MB/s for Rates -> Convert to Bytes/s
         m := map[string]float64{
-            "cpu_percent":   p.CPU,
-            "memory_usage":  p.Mem,
-            "disk_usage":    p.Disk,
-            "net_recv_rate": p.NetRecvRate,
-            "net_sent_rate": p.NetSentRate,
-            "net_total_rate": p.NetRecvRate + p.NetSentRate,
-            "swap_usage":    p.SwapUsage,
-            "cpu_freq":      p.CPUFreq,
-            "disk_read_op":  p.DiskReadIOPS,
-            "disk_write_op": p.DiskWriteIOPS,
+            "cpu_percent":    p.CPU,
+            "memory_usage":   p.Mem,
+            "disk_usage":     p.Disk,
+            "net_recv_rate":  p.NetRecvRate * 1024 * 1024,
+            "net_sent_rate":  p.NetSentRate * 1024 * 1024,
+            "net_total_rate": (p.NetRecvRate + p.NetSentRate) * 1024 * 1024,
+            "swap_usage":     p.SwapUsage,
+            "cpu_freq":       p.CPUFreq,
+            "disk_read_rate": p.DiskReadRate * 1024 * 1024,
+            "disk_write_rate": p.DiskWriteRate * 1024 * 1024,
+            "disk_read_op":   p.DiskReadIOPS,
+            "disk_write_op":  p.DiskWriteIOPS,
         }
         if p.DDoSStatus == "DDoS" { m["ddos_status"] = 1.0 }
         
