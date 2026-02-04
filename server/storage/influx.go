@@ -329,23 +329,38 @@ type InterfaceMetricData struct {
     Time        time.Time `json:"time"`
 }
 
-func (s *MetricsStore) GetInterfaceHistory(duration string) ([]InterfaceMetricData, error) {
+func (s *MetricsStore) GetInterfaceHistory(duration, host string) ([]InterfaceMetricData, error) {
     if duration == "" {
         duration = "15m"
     }
 
+    // Dynamic Aggregation Window
+    aggregateWindow := "10s"
+    if d, err := time.ParseDuration(duration); err == nil {
+        if d >= 24*time.Hour {
+            aggregateWindow = "1h"
+        } else if d >= 6*time.Hour {
+            aggregateWindow = "5m"
+        } else if d >= 1*time.Hour {
+             aggregateWindow = "1m"
+        }
+    }
+
+    hostFilter := ""
+    if host != "" {
+        hostFilter = fmt.Sprintf(`|> filter(fn: (r) => r["host"] == "%s")`, host)
+    }
+
     // We want to calculate RATE (bytes/sec) from the Counters (bytes_sent/recv)
-    // using derivative() or just difference() over time?
-    // Actually, agent sends raw counters. InfluxDB derivative() calculates rate of change.
-    // unit: 1s => bytes/second.
     query := fmt.Sprintf(`
     from(bucket: "%s")
     |> range(start: -%s)
     |> filter(fn: (r) => r["_measurement"] == "network_interface")
+    %s
     |> derivative(unit: 1s, nonNegative: true) 
-    |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)
+    |> aggregateWindow(every: %s, fn: mean, createEmpty: false)
     |> pivot(rowKey:["_time", "interface"], columnKey: ["_field"], valueColumn: "_value")
-    `, s.bucket, duration)
+    `, s.bucket, duration, hostFilter, aggregateWindow)
 
     result, err := s.queryAPI.Query(context.Background(), query)
     if err != nil {

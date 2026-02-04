@@ -8,8 +8,12 @@ export const NetworkPage = () => {
     const { selectedHost } = useHost();
     const [metrics, setMetrics] = useState(null);
     const [history, setHistory] = useState([]);
+    const [timeRange, setTimeRange] = useState('realtime'); // realtime, 1h, 6h, 24h, 7d
 
+    // Realtime Polling
     useEffect(() => {
+        if (timeRange !== 'realtime') return;
+
         const fetchMetrics = async () => {
             try {
                 const params = selectedHost ? `?host=${selectedHost}` : '';
@@ -24,7 +28,7 @@ export const NetworkPage = () => {
                     const time = new Date().toLocaleTimeString();
                     setHistory(prev => [...prev.slice(-60), {
                         time,
-                        rx: (data.net_recv_rate || 0) * 1024, // KB/s (data is MB/s)
+                        rx: (data.net_recv_rate || 0) * 1024, // KB/s
                         tx: (data.net_sent_rate || 0) * 1024  // KB/s
                     }]);
                 }
@@ -36,7 +40,86 @@ export const NetworkPage = () => {
         fetchMetrics();
         const interval = setInterval(fetchMetrics, 2000); // 2s polling
         return () => clearInterval(interval);
-    }, [selectedHost]);
+    }, [selectedHost, timeRange]);
+
+    // Historical Fetching
+    useEffect(() => {
+        if (timeRange === 'realtime') return;
+
+        const fetchHistory = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const hostParam = selectedHost ? `&host=${selectedHost}` : '';
+                const res = await fetch(`/api/v1/metrics/interfaces/history?duration=${timeRange}${hostParam}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Aggregate RX/TX across interfaces for the main chart?
+                    // The backend returns InterfaceMetricData array: [{interface, bytes_recv, bytes_sent, time}]
+                    // We need to group by time and sum.
+
+                    const aggregated = {};
+                    data.forEach(d => {
+                        const t = new Date(d.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        if (!aggregated[t]) aggregated[t] = { time: t, rx: 0, tx: 0 };
+                        // Backend returns B/s rate
+                        aggregated[t].rx += (d.bytes_recv || 0) / 1024; // KB/s
+                        aggregated[t].tx += (d.bytes_sent || 0) / 1024; // KB/s
+                    });
+
+                    // Convert to array and sort
+                    const histArray = Object.values(aggregated).sort((a, b) =>
+                        new Date('1970/01/01 ' + a.time) - new Date('1970/01/01 ' + b.time)
+                    );
+                    // Note: Sorting by time string might break across midnight for 24h view... 
+                    // Better to key by ISO timestamp
+
+                    const timeMap = new Map();
+                    data.forEach(d => {
+                        const ts = d.time; // Keep ISO string for sorting
+                        if (!timeMap.has(ts)) timeMap.set(ts, { time: new Date(ts).toLocaleString(), rawTs: ts, rx: 0, tx: 0 });
+                        const entry = timeMap.get(ts);
+                        entry.rx += (d.bytes_recv || 0) / 1024;
+                        entry.tx += (d.bytes_sent || 0) / 1024;
+                    });
+
+                    const sorted = Array.from(timeMap.values()).sort((a, b) => new Date(a.rawTs) - new Date(b.rawTs));
+                    setHistory(sorted);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchHistory();
+        const interval = setInterval(fetchHistory, 60000); // 1m polling for history
+        return () => clearInterval(interval);
+    }, [selectedHost, timeRange]);
+
+    // Independent Metric Fetch for Stat Cards (Always run regardless of chart mode)
+    useEffect(() => {
+        const fetchCurrent = async () => {
+            try {
+                const params = selectedHost ? `?host=${selectedHost}` : '';
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/v1/metrics/system${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setMetrics(data);
+                }
+            } catch (e) { }
+        }
+        if (timeRange !== 'realtime') {
+            fetchCurrent();
+            const msgInt = setInterval(fetchCurrent, 5000);
+            return () => clearInterval(msgInt);
+        }
+    }, [selectedHost, timeRange]);
+
 
     if (!metrics) return <div className="p-10 text-center text-cyan-400 animate-pulse">Scanning Network Topology...</div>;
 
@@ -46,6 +129,23 @@ export const NetworkPage = () => {
         if (bytesPerSec > 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
         return `${bytesPerSec.toFixed(0)} B/s`;
     };
+
+    const TimeSelector = () => (
+        <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+            {['realtime', '1h', '6h', '24h', '7d'].map(range => (
+                <button
+                    key={range}
+                    onClick={() => setTimeRange(range)}
+                    className={`px-3 py-1 text-xs rounded transition-all ${timeRange === range
+                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                        }`}
+                >
+                    {range === 'realtime' ? 'Live' : range}
+                </button>
+            ))}
+        </div>
+    );
 
     return (
         <div className="space-y-6">
@@ -63,7 +163,10 @@ export const NetworkPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96">
                 {/* Main Traffic Chart */}
                 <div className="lg:col-span-2 glass-panel p-4 flex flex-col min-h-0">
-                    <h3 className="text-gray-300 font-semibold text-sm mb-4">Total Bandwidth History (KB/s)</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-gray-300 font-semibold text-sm">Bandwidth History (KB/s)</h3>
+                        <TimeSelector />
+                    </div>
                     <div className="flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={history}>
