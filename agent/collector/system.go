@@ -42,6 +42,7 @@ type SystemMetrics struct {
     CPUPhysical int     `json:"cpu_physical"`
     CPUModel    string  `json:"cpu_model"`
     CPUFreq     float64 `json:"cpu_freq"`
+    CPUCores    []float64 `json:"cpu_cores"`
 	MemoryUsage float64 `json:"memory_usage"`
 	MemoryTotal uint64  `json:"memory_total"`
     SwapUsage   float64 `json:"swap_usage"`
