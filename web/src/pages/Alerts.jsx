@@ -223,6 +223,8 @@ export const Alerts = () => {
                                         <option value="memory_usage">Memory Usage (%)</option>
                                         <option value="disk_usage">Disk Usage (%)</option>
                                         <option value="net_recv_rate">Net Download (B/s)</option>
+                                        <option value="net_sent_rate">Net Upload (B/s)</option>
+                                        <option value="net_total_rate">Net Total (B/s)</option>
                                     </select>
                                 </div>
                                 <div>
