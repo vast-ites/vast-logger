@@ -9,6 +9,7 @@ import (
     "strings"
     "time"
     "log"
+    "io"
 
     "github.com/datavast/datavast/server/storage"
 )
@@ -126,7 +127,11 @@ func (s *AlertService) Dispatch(message string) {
 
 func (s *AlertService) sendWebhook(url, message string) {
     if url == "" { return }
-    payload := map[string]string{"content": message}
+    // Support multiple formats (Discord uses 'content', Slack/Teams use 'text')
+    payload := map[string]interface{}{
+        "content": message,
+        "text":    message,
+    }
     data, _ := json.Marshal(payload)
     resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
     if err != nil {
@@ -134,6 +139,11 @@ func (s *AlertService) sendWebhook(url, message string) {
         return
     }
     defer resp.Body.Close()
+    
+    if resp.StatusCode >= 400 {
+        body, _ := io.ReadAll(resp.Body)
+        log.Printf("Webhook Error %d: %s (URL: %s)", resp.StatusCode, string(body), url)
+    }
 }
 
 func (s *AlertService) sendEmail(to []string, message string) {
