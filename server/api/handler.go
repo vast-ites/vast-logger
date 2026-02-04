@@ -421,6 +421,7 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             // Alert Management
             adminRoutes.GET("/alerts/rules", h.HandleGetAlertRules)
             adminRoutes.POST("/alerts/rules", h.HandleCreateAlertRule)
+            adminRoutes.PUT("/alerts/rules/:id", h.HandleUpdateAlertRule)
             adminRoutes.POST("/alerts/rules/:id/toggle", h.HandleToggleAlertRule)
             adminRoutes.DELETE("/alerts/rules/:id", h.HandleDeleteAlertRule)
             
@@ -875,6 +876,43 @@ func (h *IngestionHandler) HandleToggleAlertRule(c *gin.Context) {
     for i, r := range cfg.AlertRules {
         if r.ID == id {
             cfg.AlertRules[i].Enabled = !cfg.AlertRules[i].Enabled
+            found = true
+            break
+        }
+    }
+    
+    if !found {
+        c.Status(http.StatusNotFound)
+        return
+    }
+    
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleUpdateAlertRule(c *gin.Context) {
+    id := c.Param("id")
+    var req storage.AlertRule
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    cfg := h.Config.Get()
+    found := false
+    for i, r := range cfg.AlertRules {
+        if r.ID == id {
+            // Update fields but preserve ID and Silenced state if not provided (though UI sends full object usually)
+            // We consciously choose to overwrite basics
+            cfg.AlertRules[i].Name = req.Name
+            cfg.AlertRules[i].Metric = req.Metric
+            cfg.AlertRules[i].Host = req.Host
+            cfg.AlertRules[i].Operator = req.Operator
+            cfg.AlertRules[i].Threshold = req.Threshold
+            cfg.AlertRules[i].Channels = req.Channels
+            // Enabled is handled by toggle, but let's allow it here too if UI sends it
+            // cfg.AlertRules[i].Enabled = req.Enabled 
+            
             found = true
             break
         }

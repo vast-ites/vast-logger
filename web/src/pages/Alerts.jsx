@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BellRing, Plus, Trash2, VolumeX, Volume2, Save, X } from 'lucide-react';
+import { BellRing, Plus, Trash2, VolumeX, Volume2, Save, X, Pencil } from 'lucide-react';
 
 export const Alerts = () => {
     const [activeTab, setActiveTab] = useState('rules');
@@ -11,6 +11,7 @@ export const Alerts = () => {
     const [showChannelModal, setShowChannelModal] = useState(false);
     const [showSilenceModal, setShowSilenceModal] = useState(false);
     const [selectedRule, setSelectedRule] = useState(null); // For silencing
+    const [editingRuleId, setEditingRuleId] = useState(null); // For editing
 
     // Form States
     const [newRule, setNewRule] = useState({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true });
@@ -37,15 +38,26 @@ export const Alerts = () => {
         setLoading(false);
     };
 
-    const handleCreateRule = async () => {
+    const handleCreateOrUpdateRule = async () => {
         const token = localStorage.getItem('token');
-        await fetch('/api/v1/alerts/rules', {
-            method: 'POST',
+        const method = editingRuleId ? 'PUT' : 'POST';
+        const url = editingRuleId ? `/api/v1/alerts/rules/${editingRuleId}` : '/api/v1/alerts/rules';
+
+        await fetch(url, {
+            method: method,
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...newRule, threshold: parseFloat(newRule.threshold) })
         });
         setShowRuleModal(false);
+        setEditingRuleId(null);
+        setNewRule({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true });
         fetchData();
+    };
+
+    const handleEditRule = (rule) => {
+        setNewRule({ ...rule });
+        setEditingRuleId(rule.id);
+        setShowRuleModal(true);
     };
 
     const handleDeleteRule = async (id) => {
@@ -119,7 +131,7 @@ export const Alerts = () => {
             {activeTab === 'rules' && (
                 <div className="space-y-4">
                     <div className="flex justify-end">
-                        <button onClick={() => setShowRuleModal(true)} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition text-sm font-semibold">
+                        <button onClick={() => { setEditingRuleId(null); setNewRule({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true }); setShowRuleModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition text-sm font-semibold">
                             <Plus size={16} /> Create Rule
                         </button>
                     </div>
@@ -158,6 +170,7 @@ export const Alerts = () => {
                                     >
                                         <VolumeX size={18} />
                                     </button>
+                                    <button onClick={() => handleEditRule(rule)} className="p-2 bg-white/5 hover:bg-cyan-500/20 rounded text-cyan-500" title="Edit Rule"><Pencil size={18} /></button>
                                     <button onClick={() => handleDeleteRule(rule.id)} className="p-2 bg-white/5 hover:bg-red-500/20 rounded text-red-500" title="Delete Rule"><Trash2 size={18} /></button>
                                 </div>
                             </div>
@@ -196,7 +209,7 @@ export const Alerts = () => {
             {showRuleModal && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
                     <div className="bg-slate-900 border border-white/10 rounded-xl p-6 w-full max-w-lg shadow-2xl">
-                        <h2 className="text-xl font-bold text-white mb-6">Create Alert Rule</h2>
+                        <h2 className="text-xl font-bold text-white mb-6">{editingRuleId ? 'Edit Alert Rule' : 'Create Alert Rule'}</h2>
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Rule Name</label>
@@ -239,7 +252,7 @@ export const Alerts = () => {
                         </div>
                         <div className="flex justify-end gap-3 mt-8">
                             <button onClick={() => setShowRuleModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                            <button onClick={handleCreateRule} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded font-bold">Create Rule</button>
+                            <button onClick={handleCreateOrUpdateRule} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded font-bold">{editingRuleId ? 'Update Rule' : 'Create Rule'}</button>
                         </div>
                     </div>
                 </div>
