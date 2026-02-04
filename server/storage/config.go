@@ -5,25 +5,49 @@ import (
     "math/rand"
 	"os"
 	"sync"
+    "time"
 )
+
+type AlertRule struct {
+    ID        string               `json:"id"`
+    Name      string               `json:"name"`
+    Enabled   bool                 `json:"enabled"`
+    Metric    string               `json:"metric"`      // e.g. "cpu_percent", "net_recv_rate"
+    Host      string               `json:"host"`        // "*" or specific host
+    Operator  string               `json:"operator"`    // ">", "<"
+    Threshold float64              `json:"threshold"`
+    Channels  []string             `json:"channels"`    // List of Channel IDs
+    Silenced  map[string]time.Time `json:"silenced"`    // Host -> ExpiryTime
+}
+
+type NotificationChannel struct {
+    ID     string            `json:"id"`
+    Name   string            `json:"name"`
+    Type   string            `json:"type"`   // "email", "webhook"
+    Config map[string]string `json:"config"` // URL, Email Address, etc.
+}
 
 type SystemConfig struct {
 	RetentionDays  int     `json:"retention_days"`
 	DDoSThreshold  float64 `json:"ddos_threshold"`
 	EmailAlerts    bool      `json:"email_alerts"`
-    AlertEmails    []string  `json:"alert_emails"`  // List of recipients
-    WebhookURLs    []string  `json:"webhook_urls"`  // List of webhooks
+    AlertEmails    []string  `json:"alert_emails"`  // Legacy
+    WebhookURLs    []string  `json:"webhook_urls"`  // Legacy
+    
+    AlertRules           []AlertRule           `json:"alert_rules"`
+    NotificationChannels []NotificationChannel `json:"notification_channels"`
+
     SMTPServer     string    `json:"smtp_server"`
     SMTPPort       int       `json:"smtp_port"`
     SMTPUser       string    `json:"smtp_user"`
     SMTPPassword   string    `json:"smtp_password"`
 
     AdminPassword  string    `json:"admin_password"`
-    SystemAPIKey   string    `json:"system_api_key"` // For Agent Registration
+    SystemAPIKey   string    `json:"system_api_key"` 
     MFAEnabled     bool      `json:"mfa_enabled"`
-    MFASecret      string    `json:"mfa_secret"`     // TOTP Secret
-    AgentSecrets   map[string]string `json:"agent_secrets"` // Hostname -> Secret
-    IgnoredHosts   []string `json:"ignored_hosts"` // List of hosts to hide
+    MFASecret      string    `json:"mfa_secret"`     
+    AgentSecrets   map[string]string `json:"agent_secrets"` 
+    IgnoredHosts   []string `json:"ignored_hosts"` 
 }
 
 type ConfigStore struct {

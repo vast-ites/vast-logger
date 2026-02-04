@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Activity, Server, Shield, Globe, Terminal, Settings, Cpu, HardDrive, Zap, CircleDashed, LayoutDashboard, ScrollText } from 'lucide-react';
+import { Activity, Server, Shield, Globe, Terminal, Settings, Cpu, HardDrive, Zap, CircleDashed, LayoutDashboard, ScrollText, BellRing } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, path }) => (
     <NavLink
@@ -58,6 +58,7 @@ export const Sidebar = () => {
                 <div className="mb-6">
                     <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Observability</h3>
                     <SidebarItem icon={Shield} label="Security" path="/security" />
+                    <SidebarItem icon={BellRing} label="Alerts" path="/alerts" />
                 </div>
             </div>
 
