@@ -954,6 +954,10 @@ func (h *IngestionHandler) HandleSilenceAlert(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid duration format (e.g., 1h, 30m)"})
         return
     }
+    
+    // Normalize Host
+    req.Host = strings.TrimSpace(req.Host)
+    if req.Host == "" { req.Host = "*" }
 
     cfg := h.Config.Get()
     found := false
