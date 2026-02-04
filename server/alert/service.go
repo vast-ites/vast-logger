@@ -7,6 +7,7 @@ import (
     "net/http"
     "net/smtp"
     "strings"
+    "time"
     "log"
 
     "github.com/datavast/datavast/server/storage"
@@ -14,29 +15,41 @@ import (
 
 type AlertService struct {
     Config *storage.ConfigStore
+    Logs   *storage.LogStore
 }
 
-func NewAlertService(cfg *storage.ConfigStore) *AlertService {
-    return &AlertService{Config: cfg}
+func NewAlertService(cfg *storage.ConfigStore, logs *storage.LogStore) *AlertService {
+    return &AlertService{Config: cfg, Logs: logs}
 }
 
 func (s *AlertService) CheckAndAlert(host string, netReceiveRate float64, ddosStatus string) {
     cfg := s.Config.Get()
     
-    // 1. Check Master Switch
-    if !cfg.EmailAlerts {
-        return
-    }
-    
-    // 2. Check Thresholds
-    // Convert Threshold (MB/s) to B/s
+    // 1. Check Thresholds (Even if email disabled, we might want to log?)
+    // Let's log first.
     thresholdBytes := cfg.DDoSThreshold * 1024 * 1024
     
-    isDDoS := ddosStatus == "DDoS" || (netReceiveRate > thresholdBytes && thresholdBytes > 0)
+    isDDoS := ddosStatus == "DDoS" || (netReceiveRate > thresholdBytes && thresholdBytes > 0 && netReceiveRate > 0)
     
     if isDDoS {
         msg := fmt.Sprintf("CRITICAL: DDoS Detected on %s! Rate: %.2f MB/s", host, netReceiveRate/1024/1024)
-        s.Dispatch(msg)
+        
+        // Persist Alert
+        if s.Logs != nil {
+             s.Logs.InsertAlert(storage.AlertEntry{
+                 Timestamp: time.Now(),
+                 Host:      host,
+                 Type:      "DDoS",
+                 Severity:  "CRITICAL",
+                 Message:   msg,
+                 Resolved:  false,
+             })
+        }
+        
+        // Dispatch Notifications
+        if cfg.EmailAlerts {
+            s.Dispatch(msg)
+        }
     }
 }
 

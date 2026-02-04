@@ -133,6 +133,23 @@ func NewLogStore(dsn string) (*LogStore, error) {
 		return nil, err
 	}
 
+    // Create Alerts Table
+    err = conn.Exec(context.Background(), `
+        CREATE TABLE IF NOT EXISTS datavast.alerts (
+            timestamp DateTime,
+            host String,
+            type String,
+            severity String,
+            message String,
+            resolved UInt8
+        ) ENGINE = MergeTree()
+        ORDER BY (timestamp, host)
+        TTL timestamp + INTERVAL 30 DAY
+    `)
+    if err != nil {
+        return nil, err
+    }
+
 	return &LogStore{conn: conn}, nil
 }
 
@@ -237,6 +254,61 @@ func (s *LogStore) GetLatestFirewall(host string) (string, error) {
         return "", err
     }
     return rules, nil
+}
+
+type AlertEntry struct {
+    Timestamp DateTime `json:"timestamp"`
+    Host      string   `json:"host"`
+    Type      string   `json:"type"`
+    Severity  string   `json:"severity"`
+    Message   string   `json:"message"`
+    Resolved  bool     `json:"resolved"` // stored as UInt8
+}
+
+// DateTime alias to standard time.Time for JSON
+type DateTime = time.Time
+
+func (s *LogStore) InsertAlert(entry AlertEntry) error {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    
+    resolvedInt := uint8(0)
+    if entry.Resolved { resolvedInt = 1 }
+
+    return s.conn.Exec(context.Background(), `
+        INSERT INTO datavast.alerts (timestamp, host, type, severity, message, resolved)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `, entry.Timestamp, entry.Host, entry.Type, entry.Severity, entry.Message, resolvedInt)
+}
+
+func (s *LogStore) GetRecentAlerts(limit int) ([]AlertEntry, error) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    
+    if limit <= 0 { limit = 50 }
+    
+    rows, err := s.conn.Query(context.Background(), fmt.Sprintf(`
+        SELECT timestamp, host, type, severity, message, resolved 
+        FROM datavast.alerts
+        ORDER BY timestamp DESC
+        LIMIT %d
+    `, limit))
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    
+    var alerts []AlertEntry
+    for rows.Next() {
+        var a AlertEntry
+        var res uint8
+        if err := rows.Scan(&a.Timestamp, &a.Host, &a.Type, &a.Severity, &a.Message, &res); err != nil {
+            return nil, err
+        }
+        a.Resolved = (res == 1)
+        alerts = append(alerts, a)
+    }
+    return alerts, nil
 }
 
 type AccessLogEntry struct {

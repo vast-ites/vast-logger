@@ -77,7 +77,7 @@ func main() {
     // 3. Load Persistent Config
     config := storage.NewConfigStore("server-config.json")
     authMgr := auth.NewAuthManager(config)
-    alertMgr := alert.NewAlertService(config)
+    alertMgr := alert.NewAlertService(config, clickh)
 
     // Initialize GeoIP
     if err := geoip.GetInstance().Initialize("GeoLite2-City.mmdb"); err != nil {

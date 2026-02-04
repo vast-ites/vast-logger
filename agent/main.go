@@ -7,6 +7,7 @@ import (
     "log"
     "time"
 	"bufio"
+    "path/filepath"
     "strconv"
 	"strings"
 	"encoding/json"
@@ -108,25 +109,27 @@ func main() {
         logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: sourceType})
     }
         
-        // Dedup
+        // Dedup with Canonical Paths (Resolve Symlinks)
         seen := make(map[string]bool)
         var unique []discovery.DiscoveredLog
         for _, l := range logs {
-            if !seen[l.Path] {
-                unique = append(unique, l)
-                seen[l.Path] = true
+            // Resolve Symlinks to catch /var/log/apache2 vs /etc/apache2/logs duplicates
+            realPath, err := filepath.EvalSymlinks(l.Path)
+            if err != nil {
+                realPath = l.Path // Fallback
+            }
+            realPath = filepath.Clean(realPath)
+            
+            if !seen[realPath] {
+                unique = append(unique, l) // Keep original struct but check unique realPath
+                seen[realPath] = true
             }
         }
         logs = unique
     
     	fmt.Printf(">> Targeting %d log sources:\n", len(logs))
-    	for i, l := range logs {
-    		if i < 5 {
-    			fmt.Printf("   [%s] %s\n", l.SourceType, l.Path)
-    		}
-    	}
-    	if len(logs) > 5 {
-    		fmt.Printf("   ... and %d more.\n", len(logs)-5)
+    	for _, l := range logs {
+    		fmt.Printf("   [%s] %s\n", l.SourceType, l.Path)
     	}
     
     	// 2. Start Log Tailers
