@@ -160,7 +160,17 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
         }
         if p.DDoSStatus == "DDoS" { m["ddos_status"] = 1.0 }
         
-        h.Alerts.EvaluateRules(p.Hostname, m)
+        // Build IP Info string
+        var ips []string
+        for _, iface := range p.Interfaces {
+            if iface.IP != "" && iface.IP != "127.0.0.1" && iface.IP != "::1" {
+                ips = append(ips, iface.IP)
+            }
+        }
+        ipInfo := strings.Join(ips, ", ")
+        if ipInfo == "" { ipInfo = "Unknown IP" }
+        
+        h.Alerts.EvaluateRules(p.Hostname, m, ipInfo)
     }
 }
 
