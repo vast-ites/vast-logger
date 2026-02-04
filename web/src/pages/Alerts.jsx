@@ -13,7 +13,7 @@ export const Alerts = () => {
     const [selectedRule, setSelectedRule] = useState(null); // For silencing
 
     // Form States
-    const [newRule, setNewRule] = useState({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [] });
+    const [newRule, setNewRule] = useState({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true });
     const [newChannel, setNewChannel] = useState({ name: '', type: 'webhook', config: { url: '', email: '' } });
     const [silenceDuration, setSilenceDuration] = useState('1h');
     const [silenceHost, setSilenceHost] = useState('');
@@ -51,6 +51,12 @@ export const Alerts = () => {
     const handleDeleteRule = async (id) => {
         const token = localStorage.getItem('token');
         await fetch(`/api/v1/alerts/rules/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        fetchData();
+    };
+
+    const handleToggleRule = async (id) => {
+        const token = localStorage.getItem('token');
+        await fetch(`/api/v1/alerts/rules/${id}/toggle`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
         fetchData();
     };
 
@@ -123,9 +129,9 @@ export const Alerts = () => {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-bold text-lg text-white">{rule.name}</h3>
-                                        <span className={`px-2 py-0.5 text-[10px] rounded ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
+                                        <button onClick={() => handleToggleRule(rule.id)} className={`px-2 py-0.5 text-[10px] rounded cursor-pointer hover:opacity-80 transition ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
                                             {rule.enabled ? 'ENABLED' : 'DISABLED'}
-                                        </span>
+                                        </button>
                                     </div>
                                     <div className="text-sm text-gray-400 mt-1 font-mono">
                                         if <span className="text-cyan-300">{rule.metric}</span> {rule.operator} <span className="text-amber-300">{rule.threshold}</span> on <span className="text-violet-300">{rule.host}</span>
