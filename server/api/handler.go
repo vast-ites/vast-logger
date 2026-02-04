@@ -407,11 +407,11 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             adminRoutes.POST("/mfa/setup", h.HandleSetupMFA)
             adminRoutes.POST("/mfa/enable", h.HandleEnableMFA)
             adminRoutes.POST("/mfa/disable", h.HandleDisableMFA)
-            adminRoutes.POST("/mfa/disable", h.HandleDisableMFA)
             
             // Alert Management
             adminRoutes.GET("/alerts/rules", h.HandleGetAlertRules)
             adminRoutes.POST("/alerts/rules", h.HandleCreateAlertRule)
+            adminRoutes.POST("/alerts/rules/:id/toggle", h.HandleToggleAlertRule)
             adminRoutes.DELETE("/alerts/rules/:id", h.HandleDeleteAlertRule)
             
             adminRoutes.GET("/alerts/channels", h.HandleGetChannels)
@@ -847,6 +847,7 @@ func (h *IngestionHandler) HandleCreateAlertRule(c *gin.Context) {
     }
     if rule.ID == "" { rule.ID = fmt.Sprintf("rule_%d", time.Now().UnixNano()) }
     if rule.Silenced == nil { rule.Silenced = make(map[string]time.Time) }
+    rule.Enabled = true // Force Enable on Create
     
     cfg := h.Config.Get()
     cfg.AlertRules = append(cfg.AlertRules, rule)
@@ -855,6 +856,27 @@ func (h *IngestionHandler) HandleCreateAlertRule(c *gin.Context) {
         return
     }
     c.JSON(http.StatusOK, rule)
+}
+
+func (h *IngestionHandler) HandleToggleAlertRule(c *gin.Context) {
+    id := c.Param("id")
+    cfg := h.Config.Get()
+    found := false
+    for i, r := range cfg.AlertRules {
+        if r.ID == id {
+            cfg.AlertRules[i].Enabled = !cfg.AlertRules[i].Enabled
+            found = true
+            break
+        }
+    }
+    
+    if !found {
+        c.Status(http.StatusNotFound)
+        return
+    }
+    
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
 }
 
 func (h *IngestionHandler) HandleDeleteAlertRule(c *gin.Context) {
