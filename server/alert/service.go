@@ -91,6 +91,9 @@ func (s *AlertService) EvaluateRules(host string, metrics map[string]float64, ho
             triggered = val <= rule.Threshold
         }
 
+        // DEBUG: Print ALL rules to see what's happening
+        // fmt.Printf("DEBUG_ALERT: Rule='%s' Metric='%s' Host='%s' Val=%.2f Threshold=%.2f Triggered=%v\n", rule.Name, rule.Metric, host, val, rule.Threshold, triggered)
+
         if triggered {
             // 4. Rate Limiting Check
             triggerKey := fmt.Sprintf("%s|%s", rule.ID, host)
