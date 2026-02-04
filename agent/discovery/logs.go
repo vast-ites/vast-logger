@@ -125,6 +125,11 @@ func scanProcForOpenLogs() ([]DiscoveredLog, error) {
 					continue
 				}
 
+                // Avoid collecting docker json logs via file (handled by Docker Collector)
+                if strings.Contains(linkPath, "/var/lib/docker") || strings.Contains(linkPath, "/containers/") {
+                    continue
+                }
+
 				results = append(results, DiscoveredLog{
 					Path:        linkPath,
 					SourceType:  "process_open_file",
@@ -159,6 +164,10 @@ func scanDirectory(root string) []DiscoveredLog {
 			if strings.HasPrefix(info.Name(), ".") || info.Name() == "node_modules" || info.Name() == "vendor" {
 				return filepath.SkipDir
 			}
+            // Skip Docker internal storage to avoid duplication
+            if info.Name() == "docker" && strings.Contains(path, "/var/lib") {
+                return filepath.SkipDir
+            }
 			return nil
 		}
 
