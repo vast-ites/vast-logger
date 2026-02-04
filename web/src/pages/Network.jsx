@@ -13,7 +13,10 @@ export const NetworkPage = () => {
         const fetchMetrics = async () => {
             try {
                 const params = selectedHost ? `?host=${selectedHost}` : '';
-                const res = await fetch(`/api/v1/metrics/system${params}`);
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/v1/metrics/system${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 if (res.ok) {
                     const data = await res.json();
                     setMetrics(data);
@@ -21,8 +24,8 @@ export const NetworkPage = () => {
                     const time = new Date().toLocaleTimeString();
                     setHistory(prev => [...prev.slice(-60), {
                         time,
-                        rx: (data.net_recv_rate || 0) / 1024, // KB/s
-                        tx: (data.net_sent_rate || 0) / 1024  // KB/s
+                        rx: (data.net_recv_rate || 0) * 1024, // KB/s (data is MB/s)
+                        tx: (data.net_sent_rate || 0) * 1024  // KB/s
                     }]);
                 }
             } catch (err) {
@@ -52,8 +55,8 @@ export const NetworkPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <StatCard label="Active Interfaces" value={(metrics.interfaces || []).filter(i => i.is_up).length} icon={Network} color="cyan" />
-                <StatCard label="Total Download" value={formatSpeed(metrics.net_recv_rate)} icon={ArrowDown} trend="neutral" color="green" />
-                <StatCard label="Total Upload" value={formatSpeed(metrics.net_sent_rate)} icon={ArrowUp} trend="neutral" color="amber" />
+                <StatCard label="Total Download" value={formatSpeed((metrics.net_recv_rate || 0) * 1024 * 1024)} icon={ArrowDown} trend="neutral" color="green" />
+                <StatCard label="Total Upload" value={formatSpeed((metrics.net_sent_rate || 0) * 1024 * 1024)} icon={ArrowUp} trend="neutral" color="amber" />
                 <StatCard label="Public Access" value="Secured" icon={Shield} trend="neutral" color="violet" />
             </div>
 
