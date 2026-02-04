@@ -153,13 +153,15 @@ export const Alerts = () => {
                                     {/* Silenced Status */}
                                     {rule.silenced && Object.keys(rule.silenced).length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-2">
-                                            {Object.entries(rule.silenced).map(([host, expire]) => (
-                                                <div key={host} className="flex items-center gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-500">
-                                                    <VolumeX size={10} />
-                                                    <span>Silenced on <b>{host}</b> until {new Date(expire).toLocaleTimeString()}</span>
-                                                    <button onClick={() => handleUnsilence(rule.id, host)} className="hover:text-white"><X size={10} /></button>
-                                                </div>
-                                            ))}
+                                            {Object.entries(rule.silenced)
+                                                .filter(([_, expire]) => new Date(expire) > new Date())
+                                                .map(([host, expire]) => (
+                                                    <div key={host} className="flex items-center gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-500">
+                                                        <VolumeX size={10} />
+                                                        <span>Silenced on <b>{host}</b> until {new Date(expire).toLocaleTimeString()}</span>
+                                                        <button onClick={() => handleUnsilence(rule.id, host)} className="hover:text-white"><X size={10} /></button>
+                                                    </div>
+                                                ))}
                                         </div>
                                     )}
                                 </div>
