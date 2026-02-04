@@ -10,6 +10,7 @@ import (
     "time"
     "log"
     "io"
+    "sync"
 
     "github.com/datavast/datavast/server/storage"
 )
@@ -17,10 +18,18 @@ import (
 type AlertService struct {
     Config *storage.ConfigStore
     Logs   *storage.LogStore
+    
+    // Rate Limiting
+    mu            sync.RWMutex
+    lastTriggered map[string]time.Time // Key: ruleID|host -> timestamp
 }
 
 func NewAlertService(cfg *storage.ConfigStore, logs *storage.LogStore) *AlertService {
-    return &AlertService{Config: cfg, Logs: logs}
+    return &AlertService{
+        Config:        cfg, 
+        Logs:          logs,
+        lastTriggered: make(map[string]time.Time),
+    }
 }
 
 func (s *AlertService) CheckAndAlert(host string, netReceiveRate float64, ddosStatus string) {
@@ -37,6 +46,7 @@ func (s *AlertService) CheckAndAlert(host string, netReceiveRate float64, ddosSt
 // EvaluateRules checks all active rules against the provided metrics
 func (s *AlertService) EvaluateRules(host string, metrics map[string]float64) {
     cfg := s.Config.Get()
+    cooldown := 5 * time.Minute // Default cooldown
     
     // Create lookup map for channels
     channels := make(map[string]storage.NotificationChannel)
@@ -53,10 +63,16 @@ func (s *AlertService) EvaluateRules(host string, metrics map[string]float64) {
         }
 
         // 2. Check Silence
+        // Check specific host silence
         if expiry, ok := rule.Silenced[host]; ok {
             if time.Now().Before(expiry) {
-                continue // Silenced
+                // fmt.Printf("DEBUG: Rule %s silenced on %s until %v\n", rule.Name, host, expiry)
+                continue 
             }
+        }
+        // Check wildcard silence (if user silenced "*")
+        if expiry, ok := rule.Silenced["*"]; ok {
+            if time.Now().Before(expiry) { continue }
         }
 
         // 3. Check Metric
@@ -76,8 +92,31 @@ func (s *AlertService) EvaluateRules(host string, metrics map[string]float64) {
         }
 
         if triggered {
-            msg := fmt.Sprintf("ALERT: %s triggered on %s! %s %.2f %s %.2f", 
-                rule.Name, host, rule.Metric, val, rule.Operator, rule.Threshold)
+            // 4. Rate Limiting Check
+            triggerKey := fmt.Sprintf("%s|%s", rule.ID, host)
+            s.mu.RLock()
+            last, exists := s.lastTriggered[triggerKey]
+            s.mu.RUnlock()
+            
+            if exists && time.Since(last) < cooldown {
+                continue // Suppress (Flood Control)
+            }
+            
+            // Mark triggered
+            s.mu.Lock()
+            s.lastTriggered[triggerKey] = time.Now()
+            s.mu.Unlock()
+
+            // Construct Rich Message
+            msg := fmt.Sprintf(
+                "🚨 **Alert Triggered**\n" +
+                "**Rule:** %s\n" +
+                "**Server:** %s\n" +
+                "**Metric:** %s\n" +
+                "**Value:** %.2f (Threshold: %s %.2f)\n" +
+                "**Time:** %s",
+                rule.Name, host, rule.Metric, val, rule.Operator, rule.Threshold, time.Now().Format(time.RFC1123),
+            )
             
             // Log to DB
             if s.Logs != nil {
