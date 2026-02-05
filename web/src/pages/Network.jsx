@@ -25,7 +25,7 @@ export const NetworkPage = () => {
                     const data = await res.json();
                     setMetrics(data);
 
-                    const time = new Date().toLocaleTimeString();
+                    const time = new Date().toISOString();
                     setHistory(prev => [...prev.slice(-60), {
                         time,
                         rx: (data.net_recv_rate || 0) * 1024, // KB/s
@@ -79,13 +79,13 @@ export const NetworkPage = () => {
                     const timeMap = new Map();
                     data.forEach(d => {
                         const ts = d.time; // Keep ISO string for sorting
-                        if (!timeMap.has(ts)) timeMap.set(ts, { time: new Date(ts).toLocaleString(), rawTs: ts, rx: 0, tx: 0 });
+                        if (!timeMap.has(ts)) timeMap.set(ts, { time: ts, formatted: new Date(ts).toLocaleString(), rx: 0, tx: 0 });
                         const entry = timeMap.get(ts);
                         entry.rx += (d.bytes_recv || 0) / 1024;
                         entry.tx += (d.bytes_sent || 0) / 1024;
                     });
 
-                    const sorted = Array.from(timeMap.values()).sort((a, b) => new Date(a.rawTs) - new Date(b.rawTs));
+                    const sorted = Array.from(timeMap.values()).sort((a, b) => new Date(a.time) - new Date(b.time));
                     setHistory(sorted);
                 }
             } catch (err) {
