@@ -34,6 +34,8 @@ type InterfaceStat struct {
     MAC         string `json:"mac"`
     IsUp        bool   `json:"is_up"` 
     Speed       string `json:"speed"` // derived or raw
+    BytesSent   uint64 `json:"bytes_sent"`
+    BytesRecv   uint64 `json:"bytes_recv"`
 }
 
 type SystemMetrics struct {
@@ -259,6 +261,14 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
     // Network Interfaces (Heavy IO)
     if shouldRefreshHeavy {
         var interfaces []InterfaceStat
+        
+        // Get per-interface stats first
+        ioCounters, _ := gnet.IOCounters(true)
+        ioMap := make(map[string]gnet.IOCountersStat)
+        for _, io := range ioCounters {
+            ioMap[io.Name] = io
+        }
+
         if ifaces, err := net.Interfaces(); err == nil {
             for _, i := range ifaces {
                 // Get IP
@@ -276,12 +286,20 @@ func (sc *SystemCollector) Collect() (*SystemMetrics, error) {
                 // If no non-loopback IPv4 found, and it's an up loopback, assign 127.0.0.1
                 if ip == "" && (i.Flags&net.FlagUp) != 0 && (i.Flags&net.FlagLoopback) != 0 { ip = "127.0.0.1" }
 
-                interfaces = append(interfaces, InterfaceStat{
+                stat := InterfaceStat{
                     Name: i.Name,
                     MAC:  i.HardwareAddr.String(),
                     IP:   ip,
                     IsUp: (i.Flags & net.FlagUp) != 0,
-                })
+                }
+                
+                // Add traffic stats if available
+                if val, ok := ioMap[i.Name]; ok {
+                    stat.BytesSent = val.BytesSent
+                    stat.BytesRecv = val.BytesRecv
+                }
+
+                interfaces = append(interfaces, stat)
             }
         }
         sc.cachedInterfaces = interfaces

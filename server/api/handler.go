@@ -42,6 +42,8 @@ type InterfaceStat struct {
     MAC         string `json:"mac"`
     IsUp        bool   `json:"is_up"` 
     Speed       string `json:"speed"`
+    BytesSent   uint64 `json:"bytes_sent"`
+    BytesRecv   uint64 `json:"bytes_recv"`
 }
 
 // Define ContainerMetric, ProcessMetric, FirewallStatus if they are not already defined elsewhere
@@ -140,6 +142,11 @@ func (h *IngestionHandler) HandleMetrics(c *gin.Context) {
             p.Hostname, cnt.ID, cnt.Name, cnt.Image, cnt.State, cnt.Status, cnt.Ports,
             cnt.CPUPercent, cnt.MemoryUsage, cnt.NetRx, cnt.NetTx,
         )
+    }
+
+    // Store Interface Metrics (for History)
+    for _, iface := range p.Interfaces {
+        h.Metrics.WriteInterfaceMetric(p.Hostname, iface.Name, iface.BytesSent, iface.BytesRecv)
     }
 
 	c.Status(http.StatusAccepted)
