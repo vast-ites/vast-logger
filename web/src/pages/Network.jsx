@@ -137,8 +137,8 @@ export const NetworkPage = () => {
                     key={range}
                     onClick={() => setTimeRange(range)}
                     className={`px-3 py-1 text-xs rounded transition-all ${timeRange === range
-                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                         }`}
                 >
                     {range === 'realtime' ? 'Live' : range}
@@ -180,9 +180,17 @@ export const NetworkPage = () => {
                                         <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <XAxis hide />
+                                <XAxis
+                                    dataKey="time"
+                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    tickFormatter={(str) => new Date(str).toLocaleTimeString()}
+                                    interval="preserveStartEnd"
+                                />
                                 <YAxis hide />
-                                <Tooltip contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }}
+                                    formatter={(value) => [Number(value).toFixed(2), undefined]}
+                                />
                                 <Area type="monotone" dataKey="rx" stroke="#22c55e" fill="url(#splitRx)" strokeWidth={2} isAnimationActive={false} name="Download" />
                                 <Area type="monotone" dataKey="tx" stroke="#f59e0b" fill="url(#splitTx)" strokeWidth={2} isAnimationActive={false} name="Upload" />
                             </AreaChart>
