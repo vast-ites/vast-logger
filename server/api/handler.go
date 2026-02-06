@@ -289,8 +289,7 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 				// Fallback to generic log insertion? No, allow it to fail for now or log error
 			} else {
 				// Successfully stored as structured log
-				c.Status(http.StatusAccepted)
-				return
+				// data is safe, but we ALSO want it in the generic table so it shows up in "Logs" explorer
 			}
 		}
 	}
