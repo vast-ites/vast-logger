@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Terminal, AlertTriangle, Bug, Info, Download, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Search, Filter, Terminal, AlertTriangle, Bug, Info, Download, ChevronLeft, ChevronRight, RefreshCw, Database, Shield, Server, Globe, Box, Cpu, Layers } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useHost } from '../contexts/HostContext';
 
@@ -76,8 +76,6 @@ const Logs = () => {
 
             params.append('limit', limit);
 
-            params.append('limit', limit);
-
             const token = localStorage.getItem('token');
             const headers = {
                 'Content-Type': 'application/json',
@@ -97,12 +95,9 @@ const Logs = () => {
         }
     };
 
-    // Debounce search
     // Debounce search & Poll
     useEffect(() => {
-        // Reset page on search/filter change
         setCurrentPage(1);
-
         fetchLogs();
         const interval = setInterval(fetchLogs, refreshInterval);
         return () => clearInterval(interval);
@@ -123,7 +118,7 @@ const Logs = () => {
 
                 const res = await fetch(url, { headers });
 
-                if (res.status === 401) return; // Don't redirect on background fetch, maybe just fail silent
+                if (res.status === 401) return;
                 if (res.ok) {
                     const data = await res.json();
                     setServices(data);
@@ -133,7 +128,6 @@ const Logs = () => {
             }
         };
         fetchServices();
-        // Note: Don't reset filterService here - it would conflict with URL params
     }, [selectedHost]);
 
     // Pagination Logic
@@ -172,7 +166,7 @@ const Logs = () => {
                 log.host,
                 log.level,
                 log.source_path,
-                `"${log.message.replace(/"/g, '""')}"` // Escape quotes
+                `"${log.message.replace(/"/g, '""')}"`
             ].join(','))
         ].join('\n');
 
@@ -184,6 +178,59 @@ const Logs = () => {
         a.click();
         window.URL.revokeObjectURL(url);
     };
+
+    // --- Categorization Logic ---
+    const getServiceCategory = (svc) => {
+        const s = svc.toLowerCase();
+
+        // System Core
+        if (['system_core', 'syslog', 'auth', 'kern', 'kernel', 'dmesg', 'boot', 'cron', 'process_open_file'].some(valid => s.includes(valid))) return 'System Core';
+
+        // Web Servers
+        if (['nginx', 'apache', 'apache2', 'httpd', 'tomcat', 'caddy', 'traefik'].some(valid => s.includes(valid))) return 'Web & Proxy';
+
+        // Databases
+        if (['mysql', 'postgres', 'mongo', 'redis', 'clickhouse', 'influx', 'elasticsearch', 'db'].some(valid => s.includes(valid))) return 'Database';
+
+        // Security
+        if (['fail2ban', 'ufw', 'audit', 'secure', 'guard'].some(valid => s.includes(valid))) return 'Security';
+
+        // System Ops
+        if (['dpkg', 'apt', 'yum', 'dnf', 'filesystem_scan'].some(valid => s.includes(valid))) return 'System Ops';
+
+        // Docker (Catch-all for containers usually, or specific prefix)
+        // If it looks like a container name (has hash or project prefix) but didn't match above, call it Container
+        // Or if we specifically know it coming from docker collector (backend doesn't explicitly flag this yet in service name, so we use heuristics)
+        // Heuristic: if it contains dashes and isn't one of the clear system ones, assume container/app
+        if (s.includes('datavast') || s.includes('-')) return 'Docker Containers';
+
+        return 'Other Applications';
+    };
+
+    const getCategoryIcon = (category) => {
+        switch (category) {
+            case 'System Core': return <Cpu size={12} className="text-cyber-muted" />;
+            case 'Web & Proxy': return <Globe size={12} className="text-cyber-cyan" />;
+            case 'Database': return <Database size={12} className="text-cyber-yellow" />;
+            case 'Security': return <Shield size={12} className="text-red-400" />;
+            case 'System Ops': return <Layers size={12} className="text-gray-400" />;
+            case 'Docker Containers': return <Box size={12} className="text-blue-400" />;
+            default: return <Server size={12} className="text-gray-500" />;
+        }
+    };
+
+    // Group services for dropdown
+    const groupedServices = services.reduce((acc, svc) => {
+        if (svc === 'apache2') return acc; // Hide legacy/duplicate service
+        const cat = getServiceCategory(svc);
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(svc);
+        return acc;
+    }, {});
+
+    // Sort categories order
+    const categoryOrder = ['Docker Containers', 'System Core', 'Web & Proxy', 'Database', 'Security', 'System Ops', 'Other Applications'];
+
 
     return (
         <div className="space-y-6">
@@ -208,7 +255,6 @@ const Logs = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full bg-cyber-gray/10 border border-cyber-gray/20 rounded pl-10 pr-10 py-2 text-sm text-cyber-text placeholder-cyber-muted focus:border-cyber-cyan focus:outline-none focus:ring-1 focus:ring-cyber-cyan transition-all"
                     />
-                    {/* Tooltip / Hint Icon */}
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-cyber-muted hover:text-cyber-cyan cursor-help group-hover:block" title="Advanced Search:
 host:hostname
 level:INFO|WARN|ERROR
@@ -238,10 +284,17 @@ order:ASC|DESC">
                         value={filterService}
                         onChange={(e) => setFilterService(e.target.value)}
                         className="bg-cyber-gray/10 border border-cyber-gray/20 rounded px-4 py-2 text-sm text-cyber-text focus:border-cyber-cyan focus:outline-none appearance-none cursor-pointer hover:bg-cyber-gray/20 max-w-[200px]"
+                        title="Filter by Container / Service"
                     >
-                        <option value="">All Services</option>
-                        {services.map(svc => (
-                            <option key={svc} value={svc}>{svc}</option>
+                        <option value="" className="bg-cyber-dark text-white">All Sources</option>
+                        {categoryOrder.map(cat => (
+                            groupedServices[cat] && groupedServices[cat].length > 0 && (
+                                <optgroup key={cat} label={cat} className="bg-cyber-dark text-white font-bold">
+                                    {groupedServices[cat].map(svc => (
+                                        <option key={svc} value={svc} className="bg-cyber-dark text-white font-normal">{svc}</option>
+                                    ))}
+                                </optgroup>
+                            )
                         ))}
                     </select>
                 </div>
@@ -308,7 +361,10 @@ order:ASC|DESC">
                                         {getLevelIcon(log.level)}
                                         {log.level || 'INFO'}
                                     </div>
-                                    <span className="text-cyber-magenta shrink-0 w-32 truncate" title={log.host}>
+                                    <span className="text-cyber-magenta shrink-0 w-32 truncate flex items-center gap-1.5" title={`${log.host} | ${log.service}`}>
+                                        {/* Dynamic Category Icon */}
+                                        {getCategoryIcon(getServiceCategory(log.service))}
+
                                         {log.host || 'localhost'}
                                     </span>
                                     <span className="text-cyber-green shrink-0 w-40 truncate" title={log.source_path}>

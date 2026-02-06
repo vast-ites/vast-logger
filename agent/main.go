@@ -87,15 +87,18 @@ func main() {
                 logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: sourceType})
             }
         } else {
-            // Auto Discover "all"
+            // 1. Add Enabled Service Logs (Priority)
+            // specific sources come first so they win dedup race against generic scanners
+            if cfg.Collectors.Apache { logs = append(logs, discovery.FindServiceLogs("apache")...) }
+            if cfg.Collectors.Nginx { logs = append(logs, discovery.FindServiceLogs("nginx")...) }
+            if cfg.Collectors.PM2 { logs = append(logs, discovery.FindServiceLogs("pm2")...) }
+
+            // 2. Auto Discover "all" (Fallbacks)
             dLogs, err := discovery.FindLogs()
             if err != nil {
                 log.Printf("Error discovering logs: %v", err)
             }
             logs = append(logs, dLogs...)
-            
-            // Add Enabled Service Logs
-            if cfg.Collectors.PM2 { logs = append(logs, discovery.FindServiceLogs("pm2")...) }
         }
     }
     

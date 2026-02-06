@@ -220,7 +220,7 @@ func FindServiceLogs(service string) []DiscoveredLog {
             if canRead(path) {
                 logs = append(logs, DiscoveredLog{
                     Path: path,
-                    SourceType: "service_preset:" + service,
+                    SourceType: service,
                     ProcessName: service,
                 })
             }

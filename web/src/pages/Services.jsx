@@ -72,6 +72,7 @@ const Services = () => {
     services.forEach(item => {
         // Skip internal types
         if (internalTypes.includes(item.name)) return;
+        if (item.name === 'apache2') return; // Hide legacy/duplicate service name
 
         // Filter by selected host (if a specific host is selected)
         if (selectedHost && item.host !== selectedHost) return;
