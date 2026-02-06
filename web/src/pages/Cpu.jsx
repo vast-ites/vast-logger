@@ -48,7 +48,7 @@ export const CpuPage = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-cyber-text tracking-tight flex items-center gap-2">
                 <Cpu size={24} className="text-cyan-400" /> CPU Monitoring
             </h1>
 
@@ -61,19 +61,19 @@ export const CpuPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-80">
                 <div className="lg:col-span-2 glass-panel p-4 flex flex-col min-h-0">
-                    <h3 className="text-gray-300 font-semibold text-sm mb-4">Total Avg Load</h3>
+                    <h3 className="text-cyber-muted font-semibold text-sm mb-4">Total Avg Load</h3>
                     <div className="flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={history}>
                                 <defs>
                                     <linearGradient id="cpuMain" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.3} />
+                                        <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.4} />
                                         <stop offset="95%" stopColor="#00f3ff" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis hide />
                                 <YAxis hide domain={[0, 100]} />
-                                <Tooltip contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(10, 10, 31, 0.9)', borderColor: '#334155', color: '#fff' }} />
                                 <Area type="monotone" dataKey="load" stroke="#00f3ff" fill="url(#cpuMain)" strokeWidth={2} isAnimationActive={false} />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -81,11 +81,11 @@ export const CpuPage = () => {
                 </div>
 
                 <div className="glass-panel p-4 flex flex-col min-h-0">
-                    <h3 className="text-gray-300 font-semibold text-sm mb-4">Core Activity</h3>
+                    <h3 className="text-cyber-muted font-semibold text-sm mb-4">Core Activity</h3>
                     <div className="space-y-3 flex-1 overflow-y-auto min-h-0 scrollbar-thin">
                         {coresLoad.slice(0, 8).map((core) => (
                             <div key={core.id} className="flex items-center justify-between text-xs">
-                                <span className="text-gray-400">Core {core.id}</span>
+                                <span className="text-cyber-muted">Core {core.id}</span>
                                 <span className="text-cyan-400 font-mono">{core.load.toFixed(1)}%</span>
                             </div>
                         ))}
@@ -95,11 +95,11 @@ export const CpuPage = () => {
 
             {/* Per Core Grid */}
             <div className="glass-panel p-6">
-                <h3 className="text-gray-300 font-semibold text-sm mb-4">Per Core Usage ({coresCount} Cores)</h3>
+                <h3 className="text-cyber-muted font-semibold text-sm mb-4">Per Core Usage ({coresCount} Cores)</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-8 gap-4">
                     {coresLoad.map(core => (
-                        <div key={core.id} className="bg-black/20 p-3 rounded border border-white/5 flex flex-col gap-2">
-                            <span className="text-xs text-gray-500">Core {core.id}</span>
+                        <div key={core.id} className="bg-cyber-black/20 p-3 rounded border border-cyber-gray/30 flex flex-col gap-2">
+                            <span className="text-xs text-cyber-muted">Core {core.id}</span>
                             <div className="h-16 flex items-end gap-1">
                                 <div
                                     className="w-full bg-cyan-500/20 rounded-sm relative overflow-hidden"
@@ -112,7 +112,7 @@ export const CpuPage = () => {
                                     ></div>
                                 </div>
                             </div>
-                            <span className="text-xs font-mono text-center text-gray-300">{core.load.toFixed(0)}%</span>
+                            <span className="text-xs font-mono text-center text-cyber-text">{core.load.toFixed(0)}%</span>
                         </div>
                     ))}
                 </div>

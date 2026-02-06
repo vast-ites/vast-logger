@@ -221,12 +221,12 @@ export const Alerts = () => {
                                 <div>
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Metric</label>
                                     <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.metric} onChange={e => setNewRule({ ...newRule, metric: e.target.value })}>
-                                        <option value="cpu_percent">CPU Usage (%)</option>
-                                        <option value="memory_usage">Memory Usage (%)</option>
-                                        <option value="disk_usage">Disk Usage (%)</option>
-                                        <option value="net_recv_rate">Net Download (B/s)</option>
-                                        <option value="net_sent_rate">Net Upload (B/s)</option>
-                                        <option value="net_total_rate">Net Total (B/s)</option>
+                                        <option value="cpu_percent" className="bg-cyber-dark text-white">CPU Usage (%)</option>
+                                        <option value="memory_usage" className="bg-cyber-dark text-white">Memory Usage (%)</option>
+                                        <option value="disk_usage" className="bg-cyber-dark text-white">Disk Usage (%)</option>
+                                        <option value="net_recv_rate" className="bg-cyber-dark text-white">Net Download (B/s)</option>
+                                        <option value="net_sent_rate" className="bg-cyber-dark text-white">Net Upload (B/s)</option>
+                                        <option value="net_total_rate" className="bg-cyber-dark text-white">Net Total (B/s)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -238,8 +238,8 @@ export const Alerts = () => {
                                 <div className="col-span-1">
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Operator</label>
                                     <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.operator} onChange={e => setNewRule({ ...newRule, operator: e.target.value })}>
-                                        <option value=">">&gt; (Greater)</option>
-                                        <option value="<">&lt; (Less)</option>
+                                        <option value=">" className="bg-cyber-dark text-white">&gt; (Greater)</option>
+                                        <option value="<" className="bg-cyber-dark text-white">&lt; (Less)</option>
                                     </select>
                                 </div>
                                 <div className="col-span-2">
@@ -250,7 +250,7 @@ export const Alerts = () => {
                             <div>
                                 <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Notification Channels (Select Multiple)</label>
                                 <select multiple className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text h-24 outline-none transition-colors" onChange={e => setNewRule({ ...newRule, channels: Array.from(e.target.selectedOptions, o => o.value) })}>
-                                    {channels.map(ch => <option key={ch.id} value={ch.id}>{ch.name} ({ch.type})</option>)}
+                                    {channels.map(ch => <option key={ch.id} value={ch.id} className="bg-cyber-dark text-white">{ch.name} ({ch.type})</option>)}
                                 </select>
                             </div>
                         </div>
@@ -319,11 +319,11 @@ export const Alerts = () => {
                             <div>
                                 <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Duration</label>
                                 <select className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" value={silenceDuration} onChange={e => setSilenceDuration(e.target.value)}>
-                                    <option value="15m">15 Minutes</option>
-                                    <option value="1h">1 Hour</option>
-                                    <option value="6h">6 Hours</option>
-                                    <option value="24h">24 Hours</option>
-                                    <option value="72h">3 Days</option>
+                                    <option value="15m" className="bg-slate-900 text-white">15 Minutes</option>
+                                    <option value="1h" className="bg-slate-900 text-white">1 Hour</option>
+                                    <option value="6h" className="bg-slate-900 text-white">6 Hours</option>
+                                    <option value="24h" className="bg-slate-900 text-white">24 Hours</option>
+                                    <option value="72h" className="bg-slate-900 text-white">3 Days</option>
                                 </select>
                             </div>
                         </div>
