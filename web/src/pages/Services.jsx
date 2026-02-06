@@ -92,12 +92,12 @@ const Services = () => {
         <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Services & Integrations</h1>
-                    <p className="text-gray-400">Manage and monitor your infrastructure components.</p>
+                    <h1 className="text-3xl font-bold text-cyber-text mb-2">Services & Integrations</h1>
+                    <p className="text-cyber-muted">Manage and monitor your infrastructure components.</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-black font-bold rounded-lg transition-colors shadow-lg shadow-cyan-500/20"
                 >
                     <Plus size={18} /> Add Service
                 </button>
@@ -105,39 +105,39 @@ const Services = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Object.entries(categories).map(([category, { icon: Icon, color, items }]) => (
-                    <div key={category} className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+                    <div key={category} className="glass-panel border border-cyber-gray/20 rounded-xl p-6">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className={`p-3 rounded-lg bg-gray-800 ${color}`}>
+                            <div className={`p-3 rounded-lg bg-cyber-gray/20 ${color}`}>
                                 <Icon size={24} />
                             </div>
-                            <h2 className="text-xl font-semibold text-white">{category}</h2>
-                            <span className="ml-auto text-sm bg-gray-800 px-2 py-1 rounded text-gray-400">
+                            <h2 className="text-xl font-semibold text-cyber-text">{category}</h2>
+                            <span className="ml-auto text-sm bg-cyber-gray/30 px-2 py-1 rounded text-cyber-muted font-mono">
                                 {items.length}
                             </span>
                         </div>
 
                         <div className="space-y-3">
                             {items.length === 0 ? (
-                                <p className="text-gray-500 italic text-sm py-4">No services detected.</p>
+                                <p className="text-cyber-muted italic text-sm py-4">No services detected.</p>
                             ) : (
                                 items.map((item, idx) => (
                                     <div
                                         key={idx}
                                         onClick={() => navigate(`/services/${item.name}`)}
-                                        className="flex items-center justify-between p-3 rounded-lg bg-black/40 hover:bg-gray-800 border border-transparent hover:border-gray-700 cursor-pointer group transition-all"
+                                        className="flex items-center justify-between p-3 rounded-lg bg-cyber-gray/10 hover:bg-cyber-gray/20 border border-transparent hover:border-cyber-cyan/30 cursor-pointer group transition-all"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                             <div>
-                                                <div className="font-medium text-gray-200 group-hover:text-cyan-400 transition-colors">
+                                                <div className="font-medium text-cyber-text group-hover:text-cyan-400 transition-colors">
                                                     {item.name}
                                                 </div>
-                                                <div className="text-xs text-gray-500">
+                                                <div className="text-xs text-cyber-muted">
                                                     {item.host ? item.host : item.type}
                                                 </div>
                                             </div>
                                         </div>
-                                        <ArrowRight size={16} className="text-gray-600 group-hover:text-cyan-500 transform group-hover:translate-x-1 transition-all" />
+                                        <ArrowRight size={16} className="text-cyber-muted group-hover:text-cyan-500 transform group-hover:translate-x-1 transition-all" />
                                     </div>
                                 ))
                             )}

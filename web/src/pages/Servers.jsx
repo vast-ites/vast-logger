@@ -104,16 +104,16 @@ export const Servers = () => {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-cyber-text tracking-tight flex items-center gap-2">
                         <Server size={24} className="text-blue-400" /> Server Infrastructure
                     </h1>
-                    <p className="text-gray-400 text-sm mt-1">
+                    <p className="text-cyber-muted text-sm mt-1">
                         Monitor remote servers via Vast Agent
                     </p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20"
                 >
                     <Plus size={18} /> Connect Server
                 </button>
@@ -145,7 +145,7 @@ export const Servers = () => {
             {/* Agent Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {agents.map((agent) => (
-                    <div key={agent.hostname} className="glass-panel p-6 border border-white/5 relative overflow-hidden group transition-all hover:border-cyan-500/30">
+                    <div key={agent.hostname} className="glass-panel p-6 border border-cyber-gray/20 relative overflow-hidden group transition-all hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10">
                         <div className={`absolute top-0 right-0 w-24 h-24 bg-${agent.status === 'ONLINE' ? 'green' : 'red'}-500/10 rounded-bl-full -mr-12 -mt-12 transition-all group-hover:scale-110`} />
 
                         <div className="flex justify-between items-start mb-6 relative z-10">
@@ -154,7 +154,7 @@ export const Servers = () => {
                                     <Terminal size={24} />
                                 </div>
                                 <div className="group/title relative">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <h3 className="text-lg font-bold text-cyber-text flex items-center gap-2">
                                         {agent.hostname}
                                         <button
                                             onClick={(e) => { e.stopPropagation(); deleteHost(agent.hostname); }}
@@ -164,7 +164,7 @@ export const Servers = () => {
                                             <Trash2 size={14} />
                                         </button>
                                     </h3>
-                                    <p className="text-xs text-gray-400 font-mono">{agent.platform}</p>
+                                    <p className="text-xs text-cyber-muted font-mono">{agent.platform}</p>
                                 </div>
                             </div>
                             <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${agent.status === 'ONLINE' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
@@ -174,27 +174,27 @@ export const Servers = () => {
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
-                            <div className="bg-white/5 p-3 rounded-lg text-center">
-                                <span className="text-gray-400 text-xs block mb-1">CPU</span>
-                                <span className={`text-lg font-bold font-mono ${agent.cpu_percent > 80 ? 'text-red-400' : 'text-white'}`}>
+                            <div className="bg-cyber-gray/10 p-3 rounded-lg text-center">
+                                <span className="text-cyber-muted text-xs block mb-1">CPU</span>
+                                <span className={`text-lg font-bold font-mono ${agent.cpu_percent > 80 ? 'text-red-400' : 'text-cyber-text'}`}>
                                     {agent.cpu_percent.toFixed(1)}%
                                 </span>
                             </div>
-                            <div className="bg-white/5 p-3 rounded-lg text-center">
-                                <span className="text-gray-400 text-xs block mb-1">Memory</span>
-                                <span className={`text-lg font-bold font-mono ${agent.mem_percent > 80 ? 'text-red-400' : 'text-white'}`}>
+                            <div className="bg-cyber-gray/10 p-3 rounded-lg text-center">
+                                <span className="text-cyber-muted text-xs block mb-1">Memory</span>
+                                <span className={`text-lg font-bold font-mono ${agent.mem_percent > 80 ? 'text-red-400' : 'text-cyber-text'}`}>
                                     {agent.mem_percent.toFixed(1)}%
                                 </span>
                             </div>
-                            <div className="bg-white/5 p-3 rounded-lg text-center">
-                                <span className="text-gray-400 text-xs block mb-1">Disk</span>
-                                <span className={`text-lg font-bold font-mono ${agent.disk_percent > 80 ? 'text-red-400' : 'text-white'}`}>
+                            <div className="bg-cyber-gray/10 p-3 rounded-lg text-center">
+                                <span className="text-cyber-muted text-xs block mb-1">Disk</span>
+                                <span className={`text-lg font-bold font-mono ${agent.disk_percent > 80 ? 'text-red-400' : 'text-cyber-text'}`}>
                                     {agent.disk_percent.toFixed(1)}%
                                 </span>
                             </div>
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs text-gray-500">
+                        <div className="mt-4 pt-4 border-t border-cyber-gray/20 flex justify-between items-center text-xs text-cyber-muted">
                             <span>{agent.platform} ({agent.arch})</span>
                             <span>Seen: {new Date(agent.last_seen).toLocaleTimeString()}</span>
                         </div>
@@ -202,7 +202,7 @@ export const Servers = () => {
                 ))}
 
                 {agents.length === 0 && !loading && (
-                    <div className="col-span-full p-12 text-center text-gray-500 border border-white/5 border-dashed rounded-xl">
+                    <div className="col-span-full p-12 text-center text-cyber-muted border border-cyber-gray/20 border-dashed rounded-xl bg-cyber-gray/5">
                         <Server size={48} className="mx-auto mb-4 opacity-20" />
                         <p>No agents connected.</p>
                         <p className="text-sm">Click "Connect Server" to deploy an agent.</p>

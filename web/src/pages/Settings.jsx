@@ -153,8 +153,8 @@ const Settings = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold font-display text-white flex items-center gap-3">
-                    <SettingsIcon className="text-gray-400" />
+                <h1 className="text-2xl font-bold font-display text-cyber-text flex items-center gap-3">
+                    <SettingsIcon className="text-cyber-muted" />
                     System Configuration
                 </h1>
                 <div className="flex items-center gap-4">
@@ -178,7 +178,7 @@ const Settings = () => {
                     </h3>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm text-gray-400 block mb-2">Log Retention Period (Days)</label>
+                            <label className="text-sm text-cyber-muted block mb-2 font-medium">Log Retention Period (Days)</label>
                             <div className="flex items-center gap-4">
                                 <input
                                     type="range"
@@ -186,9 +186,9 @@ const Settings = () => {
                                     max="90"
                                     value={retention}
                                     onChange={(e) => setRetention(e.target.value)}
-                                    className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyber-magenta"
+                                    className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyber-magenta"
                                 />
-                                <span className="font-mono text-xl text-white w-12 text-center">{retention}d</span>
+                                <span className="font-mono text-xl text-cyber-text w-12 text-center">{retention}d</span>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
                                 Older logs will be automatically purged from ClickHouse to save space.
@@ -204,13 +204,13 @@ const Settings = () => {
                     </h3>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm text-gray-400 block mb-2">DDoS Trigger Limit (MB/s)</label>
+                            <label className="text-sm text-cyber-muted block mb-2">DDoS Trigger Limit (MB/s)</label>
                             <div className="flex items-center gap-4">
                                 <input
                                     type="number"
                                     value={ddosThreshold}
                                     onChange={(e) => setDdosThreshold(e.target.value)}
-                                    className="bg-black/50 border border-gray-600 rounded px-4 py-2 text-white w-full focus:border-red-500 focus:outline-none"
+                                    className="bg-cyber-gray/10 border border-cyber-gray/30 rounded px-4 py-2 text-cyber-text w-full focus:border-red-500 focus:outline-none transition-colors"
                                 />
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
@@ -227,14 +227,14 @@ const Settings = () => {
                     </h3>
 
                     {/* Master Switch */}
-                    <div className="flex items-center justify-between mb-6 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+                    <div className="flex items-center justify-between mb-6 p-4 bg-cyber-gray/10 rounded-lg border border-cyber-gray/20">
                         <div>
-                            <span className="text-white font-bold block">Enable Alerting</span>
-                            <span className="text-xs text-gray-400">Master switch for all notifications (Email & Webhooks)</span>
+                            <span className="text-cyber-text font-bold block">Enable Alerting</span>
+                            <span className="text-xs text-cyber-muted">Master switch for all notifications (Email & Webhooks)</span>
                         </div>
                         <div
                             onClick={() => setEmailAlerts(!emailAlerts)}
-                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${emailAlerts ? 'bg-cyber-green' : 'bg-gray-700'}`}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${emailAlerts ? 'bg-cyber-green' : 'bg-gray-300 dark:bg-gray-700'}`}
                         >
                             <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${emailAlerts ? 'translate-x-6' : ''}`} />
                         </div>
@@ -250,7 +250,7 @@ const Settings = () => {
                                         <input
                                             type="email"
                                             placeholder="admin@example.com"
-                                            className="flex-1 bg-black/50 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-cyber-cyan outline-none"
+                                            className="flex-1 bg-cyber-gray/10 border border-cyber-gray/30 rounded px-3 py-2 text-cyber-text text-sm focus:border-cyber-cyan outline-none transition-colors"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     const val = e.target.value.trim();
@@ -288,10 +288,10 @@ const Settings = () => {
                                 </div>
 
                                 {/* SMTP Settings */}
-                                <div className="mt-6 pt-4 border-t border-gray-700">
+                                <div className="mt-6 pt-4 border-t border-cyber-gray/20">
                                     <button
                                         onClick={() => setShowSMTP(!showSMTP)}
-                                        className="text-xs text-gray-400 flex items-center gap-1 hover:text-white mb-3"
+                                        className="text-xs text-cyber-muted flex items-center gap-1 hover:text-cyber-text mb-3"
                                     >
                                         Configure SMTP Server {showSMTP ? '▲' : '▼'}
                                     </button>
@@ -331,7 +331,8 @@ const Settings = () => {
                                         <input
                                             type="text"
                                             placeholder="https://discord.com/api/webhooks/..."
-                                            className="flex-1 bg-black/50 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-purple-400 outline-none"
+                                            className="flex-1 bg-cyber-gray/10 border border-cyber-gray/30 rounded px-3 py-2 text-cyber-text text-sm focus:border-purple-400 outline-none transition-colors"
+
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     const val = e.target.value.trim();
@@ -381,9 +382,9 @@ const Settings = () => {
                     </h3>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm text-gray-400 block mb-2">System API Key (Global)</label>
+                            <label className="text-sm text-cyber-muted block mb-2">System API Key (Global)</label>
                             <div className="flex items-center gap-2">
-                                <code className="bg-black/50 border border-gray-600 rounded px-3 py-2 text-white font-mono flex-1 text-sm overflow-hidden">
+                                <code className="bg-cyber-gray/10 border border-cyber-gray/30 rounded px-3 py-2 text-cyber-text font-mono flex-1 text-sm overflow-hidden">
                                     {showKey ? apiKey : "••••••••••••••••••••••••••••••••"}
                                 </code>
                                 <button onClick={() => setShowKey(!showKey)} className="p-2 bg-gray-700 rounded hover:bg-gray-600">
@@ -440,7 +441,7 @@ const Settings = () => {
                             <span className="text-green-400 font-mono text-sm flex items-center gap-2">
                                 <Shield size={16} /> MFA ACTIVE
                             </span>
-                            <button onClick={disableMfa} className="text-red-400 text-xs hover:text-red-300 underline">Disable</button>
+                            <button onClick={disableMfa} className="text-red-500 hover:text-red-600 text-xs underline font-medium">Disable</button>
                         </div>
                     )}
                 </div>

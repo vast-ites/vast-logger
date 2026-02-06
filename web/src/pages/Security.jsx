@@ -192,7 +192,7 @@ const Security = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold font-display text-white flex items-center gap-3">
+                <h1 className="text-2xl font-bold font-display text-cyber-text flex items-center gap-3">
                     <Shield className={isCritical ? "text-red-500 animate-pulse" : "text-cyber-green"} />
                     Security Operations Center
                 </h1>
@@ -212,7 +212,7 @@ const Security = () => {
                         }`}>
                         <Shield size={64} className={isCritical ? 'text-red-500' : 'text-cyber-green'} />
                     </div>
-                    <h2 className="text-3xl font-bold text-white mb-2 font-display">THREAT LEVEL</h2>
+                    <h2 className="text-3xl font-bold text-cyber-text mb-2 font-display">THREAT LEVEL</h2>
                     <p className={`text-xl font-mono ${isCritical ? 'text-red-500' : 'text-cyber-green'}`}>
                         {currentStatus === 'SAFE' ? 'NORMAL' : (isCritical ? 'EXTREME' : 'ELEVATED')}
                     </p>
@@ -270,12 +270,12 @@ const Security = () => {
                                 onClick={() => setActiveFilter(tab.id)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-all ${activeFilter === tab.id
                                     ? 'bg-cyan-500 text-black'
-                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                    : 'bg-cyber-gray/20 text-cyber-muted hover:bg-cyber-gray/30'
                                     }`}
                             >
                                 <Icon size={14} />
                                 {tab.label}
-                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${activeFilter === tab.id ? 'bg-black/30' : 'bg-black/50'}`}>
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${activeFilter === tab.id ? 'bg-black/30' : 'bg-black/20'}`}>
                                     {tab.count}
                                 </span>
                             </button>
@@ -285,20 +285,20 @@ const Security = () => {
 
                 {/* Rules Table */}
                 {firewallData.length === 0 ? (
-                    <div className="bg-black/50 p-8 rounded text-center text-gray-500 border border-white/10">
+                    <div className="bg-cyber-gray/5 p-8 rounded text-center text-cyber-muted border border-cyber-gray/20">
                         <Lock size={48} className="mx-auto mb-3 opacity-20" />
                         <p className="font-mono text-sm">No firewall data available</p>
                         <p className="text-xs mt-2">Agents must run with sudo to collect firewall rules</p>
                     </div>
                 ) : filteredRules.length === 0 ? (
-                    <div className="bg-black/50 p-6 rounded text-center text-gray-500 border border-white/10">
+                    <div className="bg-cyber-gray/5 p-6 rounded text-center text-cyber-muted border border-cyber-gray/20">
                         <p className="font-mono text-sm">No rules match selected filter</p>
                     </div>
                 ) : (
-                    <div className="bg-black/50 rounded overflow-auto max-h-96 custom-scrollbar border border-white/10">
+                    <div className="bg-cyber-gray/5 rounded overflow-auto max-h-96 custom-scrollbar border border-cyber-gray/20">
                         <table className="w-full text-sm">
-                            <thead className="bg-gray-900/80 sticky top-0">
-                                <tr className="text-left text-gray-400 text-xs font-mono">
+                            <thead className="bg-cyber-gray/20 sticky top-0">
+                                <tr className="text-left text-cyber-muted text-xs font-mono">
                                     <th className="p-3">Action</th>
                                     <th className="p-3">Details</th>
                                     <th className="p-3">Type</th>
@@ -306,7 +306,7 @@ const Security = () => {
                             </thead>
                             <tbody className="font-mono text-xs">
                                 {filteredRules.map((rule, idx) => (
-                                    <tr key={rule.id} className="border-t border-gray-800 hover:bg-gray-900/50">
+                                    <tr key={rule.id} className="border-t border-cyber-gray/10 hover:bg-cyber-gray/10 transition-colors">
                                         <td className="p-3">
                                             <span className={`px-2 py-1 rounded font-bold ${rule.type === 'allowed'
                                                 ? 'bg-green-500/20 text-green-400'
@@ -315,9 +315,9 @@ const Security = () => {
                                                 {rule.action}
                                             </span>
                                         </td>
-                                        <td className="p-3 text-gray-300">{rule.details}</td>
+                                        <td className="p-3 text-cyber-text">{rule.details}</td>
                                         <td className="p-3">
-                                            <span className="text-gray-500 uppercase text-[10px]">
+                                            <span className="text-cyber-muted uppercase text-[10px]">
                                                 {rule.resourceType}
                                             </span>
                                         </td>
