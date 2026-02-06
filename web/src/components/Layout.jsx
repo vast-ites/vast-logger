@@ -8,7 +8,7 @@ const Layout = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
-        <div className="flex h-screen bg-black text-white selection:bg-cyan-500/30 font-sans">
+        <div className="flex h-screen font-sans selection:bg-cyan-500/30">
             <Sidebar />
 
             {/* Main Content */}
@@ -18,7 +18,7 @@ const Layout = () => {
                 <div
                     className="absolute inset-0 opacity-30 pointer-events-none"
                     style={{
-                        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)`,
+                        backgroundImage: `linear-gradient(rgb(var(--cyber-muted) / 0.1) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--cyber-muted) / 0.1) 1px, transparent 1px)`,
                         backgroundSize: '40px 40px'
                     }}
                 ></div>

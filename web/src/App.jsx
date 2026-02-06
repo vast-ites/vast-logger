@@ -18,6 +18,7 @@ import { NetworkPage } from './pages/Network';
 import { Alerts } from './pages/Alerts';
 
 import { HostProvider } from './contexts/HostContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -27,117 +28,119 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return (
     <HostProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<Layout />}>
-            <Route
-              index
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="logs"
-              element={
-                <PrivateRoute>
-                  <Logs />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="services"
-              element={
-                <PrivateRoute>
-                  <Services />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="services/:serviceName"
-              element={
-                <PrivateRoute>
-                  <ServiceDetail />
-                </PrivateRoute>
-              }
-            />
-
-            {/* Infrastructure Routes */}
-            <Route path="infrastructure">
+            <Route path="/" element={<Layout />}>
               <Route
                 index
                 element={
                   <PrivateRoute>
-                    <Servers />
+                    <Dashboard />
                   </PrivateRoute>
                 }
               />
               <Route
-                path="cpu"
+                path="logs"
                 element={
                   <PrivateRoute>
-                    <CpuPage />
+                    <Logs />
                   </PrivateRoute>
                 }
               />
               <Route
-                path="memory"
+                path="services"
                 element={
                   <PrivateRoute>
-                    <MemoryPage />
+                    <Services />
                   </PrivateRoute>
                 }
               />
               <Route
-                path="storage"
+                path="services/:serviceName"
                 element={
                   <PrivateRoute>
-                    <Storage />
+                    <ServiceDetail />
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Infrastructure Routes */}
+              <Route path="infrastructure">
+                <Route
+                  index
+                  element={
+                    <PrivateRoute>
+                      <Servers />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="cpu"
+                  element={
+                    <PrivateRoute>
+                      <CpuPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="memory"
+                  element={
+                    <PrivateRoute>
+                      <MemoryPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="storage"
+                  element={
+                    <PrivateRoute>
+                      <Storage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="network"
+                  element={
+                    <PrivateRoute>
+                      <NetworkPage />
+                    </PrivateRoute>
+                  }
+                />
+              </Route>
+
+              <Route
+                path="security"
+                element={
+                  <PrivateRoute>
+                    <Security />
                   </PrivateRoute>
                 }
               />
               <Route
-                path="network"
+                path="alerts"
                 element={
                   <PrivateRoute>
-                    <NetworkPage />
+                    <Alerts />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <PrivateRoute>
+                    <Settings />
                   </PrivateRoute>
                 }
               />
             </Route>
 
-            <Route
-              path="security"
-              element={
-                <PrivateRoute>
-                  <Security />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="alerts"
-              element={
-                <PrivateRoute>
-                  <Alerts />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <PrivateRoute>
-                  <Settings />
-                </PrivateRoute>
-              }
-            />
-          </Route>
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </HostProvider>
   );
 }

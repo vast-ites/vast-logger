@@ -117,14 +117,14 @@ export const Alerts = () => {
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-cyber-text flex items-center gap-2">
                 <BellRing className="text-cyan-400" /> Alerting System
             </h1>
 
             {/* Tabs */}
-            <div className="flex gap-4 border-b border-white/10 pb-1">
-                <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 text-sm font-semibold transition ${activeTab === 'rules' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-400 hover:text-white'}`}>Alert Rules</button>
-                <button onClick={() => setActiveTab('channels')} className={`px-4 py-2 text-sm font-semibold transition ${activeTab === 'channels' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-400 hover:text-white'}`}>Notification Channels</button>
+            <div className="flex gap-4 border-b border-cyber-gray/20 pb-1">
+                <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 text-sm font-semibold transition ${activeTab === 'rules' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-cyber-muted hover:text-cyber-text'}`}>Alert Rules</button>
+                <button onClick={() => setActiveTab('channels')} className={`px-4 py-2 text-sm font-semibold transition ${activeTab === 'channels' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-cyber-muted hover:text-cyber-text'}`}>Notification Channels</button>
             </div>
 
             {/* Rules Content */}
@@ -138,16 +138,16 @@ export const Alerts = () => {
 
                     <div className="grid gap-4">
                         {rules.map(rule => (
-                            <div key={rule.id} className="bg-white/5 border border-white/10 rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div key={rule.id} className="glass-panel p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-cyber-gray/20 rounded-lg">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-lg text-white">{rule.name}</h3>
-                                        <button onClick={() => handleToggleRule(rule.id)} className={`px-2 py-0.5 text-[10px] rounded cursor-pointer hover:opacity-80 transition ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
+                                        <h3 className="font-bold text-lg text-cyber-text">{rule.name}</h3>
+                                        <button onClick={() => handleToggleRule(rule.id)} className={`px-2 py-0.5 text-[10px] rounded cursor-pointer hover:opacity-80 transition ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-cyber-gray/20 text-cyber-muted'}`}>
                                             {rule.enabled ? 'ENABLED' : 'DISABLED'}
                                         </button>
                                     </div>
-                                    <div className="text-sm text-gray-400 mt-1 font-mono">
-                                        if <span className="text-cyan-300">{rule.metric}</span> {rule.operator} <span className="text-amber-300">{rule.threshold}</span> on <span className="text-violet-300">{rule.host}</span>
+                                    <div className="text-sm text-gray-500 mt-1 font-mono font-medium">
+                                        if <span className="text-cyan-600 dark:text-cyan-400 font-bold">{rule.metric}</span> {rule.operator} <span className="text-amber-600 dark:text-amber-400 font-bold">{rule.threshold}</span> on <span className="text-violet-600 dark:text-violet-400 font-bold">{rule.host}</span>
                                     </div>
 
                                     {/* Silenced Status */}
@@ -168,12 +168,12 @@ export const Alerts = () => {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => { setSelectedRule(rule); setSilenceHost(rule.host === '*' ? '' : rule.host); setShowSilenceModal(true); }}
-                                        className="p-2 bg-white/5 hover:bg-white/10 rounded text-amber-400" title="Silence Rule"
+                                        className="p-2 bg-cyber-gray/5 hover:bg-cyber-gray/10 rounded text-amber-500 hover:text-amber-600 transition-colors" title="Silence Rule"
                                     >
                                         <VolumeX size={18} />
                                     </button>
-                                    <button onClick={() => handleEditRule(rule)} className="p-2 bg-white/5 hover:bg-cyan-500/20 rounded text-cyan-500" title="Edit Rule"><Pencil size={18} /></button>
-                                    <button onClick={() => handleDeleteRule(rule.id)} className="p-2 bg-white/5 hover:bg-red-500/20 rounded text-red-500" title="Delete Rule"><Trash2 size={18} /></button>
+                                    <button onClick={() => handleEditRule(rule)} className="p-2 bg-cyber-gray/5 hover:bg-cyan-500/10 rounded text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors" title="Edit Rule"><Pencil size={18} /></button>
+                                    <button onClick={() => handleDeleteRule(rule.id)} className="p-2 bg-cyber-gray/5 hover:bg-red-500/10 rounded text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 transition-colors" title="Delete Rule"><Trash2 size={18} /></button>
                                 </div>
                             </div>
                         ))}
@@ -192,12 +192,12 @@ export const Alerts = () => {
                     </div>
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         {channels.map(ch => (
-                            <div key={ch.id} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                            <div key={ch.id} className="glass-panel p-4 border border-cyber-gray/20 rounded-lg">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-bold text-white">{ch.name}</h3>
-                                        <div className="text-xs text-cyan-400 font-mono mt-1 uppercase">{ch.type}</div>
-                                        <div className="text-sm text-gray-400 mt-2 break-all">{ch.config.url || ch.config.email}</div>
+                                        <h3 className="font-bold text-cyber-text">{ch.name}</h3>
+                                        <div className="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-1 uppercase">{ch.type}</div>
+                                        <div className="text-sm text-gray-500 mt-2 break-all">{ch.config.url || ch.config.email}</div>
                                     </div>
                                     <button onClick={() => handleDeleteChannel(ch.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>
                                 </div>
@@ -210,17 +210,17 @@ export const Alerts = () => {
             {/* Create Rule Modal */}
             {showRuleModal && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-white/10 rounded-xl p-6 w-full max-w-lg shadow-2xl">
-                        <h2 className="text-xl font-bold text-white mb-6">{editingRuleId ? 'Edit Alert Rule' : 'Create Alert Rule'}</h2>
+                    <div className="bg-cyber-dark border border-cyber-gray/30 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+                        <h2 className="text-xl font-bold text-cyber-text mb-6">{editingRuleId ? 'Edit Alert Rule' : 'Create Alert Rule'}</h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Rule Name</label>
-                                <input className="w-full bg-black/30 border border-white/10 rounded p-2 text-white focus:border-cyan-500 outline-none" placeholder="e.g. High CPU Load" value={newRule.name} onChange={e => setNewRule({ ...newRule, name: e.target.value })} />
+                                <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Rule Name</label>
+                                <input className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text focus:border-cyan-500 outline-none transition-colors" placeholder="e.g. High CPU Load" value={newRule.name} onChange={e => setNewRule({ ...newRule, name: e.target.value })} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Metric</label>
-                                    <select className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" value={newRule.metric} onChange={e => setNewRule({ ...newRule, metric: e.target.value })}>
+                                    <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Metric</label>
+                                    <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.metric} onChange={e => setNewRule({ ...newRule, metric: e.target.value })}>
                                         <option value="cpu_percent">CPU Usage (%)</option>
                                         <option value="memory_usage">Memory Usage (%)</option>
                                         <option value="disk_usage">Disk Usage (%)</option>
@@ -230,26 +230,26 @@ export const Alerts = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Target Host</label>
-                                    <input className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" placeholder="* for Any" value={newRule.host} onChange={e => setNewRule({ ...newRule, host: e.target.value })} />
+                                    <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Target Host</label>
+                                    <input className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" placeholder="* for Any" value={newRule.host} onChange={e => setNewRule({ ...newRule, host: e.target.value })} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="col-span-1">
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Operator</label>
-                                    <select className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" value={newRule.operator} onChange={e => setNewRule({ ...newRule, operator: e.target.value })}>
+                                    <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Operator</label>
+                                    <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.operator} onChange={e => setNewRule({ ...newRule, operator: e.target.value })}>
                                         <option value=">">&gt; (Greater)</option>
                                         <option value="<">&lt; (Less)</option>
                                     </select>
                                 </div>
                                 <div className="col-span-2">
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Threshold</label>
-                                    <input type="number" className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" value={newRule.threshold} onChange={e => setNewRule({ ...newRule, threshold: e.target.value })} />
+                                    <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Threshold</label>
+                                    <input type="number" className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.threshold} onChange={e => setNewRule({ ...newRule, threshold: e.target.value })} />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Notification Channels (Select Multiple)</label>
-                                <select multiple className="w-full bg-black/30 border border-white/10 rounded p-2 text-white h-24 outline-none" onChange={e => setNewRule({ ...newRule, channels: Array.from(e.target.selectedOptions, o => o.value) })}>
+                                <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Notification Channels (Select Multiple)</label>
+                                <select multiple className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text h-24 outline-none transition-colors" onChange={e => setNewRule({ ...newRule, channels: Array.from(e.target.selectedOptions, o => o.value) })}>
                                     {channels.map(ch => <option key={ch.id} value={ch.id}>{ch.name} ({ch.type})</option>)}
                                 </select>
                             </div>

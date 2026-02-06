@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Activity, Server, Shield, Globe, Terminal, Settings, Cpu, HardDrive, Zap, CircleDashed, LayoutDashboard, ScrollText, BellRing } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 const SidebarItem = ({ icon: Icon, label, path }) => (
     <NavLink
@@ -8,8 +9,8 @@ const SidebarItem = ({ icon: Icon, label, path }) => (
         className={({ isActive }) => `
             flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all duration-300
             ${isActive
-                ? 'bg-cyan-900/20 text-cyan-400 border-l-2 border-cyan-400 shadow-[0_0_15px_rgba(0,243,255,0.1)]'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'}
+                ? 'bg-cyan-900/20 text-cyan-400 border-l-2 border-cyan-400 shadow-[0_0_15px_rgb(0,243,255,0.1)]'
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-gray/20'}
         `}
     >
         <Icon size={18} />
@@ -19,7 +20,7 @@ const SidebarItem = ({ icon: Icon, label, path }) => (
 
 export const Sidebar = () => {
     return (
-        <aside className="w-64 border-r border-white/5 bg-black/40 backdrop-blur-xl p-4 flex flex-col h-full">
+        <aside className="w-64 border-r border-cyber-gray/20 glass-panel p-4 flex flex-col h-full rounded-none border-l-0 border-t-0 border-b-0">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-10 px-2 mt-2">
                 <div className="relative group">
@@ -29,7 +30,7 @@ export const Sidebar = () => {
                     <div className="absolute inset-0 bg-cyan-400 blur-lg opacity-50 group-hover:opacity-100 transition-opacity"></div>
                 </div>
                 <div>
-                    <h1 className="text-xl font-bold text-white tracking-widest font-display">
+                    <h1 className="text-xl font-bold text-cyber-text tracking-widest font-display">
                         DataVAST
                     </h1>
                     <span className="text-[10px] text-cyan-500 font-mono tracking-[0.2em] relative -top-1 block">
@@ -40,14 +41,14 @@ export const Sidebar = () => {
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 <div className="mb-6">
-                    <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Overview</h3>
+                    <h3 className="text-[10px] text-cyber-muted font-mono uppercase tracking-widest mb-3 pl-3">Overview</h3>
                     <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" />
                     <SidebarItem icon={Activity} label="Services" path="/services" />
                     <SidebarItem icon={ScrollText} label="Logs" path="/logs" />
                 </div>
 
                 <div className="mb-6">
-                    <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Infrastructure</h3>
+                    <h3 className="text-[10px] text-cyber-muted font-mono uppercase tracking-widest mb-3 pl-3">Infrastructure</h3>
                     <SidebarItem icon={Server} label="Servers" path="/infrastructure" />
                     <SidebarItem icon={Cpu} label="CPU" path="/infrastructure/cpu" />
                     <SidebarItem icon={CircleDashed} label="Memory" path="/infrastructure/memory" />
@@ -56,18 +57,21 @@ export const Sidebar = () => {
                 </div>
 
                 <div className="mb-6">
-                    <h3 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-3 pl-3">Observability</h3>
+                    <h3 className="text-[10px] text-cyber-muted font-mono uppercase tracking-widest mb-3 pl-3">Observability</h3>
                     <SidebarItem icon={Shield} label="Security" path="/security" />
                     <SidebarItem icon={BellRing} label="Alerts" path="/alerts" />
                 </div>
             </div>
 
-            <div className="pt-4 border-t border-white/5">
-                <SidebarItem icon={Settings} label="Settings" path="/settings" />
+            <div className="pt-4 border-t border-cyber-gray/20">
+                <div className="flex items-center justify-between px-2 mb-2">
+                    <SidebarItem icon={Settings} label="Settings" path="/settings" />
+                    <ThemeToggle />
+                </div>
                 <div className="px-3 mt-4">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                        <span className="text-[10px] text-gray-500 font-mono">SYSTEM ONLINE</span>
+                        <span className="text-[10px] text-cyber-muted font-mono">SYSTEM ONLINE</span>
                     </div>
                 </div>
             </div>

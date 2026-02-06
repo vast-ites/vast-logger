@@ -19,22 +19,22 @@ export const StatCard = ({
         <div className="glass-panel p-5 relative overflow-hidden group">
             <div className="relative z-10 flex justify-between items-start">
                 <div>
-                    <p className="text-gray-400 text-xs uppercase tracking-wider font-semibold mb-1">{label}</p>
+                    <p className="text-cyber-muted text-xs uppercase tracking-wider font-semibold mb-1">{label}</p>
                     <div className="flex items-baseline gap-2">
                         <h3 className={`text-2xl font-bold tracking-tight ${iconColor}`}>{value}</h3>
-                        {subValue && <span className="text-xs text-gray-500">{subValue}</span>}
+                        {subValue && <span className="text-xs text-cyber-muted">{subValue}</span>}
                     </div>
 
                     {trend && (
-                        <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-rose-400' : 'text-gray-400'}`}>
+                        <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-rose-400' : 'text-cyber-muted'}`}>
                             <span>{trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}</span>
                             <span>{trendValue}</span>
-                            <span className="text-gray-500 ml-1">vs last hour</span>
+                            <span className="text-cyber-muted ml-1">vs last hour</span>
                         </div>
                     )}
                 </div>
 
-                <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${iconColor} shadow-[0_0_10px_rgba(0,0,0,0.2)]`}>
+                <div className={`p-2 rounded-lg bg-cyber-gray/10 border border-cyber-gray/20 ${iconColor} shadow-[0_0_10px_rgba(0,0,0,0.2)]`}>
                     <Icon size={20} />
                 </div>
             </div>

@@ -6,16 +6,16 @@ export const TopBar = ({ onAddSource }) => {
     const { selectedHost, setSelectedHost, hosts, refreshInterval, setRefreshInterval } = useHost();
 
     return (
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-black/20 backdrop-blur-sm z-10">
+        <header className="h-16 border-b border-cyber-gray/20 flex items-center justify-between px-6 glass-panel rounded-none border-t-0 border-l-0 border-r-0 z-10">
             {/* Search Bar */}
             <div className="flex-1 max-w-xl">
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search size={16} className="text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
+                        <Search size={16} className="text-cyber-muted group-focus-within:text-cyan-400 transition-colors" />
                     </div>
                     <input
                         type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-white/5 rounded-lg leading-5 bg-white/5 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-black/40 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 sm:text-sm transition-all shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
+                        className="block w-full pl-10 pr-3 py-2 border border-cyber-gray/20 rounded-lg leading-5 bg-cyber-gray/10 text-cyber-text placeholder-cyber-muted focus:outline-none focus:bg-cyber-gray/20 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 sm:text-sm transition-all shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
                         placeholder="Search metrics, logs, or server events..."
                     />
                     <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
@@ -27,11 +27,11 @@ export const TopBar = ({ onAddSource }) => {
             <div className="flex items-center gap-6 ml-6">
                 {/* Refresh Rate Selector */}
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">REFRESH:</span>
+                    <span className="text-[10px] text-cyber-muted font-mono uppercase tracking-wider">REFRESH:</span>
                     <select
                         value={refreshInterval}
                         onChange={(e) => setRefreshInterval(Number(e.target.value))}
-                        className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer border-b border-white/10 pb-0.5 hover:border-cyan-500/50 transition-colors"
+                        className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer border-b border-cyber-gray/20 pb-0.5 hover:border-cyan-500/50 transition-colors"
                     >
                         <option value={1000}>1s (Realtime)</option>
                         <option value={2000}>2s (Fast)</option>
@@ -41,11 +41,11 @@ export const TopBar = ({ onAddSource }) => {
                     </select>
                 </div>
 
-                <div className="w-px h-6 bg-white/10"></div>
+                <div className="w-px h-6 bg-cyber-gray/20"></div>
 
                 {/* Host Selector */}
-                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-white/5 bg-white/5">
-                    <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Source</span>
+                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-cyber-gray/20 bg-cyber-gray/10">
+                    <span className="text-[10px] text-cyber-muted font-mono uppercase tracking-wider">Source</span>
                     <select
                         value={selectedHost}
                         onChange={(e) => setSelectedHost(e.target.value)}
@@ -69,22 +69,22 @@ export const TopBar = ({ onAddSource }) => {
                 {/* Actions */}
                 <button
                     onClick={onAddSource}
-                    className="px-3 py-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded text-xs font-bold tracking-wider hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all shadow-[0_0_10px_rgba(0,243,255,0.1)]"
+                    className="px-3 py-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded text-xs font-bold tracking-wider hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all shadow-[0_0_10px_rgb(0,243,255,0.1)]"
                 >
                     + ADD SOURCE
                 </button>
 
-                <div className="w-px h-6 bg-white/10 mx-2"></div>
+                <div className="w-px h-6 bg-cyber-gray/20 mx-2"></div>
 
                 <div className="flex items-center gap-4">
-                    <button className="text-gray-500 hover:text-white transition-colors relative">
+                    <button className="text-cyber-muted hover:text-cyber-text transition-colors relative">
                         <Bell size={18} />
                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                     </button>
-                    <button className="text-gray-400 hover:text-white transition-colors">
+                    <button className="text-cyber-muted hover:text-cyber-text transition-colors">
                         <HelpCircle size={18} />
                     </button>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-300">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyber-gray to-cyber-black border border-cyber-gray/20 flex items-center justify-center text-xs font-bold text-cyber-muted">
                         OP
                     </div>
                 </div>

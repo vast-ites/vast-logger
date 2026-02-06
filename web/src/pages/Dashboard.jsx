@@ -118,13 +118,13 @@ const Dashboard = () => {
                 <div className={`absolute -right-10 -top-10 transform rotate-12 ${isDDoS ? 'text-red-500/10' : 'text-cyber-cyan/10'}`}>
                     <Zap size={200} />
                 </div>
-                <h2 className="text-xl font-bold text-white mb-2 font-display">
+                <h2 className="text-xl font-bold text-cyber-text mb-2 font-display">
                     {isDDoS ? 'SYSTEM UNDER ATTACK' : 'Zero-Config Agent Active'}
                 </h2>
-                <p className="text-gray-400 mb-4 max-w-2xl">
+                <p className="text-cyber-muted mb-4 max-w-2xl">
                     {isDDoS ? 'Traffic thresholds exceeded. Automatic mitigation protocols recommended.' : 'Receiving deep telemetry from host. Universal log discovery engaged.'}
                 </p>
-                <div className={`p-3 rounded font-mono text-sm border inline-block bg-black/50 ${isDDoS ? 'text-red-500 border-red-500 font-bold' : 'text-cyber-cyan border-cyber-gray'}`}>
+                <div className={`p-3 rounded font-mono text-sm border inline-block bg-cyber-black/50 ${isDDoS ? 'text-red-500 border-red-500 font-bold' : 'text-cyber-cyan border-cyber-gray'}`}>
                     Status: {isDDoS ? 'CRITICAL WARN' : 'ONLINE'}
                 </div>
             </div>
@@ -164,28 +164,28 @@ const Dashboard = () => {
             {/* Live Log Stream & Containers */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
-                    <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
+                    <div className="p-4 border-b border-cyber-gray/20 flex justify-between items-center bg-cyber-dark/80">
                         <h3 className="font-mono text-sm text-cyber-cyan uppercase">Live Log Stream (Centralized)</h3>
                         <div className="flex gap-2 text-xs">
-                            <div className="text-[10px] text-gray-500 font-mono">LATEST 50</div>
+                            <div className="text-[10px] text-cyber-muted font-mono">LATEST 50</div>
                         </div>
                     </div>
-                    <div className="flex-1 bg-black/40 p-4 font-mono text-xs overflow-auto custom-scrollbar">
+                    <div className="flex-1 bg-cyber-black/40 p-4 font-mono text-xs overflow-auto custom-scrollbar">
                         <div className="space-y-1">
                             {logs.length === 0 && (
-                                <div className="text-gray-500 italic p-4">Waiting for incoming logs...</div>
+                                <div className="text-cyber-muted italic p-4">Waiting for incoming logs...</div>
                             )}
                             {logs.map((log, i) => {
-                                let levelColor = "text-gray-300";
+                                let levelColor = "text-cyber-text";
                                 if (log.level === "ERROR") levelColor = "text-red-500 font-bold";
                                 if (log.level === "WARN") levelColor = "text-cyber-yellow";
-                                if (log.level === "DEBUG") levelColor = "text-gray-500";
+                                if (log.level === "DEBUG") levelColor = "text-cyber-muted";
 
                                 return (
-                                    <div key={i} className="flex gap-3 text-gray-400 hover:bg-cyber-gray/20 p-0.5 rounded transistion-colors">
+                                    <div key={i} className="flex gap-3 text-cyber-muted hover:bg-cyber-gray/20 p-0.5 rounded transistion-colors">
                                         <span className="text-cyber-cyan/60 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
                                         <span className="text-cyber-magenta shrink-0 w-20 truncate">[{log.host || 'local'}]</span>
-                                        <span className={`shrink-0 w-12 text-center text-xs border border-white/10 rounded px-1 ${levelColor} bg-black/30`}>{log.level || 'INFO'}</span>
+                                        <span className={`shrink-0 w-12 text-center text-xs border border-cyber-gray/20 rounded px-1 ${levelColor} bg-cyber-gray/20`}>{log.level || 'INFO'}</span>
                                         <span className="text-cyber-green shrink-0 truncate w-32" title={log.source_path}>{log.source_path.split('/').pop()}</span>
                                         <span className={`${levelColor} truncate`}>{log.message}</span>
                                     </div>
@@ -197,14 +197,14 @@ const Dashboard = () => {
 
                 {/* Container Monitor */}
                 <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
-                    <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
+                    <div className="p-4 border-b border-cyber-gray/20 flex justify-between items-center bg-cyber-dark/80">
                         <h3 className="font-mono text-sm text-cyber-cyan uppercase">Active Containers</h3>
                         <span className="text-xs font-mono text-cyber-green animate-pulse">{containers.length} RUNNING</span>
                     </div>
-                    <div className="flex-1 bg-black/40 overflow-auto custom-scrollbar">
+                    <div className="flex-1 bg-cyber-black/40 overflow-auto custom-scrollbar">
                         <table className="w-full text-left font-mono text-xs">
                             <thead>
-                                <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-black/20">
+                                <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-cyber-black/20">
                                     <th className="p-3">NAME</th>
                                     <th className="p-3">STATUS</th>
                                     <th className="p-3">CPU</th>
@@ -214,11 +214,11 @@ const Dashboard = () => {
                             </thead>
                             <tbody>
                                 {containers.length === 0 ? (
-                                    <tr><td colSpan="5" className="p-4 text-center text-gray-500">No active containers found</td></tr>
+                                    <tr><td colSpan="5" className="p-4 text-center text-cyber-muted">No active containers found</td></tr>
                                 ) : (
                                     containers.map((c, i) => (
                                         <tr key={i} className="border-b border-cyber-gray/20 hover:bg-cyber-gray/10 transition-colors">
-                                            <td className="p-3 font-bold text-white truncate max-w-[150px]" title={c.name}>{c.name}</td>
+                                            <td className="p-3 font-bold text-cyber-text truncate max-w-[150px]" title={c.name}>{c.name}</td>
                                             <td className="p-3">
                                                 <span className={`px-2 py-0.5 rounded w-fit ${c.state === 'running' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-red-500/20 text-red-500'}`}>
                                                     {c.state.toUpperCase()}
@@ -243,20 +243,20 @@ const Dashboard = () => {
 
             {/* Top Processes (Live Terminal) */}
             <div className="glass-panel rounded-xl p-0 overflow-hidden flex flex-col h-96">
-                <div className="p-4 border-b border-cyber-gray flex justify-between items-center bg-cyber-dark/90">
+                <div className="p-4 border-b border-cyber-gray/20 flex justify-between items-center bg-cyber-dark/80">
                     <h3 className="font-mono text-sm text-cyber-cyan uppercase">Live Terminal (top)</h3>
                     <div className="flex gap-2">
                         <span className="text-[10px] font-mono text-green-400 animate-pulse">● LIVE</span>
                     </div>
                 </div>
-                <div className="flex-1 bg-black p-4 overflow-auto custom-scrollbar">
+                <div className="flex-1 bg-cyber-black p-4 overflow-auto custom-scrollbar">
                     <pre className="font-mono text-[10px] text-green-400 whitespace-pre-wrap leading-snug">
                         {metrics.process_raw ? metrics.process_raw
                             .replace(/\\\\n/g, '\n') // Handle double escaped
                             .replace(/\\n/g, '\n')   // Handle single escaped
                             .replace(/\\t/g, '\t')   // Handle tabs
                             : (
-                                <span className="text-gray-500 italic">
+                                <span className="text-cyber-muted italic">
                                     No live terminal data received.<br />
                                     1. Ensure Host Agent is updated (v2.2+).<br />
                                     2. Select a specific Host from the Sidebar.
