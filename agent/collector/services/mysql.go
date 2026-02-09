@@ -181,7 +181,6 @@ func (c *MySQLCollector) getReplicationStatus() (isMaster bool, lagSeconds int) 
 		secondsBehind   sql.NullInt64
 		// Other columns (MySQL has many columns in SHOW SLAVE STATUS)
 		dummyStrings [50]sql.NullString
-		dummyInts    [20]sql.NullInt64
 	)
 
 	err := row.Scan(
