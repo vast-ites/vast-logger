@@ -60,6 +60,7 @@ export const Sidebar = () => {
                     <h3 className="text-[10px] text-cyber-muted font-mono uppercase tracking-widest mb-3 pl-3">Observability</h3>
                     <SidebarItem icon={Shield} label="Security" path="/security" />
                     <SidebarItem icon={BellRing} label="Alerts" path="/alerts" />
+                    <SidebarItem icon={Globe} label="Connection Tracking" path="/connections" />
                 </div>
             </div>
 

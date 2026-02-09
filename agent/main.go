@@ -224,6 +224,11 @@ func main() {
         sysCol = collector.NewSystemCollector()
         fmt.Println(">> Starting System Metrics Collector (1s interval)...")
     }
+
+    // Initialize Connection Collector
+    connCol := collector.NewConnectionCollector(strings.TrimSuffix(cfg.ServerURL, "/"), cfg.AgentID)
+    go connCol.Start()
+    fmt.Println(">> Starting Connection Tracking (1s interval)...")
     
     // Initialize Enhanced Collectors (Process/Firewall)
     procCol := collector.NewProcessCollector()
