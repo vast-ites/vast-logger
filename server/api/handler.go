@@ -389,6 +389,7 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
 	    v1.POST("/ingest/logs", h.HandleLogs)
         v1.POST("/ingest/processes", h.HandleIngestProcesses)
         v1.POST("/ingest/firewall", h.HandleIngestFirewall)
+        v1.POST("/ingest/connections", h.HandleIngestConnections)
 
         // User-facing endpoints (optional auth based on AUTH_ENABLED)
         userRoutes := v1.Group("/")
@@ -406,6 +407,8 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             userRoutes.GET("/logs/services", h.HandleGetServices)
             userRoutes.GET("/processes", h.HandleGetProcesses)
             userRoutes.GET("/firewall", h.HandleGetFirewall)
+            userRoutes.GET("/connections/summary", h.HandleGetConnectionSummary)
+            userRoutes.GET("/connections/details", h.HandleGetConnectionDetails)
             
             // Service detail endpoints
             userRoutes.GET("/services/:service/stats", h.HandleGetServiceStats)
@@ -1049,4 +1052,65 @@ func (h *IngestionHandler) HandleUnsilenceAlert(c *gin.Context) {
     
     h.Config.Save(cfg)
     c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleIngestConnections(c *gin.Context) {
+    var req struct {
+        Host        string                    `json:"host"`
+        Connections []storage.ConnectionEntry `json:"connections"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // Enrich with timestamp if missing
+    now := time.Now()
+    for i := range req.Connections {
+        if req.Connections[i].Timestamp.IsZero() {
+            req.Connections[i].Timestamp = now
+        }
+        if req.Connections[i].Host == "" {
+            req.Connections[i].Host = req.Host
+        }
+    }
+
+    if err := h.Logs.InsertConnections(req.Connections); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert connections"})
+        return
+    }
+    c.Status(http.StatusAccepted)
+}
+
+func (h *IngestionHandler) HandleGetConnectionSummary(c *gin.Context) {
+    host := c.Query("host")
+    summary, err := h.Logs.GetConnectionSummary(host)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    if summary == nil {
+        summary = []storage.ConnectionSummary{}
+    }
+    c.JSON(http.StatusOK, summary)
+}
+
+func (h *IngestionHandler) HandleGetConnectionDetails(c *gin.Context) {
+    host := c.Query("host")
+    portStr := c.Query("port")
+    port, err := strconv.Atoi(portStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid port"})
+        return
+    }
+
+    details, err := h.Logs.GetConnectionDetails(host, uint16(port))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    if details == nil {
+        details = []storage.ConnectionEntry{}
+    }
+    c.JSON(http.StatusOK, details)
 }

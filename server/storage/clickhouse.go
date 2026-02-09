@@ -150,6 +150,26 @@ func NewLogStore(dsn string) (*LogStore, error) {
         return nil, err
     }
 
+    // Create Connections Table (High Frequency)
+    err = conn.Exec(context.Background(), `
+        CREATE TABLE IF NOT EXISTS datavast.connections (
+            timestamp DateTime,
+            host String,
+            local_ip String,
+            local_port UInt16,
+            remote_ip String,
+            remote_port UInt16,
+            status String,
+            pid Int32,
+            process_name String
+        ) ENGINE = MergeTree()
+        ORDER BY (timestamp, host, local_port)
+        TTL timestamp + INTERVAL 3 DAY
+    `)
+    if err != nil {
+        return nil, err
+    }
+
 	return &LogStore{conn: conn}, nil
 }
 
@@ -499,10 +519,130 @@ func (s *LogStore) GetUniqueServices(host string) ([]string, error) {
 		// Continue to next table even if this fails? better to Log and continue
 	}
 
-	// 2. Query access logs
+    // 2. Query access logs
 	if err := queryTable("datavast.access_logs"); err != nil {
 		fmt.Printf("[ERROR] Failed to query datavast.access_logs services: %v\n", err)
 	}
 
 	return services, nil
+}
+
+type ConnectionEntry struct {
+    Timestamp   time.Time `json:"timestamp"`
+    Host        string    `json:"host"`
+    LocalIP     string    `json:"local_ip"`
+    LocalPort   uint16    `json:"local_port"`
+    RemoteIP    string    `json:"remote_ip"`
+    RemotePort  uint16    `json:"remote_port"`
+    Status      string    `json:"status"`
+    PID         int32     `json:"pid"`
+    ProcessName string    `json:"process_name"`
+}
+
+func (s *LogStore) InsertConnections(entries []ConnectionEntry) error {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    batch, err := s.conn.PrepareBatch(context.Background(), "INSERT INTO datavast.connections")
+    if err != nil {
+        return err
+    }
+    for _, e := range entries {
+        err := batch.Append(
+            e.Timestamp, e.Host, e.LocalIP, e.LocalPort,
+            e.RemoteIP, e.RemotePort, e.Status, e.PID, e.ProcessName,
+        )
+        if err != nil {
+            return err
+        }
+    }
+    return batch.Send()
+}
+
+type ConnectionSummary struct {
+    LocalPort   uint16 `json:"local_port"`
+    ProcessName string `json:"process_name"`
+    Count       uint64 `json:"count"`
+}
+
+// GetConnectionSummary returns the latest count of connections per port for a host
+func (s *LogStore) GetConnectionSummary(host string) ([]ConnectionSummary, error) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    
+    // Logic: Get the LATEST snapshot for the host. 
+    // Since we ingest every 1s, we take data from the last 5 seconds to be safe, filtering by max timestamp.
+    query := `
+        SELECT local_port, any(process_name) as process_name, count() as count
+        FROM datavast.connections
+        WHERE host = ? 
+          AND timestamp = (SELECT max(timestamp) FROM datavast.connections WHERE host = ?)
+          AND status != 'LISTEN' 
+        GROUP BY local_port
+        ORDER BY count DESC
+    `
+    // Note: status != 'LISTEN' gives us active connections. 
+    // We might also want to know WHICH ports are Listening even if 0 connections?
+    // User asked "automatically determine which ports are open... live total counts".
+    // So we probably want: 
+    // 1. Find all ports in 'LISTEN' state from latest snapshot.
+    // 2. Count connections for those ports.
+    
+    // Improved Query:
+    // This is a bit complex in one go. Let's stick to "Active Connections count per port".
+    // And separately we can get "Listening Ports".
+    
+    // Let's do a robust aggregation:
+    query = `
+        SELECT local_port, any(process_name), countIf(status != 'LISTEN') as active
+        FROM datavast.connections
+        WHERE host = ?
+          AND timestamp = (SELECT max(timestamp) FROM datavast.connections WHERE host = ?)
+        GROUP BY local_port
+        ORDER BY active DESC
+    `
+
+    rows, err := s.conn.Query(context.Background(), query, host, host)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var summary []ConnectionSummary
+    for rows.Next() {
+        var c ConnectionSummary
+        if err := rows.Scan(&c.LocalPort, &c.ProcessName, &c.Count); err != nil {
+            return nil, err
+        }
+        summary = append(summary, c)
+    }
+    return summary, nil
+}
+
+func (s *LogStore) GetConnectionDetails(host string, port uint16) ([]ConnectionEntry, error) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    
+    rows, err := s.conn.Query(context.Background(), `
+        SELECT timestamp, host, local_ip, local_port, remote_ip, remote_port, status, pid, process_name
+        FROM datavast.connections
+        WHERE host = ? 
+          AND local_port = ?
+          AND timestamp = (SELECT max(timestamp) FROM datavast.connections WHERE host = ?)
+          AND status != 'LISTEN'
+        ORDER BY status, remote_ip
+    `, host, port, host)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var entries []ConnectionEntry
+    for rows.Next() {
+        var e ConnectionEntry
+        if err := rows.Scan(&e.Timestamp, &e.Host, &e.LocalIP, &e.LocalPort, &e.RemoteIP, &e.RemotePort, &e.Status, &e.PID, &e.ProcessName); err != nil {
+            return nil, err
+        }
+        entries = append(entries, e)
+    }
+    return entries, nil
 }
