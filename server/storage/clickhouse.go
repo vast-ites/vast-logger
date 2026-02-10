@@ -170,6 +170,16 @@ func NewLogStore(dsn string) (*LogStore, error) {
         return nil, err
     }
 
+	// [Fix] Apply Retention Policy to System Tables to prevent Disk Exhaustion
+	// We use standard SQL execution. Errors here (e.g. if table doesn't exist) should be logged but not fatal.
+	systemTables := []string{"text_log", "trace_log", "metric_log", "query_log", "part_log"}
+	for _, table := range systemTables {
+		// Context: system tables might not support TTL modification if they are not MergeTree, 
+		// but default ClickHouse config usually uses MergeTree for these.
+		// We ignore errors to prevent startup failure if permissions are strict.
+		_ = conn.Exec(context.Background(), fmt.Sprintf("ALTER TABLE system.%s MODIFY TTL event_time + INTERVAL 3 DAY", table))
+	}
+
 	return &LogStore{conn: conn}, nil
 }
 
