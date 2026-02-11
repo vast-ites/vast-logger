@@ -295,7 +295,6 @@ This project is proprietary software. All rights reserved.
 ## 🚧 Roadmap
 
 ### Phase 40: Advanced Analytics
-- [ ] Log pattern recognition
 
 ### Phase 41: Integrations
 - [ ] Kubernetes support
