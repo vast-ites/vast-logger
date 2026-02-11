@@ -296,8 +296,6 @@ This project is proprietary software. All rights reserved.
 
 ### Phase 40: Advanced Analytics
 - [ ] Log pattern recognition
-- [ ] Anomaly detection
-- [ ] Predictive alerts
 
 ### Phase 41: Integrations
 - [ ] Kubernetes support
@@ -308,6 +306,72 @@ This project is proprietary software. All rights reserved.
 - [ ] Log compression
 - [ ] Metric aggregation
 - [ ] Query optimization
+
+### Phase 43: Security & Core Architecture
+
+**1. Feature: IP Intelligence (Source Filter + GeoIP)**
+*Goal: Dedicated page for IP search, analysis, and management with full source-scoping.*
+
+*   **Source Filter Behavior:**
+    *   Strict adherence to selected Source (Server/Agent).
+    *   Data aggregation respects source selection.
+    *   No cross-server data leakage unless "All Sources" is active.
+
+*   **IP Search & GeoIP:**
+    *   Search displays: Total occurrences, First/Last seen, Services, Block status.
+    *   **Automatic Geo Lookup** (MaxMind DB): Country, State, City.
+    *   Composite view when "All Sources" is selected.
+
+*   **Activity Aggregation:**
+    *   Breakdown by service (Apache, Nginx, SSH, DB).
+    *   Request counts and last activity timestamps.
+
+*   **Source-Aware Blocking:**
+    *   Block/Unblock actions apply ONLY to the selected source.
+    *   Visual indicators for Blocked/Active status.
+    *   Safety: Blocking disabled or requires specific source when "All Sources" is active.
+
+*   **Backend & Optimization:**
+    *   **GeoIP Integration**: Local MaxMind DB with caching layer (`ip_geo_cache` table) to minimize lookups.
+    *   **Data Model**: `ip_activity` (tracking counts/services) and `blocked_ips` (source-specific blocking).
+    *   **Performance**: Composite index on `(agent_id, ip_address)`.
+
+**2. Architecture: Extensible Agent Design**
+*   **Goal**: Modularize agent functionality.
+*   New capabilities (e.g., log parsers) must be added as separate files/modules.
+*   Dynamic loading of modules to prevent core logic modification.
+
+**3. Integration: 1Password Watchtower**
+*   **Goal**: Fetch and display security insights.
+*   UI to show: Security alerts, compromised items, weak passwords, actionable recommendations.
+
+### Phase 44: Enhanced Observability & UI
+
+**1. Resource Speedometer**
+*   Visual gauges for RAM, Disk, CPU.
+*   Configurable thresholds with color states (Green/Red).
+
+**2. Webhook Security**
+*   Hide Webhook URLs by default.
+*   "Show URL" click-to-reveal interaction.
+
+**3. Search UI Update**
+*   Remove `Cmd+K` icon.
+*   Move keyboard shortcuts to Help (?) section.
+
+**4. Data Retention & Log Management**
+*   User-defined data retention periods.
+*   Auto-archival of logs older than retention period.
+*   UI for manual retrieval of archived logs.
+
+**5. Connection Monitoring (`/connections`)**
+*   Configurable connection thresholds (default: 50).
+*   Visual alarms (color change) when thresholds exceeded.
+*   Sorting options (highest connections first).
+
+**6. Notification System**
+*   Browser notification popups.
+*   In-app notification center and controls.
 
 ---
 
