@@ -1,6 +1,6 @@
-# VastPulse Observability Platform
+# DataVAST Observability Platform
 
-**VastPulse** is a modern, zero-config observability platform for Linux infrastructure. Built with Go, React, ClickHouse, and InfluxDB, it provides real-time monitoring, log aggregation, and intelligent alerting across your entire fleet.
+**DataVAST** is a modern, zero-config observability platform for Linux infrastructure. Built with Go, React, ClickHouse, and InfluxDB, it provides real-time monitoring, log aggregation, and intelligent alerting across your entire fleet.
 
 ## ✨ Features
 
