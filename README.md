@@ -294,8 +294,6 @@ This project is proprietary software. All rights reserved.
 
 ## 🚧 Roadmap
 
-### Phase 40: Advanced Analytics
-
 ### Phase 41: Integrations
 - [ ] Kubernetes support
 - [ ] Cloud provider metrics (AWS, GCP, Azure)
