@@ -73,7 +73,7 @@ export const CpuPage = () => {
                                 </defs>
                                 <XAxis hide />
                                 <YAxis hide domain={[0, 100]} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(10, 10, 31, 0.9)', borderColor: '#334155', color: '#fff' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', borderColor: '#334155', color: '#fff', borderRadius: '8px' }} />
                                 <Area type="monotone" dataKey="load" stroke="#00f3ff" fill="url(#cpuMain)" strokeWidth={2} isAnimationActive={false} />
                             </AreaChart>
                         </ResponsiveContainer>

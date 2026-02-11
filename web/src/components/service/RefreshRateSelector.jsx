@@ -12,15 +12,15 @@ const RefreshRateSelector = ({ value, onChange }) => {
     ];
 
     return (
-        <div className="flex items-center gap-2 bg-gray-800/50 border border-cyan-500/30 rounded-lg p-1">
-            <RefreshCw className="w-4 h-4 text-cyan-400 ml-2" />
+        <div className="flex items-center gap-2 bg-cyber-gray/20 border border-cyber-dim rounded-lg p-1">
+            <RefreshCw className="w-4 h-4 text-cyber-cyan ml-2" />
             {rates.map((rate) => (
                 <button
                     key={rate.value}
                     onClick={() => onChange(rate.value)}
                     className={`px-3 py-1 rounded text-sm transition-colors ${value === rate.value
-                        ? 'bg-cyan-500 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                        ? 'bg-cyber-cyan text-white'
+                        : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-gray/50'
                         }`}
                 >
                     {rate.label}

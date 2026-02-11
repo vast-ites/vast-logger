@@ -142,7 +142,7 @@ const Logs = () => {
         switch (level) {
             case 'ERROR': return <AlertTriangle size={14} className="text-red-500" />;
             case 'WARN': return <AlertTriangle size={14} className="text-cyber-yellow" />;
-            case 'DEBUG': return <Bug size={14} className="text-gray-400" />;
+            case 'DEBUG': return <Bug size={14} className="text-cyber-muted" />;
             default: return <Info size={14} className="text-cyber-cyan" />;
         }
     };
@@ -151,7 +151,7 @@ const Logs = () => {
         switch (level) {
             case 'ERROR': return 'text-red-500 bg-red-500/10 border-red-500/30';
             case 'WARN': return 'text-cyber-yellow bg-cyber-yellow/10 border-cyber-yellow/30';
-            case 'DEBUG': return 'text-gray-400 bg-gray-500/10 border-gray-500/30';
+            case 'DEBUG': return 'text-cyber-muted bg-cyber-muted/10 border-cyber-muted/30';
             default: return 'text-cyber-cyan bg-cyber-cyan/10 border-cyber-cyan/30';
         }
     };
@@ -213,9 +213,9 @@ const Logs = () => {
             case 'Web & Proxy': return <Globe size={12} className="text-cyber-cyan" />;
             case 'Database': return <Database size={12} className="text-cyber-yellow" />;
             case 'Security': return <Shield size={12} className="text-red-400" />;
-            case 'System Ops': return <Layers size={12} className="text-gray-400" />;
+            case 'System Ops': return <Layers size={12} className="text-cyber-muted" />;
             case 'Docker Containers': return <Box size={12} className="text-blue-400" />;
-            default: return <Server size={12} className="text-gray-500" />;
+            default: return <Server size={12} className="text-cyber-muted" />;
         }
     };
 
@@ -286,12 +286,12 @@ order:ASC|DESC">
                         className="bg-cyber-gray/10 border border-cyber-gray/20 rounded px-4 py-2 text-sm text-cyber-text focus:border-cyber-cyan focus:outline-none appearance-none cursor-pointer hover:bg-cyber-gray/20 max-w-[200px]"
                         title="Filter by Container / Service"
                     >
-                        <option value="" className="bg-cyber-dark text-white">All Sources</option>
+                        <option value="" className="bg-cyber-dark text-cyber-text">All Sources</option>
                         {categoryOrder.map(cat => (
                             groupedServices[cat] && groupedServices[cat].length > 0 && (
-                                <optgroup key={cat} label={cat} className="bg-cyber-dark text-white font-bold">
+                                <optgroup key={cat} label={cat} className="bg-cyber-dark text-cyber-text font-bold">
                                     {groupedServices[cat].map(svc => (
-                                        <option key={svc} value={svc} className="bg-cyber-dark text-white font-normal">{svc}</option>
+                                        <option key={svc} value={svc} className="bg-cyber-dark text-cyber-text font-normal">{svc}</option>
                                     ))}
                                 </optgroup>
                             )

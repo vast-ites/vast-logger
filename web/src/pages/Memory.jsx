@@ -64,7 +64,7 @@ export const MemoryPage = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-cyber-text tracking-tight flex items-center gap-2">
                 <Layers size={24} className="text-violet-400" /> Memory Monitoring
             </h1>
 
@@ -77,7 +77,7 @@ export const MemoryPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96">
                 {/* Usage Breakdown Pie */}
                 <div className="glass-panel p-6 flex flex-col items-center justify-center relative min-h-0">
-                    <h3 className="absolute top-6 left-6 text-gray-400 text-sm font-semibold">Allocation</h3>
+                    <h3 className="absolute top-6 left-6 text-cyber-muted text-sm font-semibold">Allocation</h3>
                     <div className="w-full h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -93,7 +93,7 @@ export const MemoryPage = () => {
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }} formatter={(val) => toGBStr(val) + ' GB'} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(var(--cyber-dark), 0.9)', borderColor: 'rgba(var(--cyber-gray), 0.5)', color: 'rgb(var(--text-main))' }} formatter={(val) => toGBStr(val) + ' GB'} itemStyle={{ color: 'rgb(var(--text-main))' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
@@ -101,7 +101,7 @@ export const MemoryPage = () => {
                         {MEM_BREAKDOWN.map((item) => (
                             <div key={item.name} className="flex items-center gap-1">
                                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></span>
-                                <span className="text-gray-400">{item.name}</span>
+                                <span className="text-cyber-muted">{item.name}</span>
                             </div>
                         ))}
                     </div>
@@ -109,7 +109,7 @@ export const MemoryPage = () => {
 
                 {/* History Stacked Area */}
                 <div className="lg:col-span-2 glass-panel p-6 flex flex-col min-h-0">
-                    <h3 className="text-gray-400 text-sm font-semibold mb-4">Memory Trend (GB)</h3>
+                    <h3 className="text-cyber-muted text-sm font-semibold mb-4">Memory Trend (GB)</h3>
                     <div className="flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={history}>
@@ -121,7 +121,7 @@ export const MemoryPage = () => {
                                 </defs>
                                 <XAxis hide />
                                 <YAxis hide domain={[0, totalGB]} />
-                                <Tooltip contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(var(--cyber-dark), 0.9)', borderColor: 'rgba(var(--cyber-gray), 0.5)', color: 'rgb(var(--text-main))' }} itemStyle={{ color: 'rgb(var(--text-main))' }} />
                                 <Area type="monotone" dataKey="used" stroke="#bc13fe" fill="url(#splitColor)" isAnimationActive={false} />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -130,11 +130,11 @@ export const MemoryPage = () => {
             </div>
 
             <div className="glass-panel p-6">
-                <h3 className="text-gray-400 font-semibold mb-4">Swap Usage</h3>
-                <div className="w-full bg-white/5 h-4 rounded-full overflow-hidden">
+                <h3 className="text-cyber-muted font-semibold mb-4">Swap Usage</h3>
+                <div className="w-full bg-cyber-gray/20 h-4 rounded-full overflow-hidden">
                     <div className="h-full bg-amber-500 shadow-[0_0_10px_rgba(255,174,0,0.4)] transition-all duration-500" style={{ width: `${metrics.swap_usage || 0}%` }}></div>
                 </div>
-                <div className="mt-2 text-xs text-gray-500 flex justify-between">
+                <div className="mt-2 text-xs text-cyber-muted flex justify-between">
                     <span>Used: {swapUsedGB.toFixed(1)} GB ({metrics.swap_usage?.toFixed(1) || 0}%)</span>
                     <span>Total: {swapTotalGB.toFixed(1)} GB</span>
                 </div>

@@ -34,7 +34,7 @@ const RedisDetail = () => {
         return () => clearInterval(interval);
     }, [refreshRate, timeRange]);
 
-    if (loading) return <div className="p-6 text-cyan-400">Loading Redis metrics...</div>;
+    if (loading) return <div className="p-6 text-cyber-cyan">Loading Redis metrics...</div>;
 
     const memUsage = stats?.max_memory ?
         ((stats.used_memory / stats.max_memory) * 100).toFixed(1) : 0;
@@ -44,15 +44,15 @@ const RedisDetail = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate('/services')}
-                        className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-cyan-500/30">
-                        <ArrowLeft className="w-5 h-5 text-cyan-400" />
+                        className="p-2 rounded-lg bg-cyber-gray/50 hover:bg-cyber-gray/80 border border-cyber-dim transition-colors">
+                        <ArrowLeft className="w-5 h-5 text-cyber-cyan" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-cyber-text flex items-center gap-2">
                             <Database className="w-6 h-6 text-red-400" />
                             Redis Cache
                         </h1>
-                        <p className="text-gray-400 mt-1">
+                        <p className="text-cyber-muted mt-1">
                             Memory & performance monitoring
                             {stats?.role && (
                                 <span className="ml-2 px-2 py-0.5 text-xs rounded bg-red-500/20 text-red-300">
@@ -84,7 +84,7 @@ const RedisDetail = () => {
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
                             <div className="text-6xl font-bold text-red-400">{memUsage}%</div>
-                            <div className="text-gray-400 mt-2">
+                            <div className="text-cyber-muted mt-2">
                                 {(stats?.used_memory / 1024 / 1024 || 0).toFixed(2)} MB /
                                 {(stats?.max_memory / 1024 / 1024 || 0).toFixed(2)} MB
                             </div>
@@ -92,24 +92,24 @@ const RedisDetail = () => {
                     </div>
                 </ChartPanel>
 
-                <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-white mb-4">Key Metrics</h3>
+                <div className="glass-panel p-4">
+                    <h3 className="text-lg font-semibold text-cyber-text mb-4">Key Metrics</h3>
                     <div className="space-y-3">
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Keyspace Hits</span>
-                            <span className="text-white font-semibold">{stats?.keyspace_hits?.toLocaleString() || 0}</span>
+                            <span className="text-cyber-muted">Keyspace Hits</span>
+                            <span className="text-cyber-text font-semibold">{stats?.keyspace_hits?.toLocaleString() || 0}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Keyspace Misses</span>
-                            <span className="text-white font-semibold">{stats?.keyspace_misses?.toLocaleString() || 0}</span>
+                            <span className="text-cyber-muted">Keyspace Misses</span>
+                            <span className="text-cyber-text font-semibold">{stats?.keyspace_misses?.toLocaleString() || 0}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Expired Keys</span>
-                            <span className="text-white font-semibold">{stats?.expired_keys?.toLocaleString() || 0}</span>
+                            <span className="text-cyber-muted">Expired Keys</span>
+                            <span className="text-cyber-text font-semibold">{stats?.expired_keys?.toLocaleString() || 0}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Memory Fragmentation</span>
-                            <span className="text-white font-semibold">{stats?.memory_fragmentation?.toFixed(2) || 0}</span>
+                            <span className="text-cyber-muted">Memory Fragmentation</span>
+                            <span className="text-cyber-text font-semibold">{stats?.memory_fragmentation?.toFixed(2) || 0}</span>
                         </div>
                     </div>
                 </div>

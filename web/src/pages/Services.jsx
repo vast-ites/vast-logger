@@ -60,9 +60,9 @@ const Services = () => {
     };
 
     const categories = {
-        'Web Servers': { icon: Globe, color: 'text-green-400', items: [] },
-        'Databases': { icon: Database, color: 'text-yellow-400', items: [] },
-        'Other Services': { icon: Box, color: 'text-gray-400', items: [] }
+        'Web Servers': { icon: Globe, color: 'text-green-500', items: [] },
+        'Databases': { icon: Database, color: 'text-yellow-500', items: [] },
+        'Other Services': { icon: Box, color: 'text-cyber-muted', items: [] }
     };
 
     // Populate categories with discovered services
@@ -106,13 +106,13 @@ const Services = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Object.entries(categories).map(([category, { icon: Icon, color, items }]) => (
-                    <div key={category} className="glass-panel border border-cyber-gray/20 rounded-xl p-6">
+                    <div key={category} className="glass-panel border border-cyber-gray rounded-xl p-6">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className={`p-3 rounded-lg bg-cyber-gray/20 ${color}`}>
+                            <div className={`p-3 rounded-lg bg-cyber-gray/50 ${color}`}>
                                 <Icon size={24} />
                             </div>
                             <h2 className="text-xl font-semibold text-cyber-text">{category}</h2>
-                            <span className="ml-auto text-sm bg-cyber-gray/30 px-2 py-1 rounded text-cyber-muted font-mono">
+                            <span className="ml-auto text-sm bg-cyber-gray/60 px-2 py-1 rounded text-cyber-muted font-mono">
                                 {items.length}
                             </span>
                         </div>
@@ -125,7 +125,7 @@ const Services = () => {
                                     <div
                                         key={idx}
                                         onClick={() => navigate(`/services/${item.name}`)}
-                                        className="flex items-center justify-between p-3 rounded-lg bg-cyber-gray/10 hover:bg-cyber-gray/20 border border-transparent hover:border-cyber-cyan/30 cursor-pointer group transition-all"
+                                        className="flex items-center justify-between p-3 rounded-lg bg-cyber-gray/30 hover:bg-cyber-gray/60 border border-transparent hover:border-cyber-cyan/30 cursor-pointer group transition-all"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />

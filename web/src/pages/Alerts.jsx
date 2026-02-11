@@ -209,8 +209,8 @@ export const Alerts = () => {
 
             {/* Create Rule Modal */}
             {showRuleModal && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-cyber-dark border border-cyber-gray/30 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+                <div className="fixed inset-0 bg-cyber-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="glass-panel border border-cyber-gray/30 rounded-xl p-6 w-full max-w-lg shadow-2xl">
                         <h2 className="text-xl font-bold text-cyber-text mb-6">{editingRuleId ? 'Edit Alert Rule' : 'Create Alert Rule'}</h2>
                         <div className="space-y-4">
                             <div>
@@ -221,12 +221,12 @@ export const Alerts = () => {
                                 <div>
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Metric</label>
                                     <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.metric} onChange={e => setNewRule({ ...newRule, metric: e.target.value })}>
-                                        <option value="cpu_percent" className="bg-cyber-dark text-white">CPU Usage (%)</option>
-                                        <option value="memory_usage" className="bg-cyber-dark text-white">Memory Usage (%)</option>
-                                        <option value="disk_usage" className="bg-cyber-dark text-white">Disk Usage (%)</option>
-                                        <option value="net_recv_rate" className="bg-cyber-dark text-white">Net Download (B/s)</option>
-                                        <option value="net_sent_rate" className="bg-cyber-dark text-white">Net Upload (B/s)</option>
-                                        <option value="net_total_rate" className="bg-cyber-dark text-white">Net Total (B/s)</option>
+                                        <option value="cpu_percent" className="bg-cyber-background text-cyber-text">CPU Usage (%)</option>
+                                        <option value="memory_usage" className="bg-cyber-background text-cyber-text">Memory Usage (%)</option>
+                                        <option value="disk_usage" className="bg-cyber-background text-cyber-text">Disk Usage (%)</option>
+                                        <option value="net_recv_rate" className="bg-cyber-background text-cyber-text">Net Download (B/s)</option>
+                                        <option value="net_sent_rate" className="bg-cyber-background text-cyber-text">Net Upload (B/s)</option>
+                                        <option value="net_total_rate" className="bg-cyber-background text-cyber-text">Net Total (B/s)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -238,8 +238,8 @@ export const Alerts = () => {
                                 <div className="col-span-1">
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Operator</label>
                                     <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.operator} onChange={e => setNewRule({ ...newRule, operator: e.target.value })}>
-                                        <option value=">" className="bg-cyber-dark text-white">&gt; (Greater)</option>
-                                        <option value="<" className="bg-cyber-dark text-white">&lt; (Less)</option>
+                                        <option value=">" className="bg-cyber-background text-cyber-text">&gt; (Greater)</option>
+                                        <option value="<" className="bg-cyber-background text-cyber-text">&lt; (Less)</option>
                                     </select>
                                 </div>
                                 <div className="col-span-2">
@@ -250,13 +250,13 @@ export const Alerts = () => {
                             <div>
                                 <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Notification Channels (Select Multiple)</label>
                                 <select multiple className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text h-24 outline-none transition-colors" onChange={e => setNewRule({ ...newRule, channels: Array.from(e.target.selectedOptions, o => o.value) })}>
-                                    {channels.map(ch => <option key={ch.id} value={ch.id} className="bg-cyber-dark text-white">{ch.name} ({ch.type})</option>)}
+                                    {channels.map(ch => <option key={ch.id} value={ch.id} className="bg-cyber-background text-cyber-text">{ch.name} ({ch.type})</option>)}
                                 </select>
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 mt-8">
-                            <button onClick={() => setShowRuleModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                            <button onClick={handleCreateOrUpdateRule} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded font-bold">{editingRuleId ? 'Update Rule' : 'Create Rule'}</button>
+                            <button onClick={() => setShowRuleModal(false)} className="px-4 py-2 text-cyber-muted hover:text-cyber-text">Cancel</button>
+                            <button onClick={handleCreateOrUpdateRule} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded font-bold transition-colors">{editingRuleId ? 'Update Rule' : 'Create Rule'}</button>
                         </div>
                     </div>
                 </div>
@@ -264,41 +264,41 @@ export const Alerts = () => {
 
             {/* Create Channel Modal */}
             {showChannelModal && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-white/10 rounded-xl p-6 w-full max-w-lg shadow-2xl">
-                        <h2 className="text-xl font-bold text-white mb-6">Add Notification Channel</h2>
+                <div className="fixed inset-0 bg-cyber-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="glass-panel border border-cyber-gray/30 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+                        <h2 className="text-xl font-bold text-cyber-text mb-6">Add Notification Channel</h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Channel Name</label>
-                                <input className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" placeholder="e.g. Critical Team Slack" value={newChannel.name} onChange={e => setNewChannel({ ...newChannel, name: e.target.value })} />
+                                <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Channel Name</label>
+                                <input className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none focus:border-cyan-500 transition-colors" placeholder="e.g. Critical Team Slack" value={newChannel.name} onChange={e => setNewChannel({ ...newChannel, name: e.target.value })} />
                             </div>
                             <div>
-                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Type</label>
+                                <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Type</label>
                                 <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 text-gray-300 cursor-pointer">
+                                    <label className="flex items-center gap-2 text-cyber-text cursor-pointer">
                                         <input type="radio" checked={newChannel.type === 'webhook'} onChange={() => setNewChannel({ ...newChannel, type: 'webhook' })} /> Webhook
                                     </label>
-                                    <label className="flex items-center gap-2 text-gray-300 cursor-pointer">
+                                    <label className="flex items-center gap-2 text-cyber-text cursor-pointer">
                                         <input type="radio" checked={newChannel.type === 'email'} onChange={() => setNewChannel({ ...newChannel, type: 'email' })} /> Email
                                     </label>
                                 </div>
                             </div>
                             {newChannel.type === 'webhook' && (
                                 <div>
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Webhook URL</label>
-                                    <input className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" placeholder="https://discord.com/api/webhooks/..." value={newChannel.config.url} onChange={e => setNewChannel({ ...newChannel, config: { ...newChannel.config, url: e.target.value } })} />
+                                    <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Webhook URL</label>
+                                    <input className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none focus:border-cyan-500 transition-colors" placeholder="https://discord.com/api/webhooks/..." value={newChannel.config.url} onChange={e => setNewChannel({ ...newChannel, config: { ...newChannel.config, url: e.target.value } })} />
                                 </div>
                             )}
                             {newChannel.type === 'email' && (
                                 <div>
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Email Address</label>
-                                    <input className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" placeholder="oncall@company.com" value={newChannel.config.email} onChange={e => setNewChannel({ ...newChannel, config: { ...newChannel.config, email: e.target.value } })} />
+                                    <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Email Address</label>
+                                    <input className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none focus:border-cyan-500 transition-colors" placeholder="oncall@company.com" value={newChannel.config.email} onChange={e => setNewChannel({ ...newChannel, config: { ...newChannel.config, email: e.target.value } })} />
                                 </div>
                             )}
                         </div>
                         <div className="flex justify-end gap-3 mt-8">
-                            <button onClick={() => setShowChannelModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                            <button onClick={handleCreateChannel} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded font-bold">Add Channel</button>
+                            <button onClick={() => setShowChannelModal(false)} className="px-4 py-2 text-cyber-muted hover:text-cyber-text">Cancel</button>
+                            <button onClick={handleCreateChannel} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded font-bold transition-colors">Add Channel</button>
                         </div>
                     </div>
                 </div>
@@ -306,31 +306,31 @@ export const Alerts = () => {
 
             {/* Silence Modal */}
             {showSilenceModal && selectedRule && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-white/10 rounded-xl p-6 w-full max-w-sm shadow-2xl">
-                        <h2 className="text-xl font-bold text-white mb-4">Silence Alert</h2>
-                        <p className="text-sm text-gray-400 mb-4">Silence <strong className="text-white">{selectedRule.name}</strong>?</p>
+                <div className="fixed inset-0 bg-cyber-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="glass-panel border border-cyber-gray/30 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+                        <h2 className="text-xl font-bold text-cyber-text mb-4">Silence Alert</h2>
+                        <p className="text-sm text-cyber-muted mb-4">Silence <strong className="text-cyber-text">{selectedRule.name}</strong>?</p>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Hostname (Optional)</label>
-                                <input className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" placeholder="Specific Host or Empty for All" value={silenceHost} onChange={e => setSilenceHost(e.target.value)} />
+                                <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Hostname (Optional)</label>
+                                <input className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none focus:border-cyan-500 transition-colors" placeholder="Specific Host or Empty for All" value={silenceHost} onChange={e => setSilenceHost(e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Duration</label>
-                                <select className="w-full bg-black/30 border border-white/10 rounded p-2 text-white outline-none" value={silenceDuration} onChange={e => setSilenceDuration(e.target.value)}>
-                                    <option value="15m" className="bg-slate-900 text-white">15 Minutes</option>
-                                    <option value="1h" className="bg-slate-900 text-white">1 Hour</option>
-                                    <option value="6h" className="bg-slate-900 text-white">6 Hours</option>
-                                    <option value="24h" className="bg-slate-900 text-white">24 Hours</option>
-                                    <option value="72h" className="bg-slate-900 text-white">3 Days</option>
+                                <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Duration</label>
+                                <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none focus:border-cyan-500 transition-colors" value={silenceDuration} onChange={e => setSilenceDuration(e.target.value)}>
+                                    <option value="15m" className="bg-cyber-background text-cyber-text">15 Minutes</option>
+                                    <option value="1h" className="bg-cyber-background text-cyber-text">1 Hour</option>
+                                    <option value="6h" className="bg-cyber-background text-cyber-text">6 Hours</option>
+                                    <option value="24h" className="bg-cyber-background text-cyber-text">24 Hours</option>
+                                    <option value="72h" className="bg-cyber-background text-cyber-text">3 Days</option>
                                 </select>
                             </div>
                         </div>
 
                         <div className="flex justify-end gap-3 mt-6">
-                            <button onClick={() => setShowSilenceModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                            <button onClick={handleSilence} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold">Silence</button>
+                            <button onClick={() => setShowSilenceModal(false)} className="px-4 py-2 text-cyber-muted hover:text-cyber-text">Cancel</button>
+                            <button onClick={handleSilence} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold transition-colors">Silence</button>
                         </div>
                     </div>
                 </div>

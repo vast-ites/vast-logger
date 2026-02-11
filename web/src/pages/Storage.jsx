@@ -53,7 +53,7 @@ export const Storage = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-cyber-text tracking-tight flex items-center gap-2">
                 <HardDrive size={24} className="text-amber-400" /> Disk & Storage
             </h1>
 
@@ -65,7 +65,7 @@ export const Storage = () => {
             </div>
 
             <div className="glass-panel p-6">
-                <h3 className="text-gray-300 font-semibold mb-6">Real-Time Disk I/O Throughput (MB/s)</h3>
+                <h3 className="text-cyber-text font-semibold mb-6">Real-Time Disk I/O Throughput (MB/s)</h3>
                 <div className="h-64 flex items-end justify-between gap-1">
                     {(() => {
                         // Prepare data
@@ -86,14 +86,14 @@ export const Storage = () => {
                             const tooltip = `R: ${read.toFixed(1)} MB/s | W: ${write.toFixed(1)} MB/s`;
 
                             return (
-                                <div key={i} className="w-full bg-white/5 rounded-t overflow-hidden relative group" style={{ height: `${h}%` }} title={tooltip}>
+                                <div key={i} className="w-full bg-cyber-gray/10 rounded-t overflow-hidden relative group" style={{ height: `${h}%` }} title={tooltip}>
                                     <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/50 to-amber-500/50 opacity-80"></div>
                                 </div>
                             )
                         });
                     })()}
                     {history.length === 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                        <div className="absolute inset-0 flex items-center justify-center text-cyber-muted">
                             Waiting for telemetry data...
                         </div>
                     )}
@@ -101,10 +101,10 @@ export const Storage = () => {
             </div>
 
             <div className="glass-panel p-6">
-                <h3 className="text-gray-300 font-semibold mb-4">Partition Usage</h3>
+                <h3 className="text-cyber-text font-semibold mb-4">Partition Usage</h3>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-gray-400">
-                        <thead className="text-xs uppercase bg-white/5 text-gray-300">
+                    <table className="w-full text-left text-sm text-cyber-muted">
+                        <thead className="text-xs uppercase bg-cyber-gray/10 text-cyber-muted">
                             <tr>
                                 <th className="p-3">Mount Point</th>
                                 <th className="p-3">Type</th>
@@ -113,21 +113,21 @@ export const Storage = () => {
                                 <th className="p-3">Availability</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-cyber-dim">
                             {(metrics.partitions || []).map((disk, idx) => {
                                 const sizeGB = disk.total / (1024 * 1024 * 1024);
                                 const usedGB = disk.used / (1024 * 1024 * 1024);
                                 const usage = disk.total > 0 ? ((disk.used / disk.total) * 100) : 0;
 
                                 return (
-                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                        <td className="p-3 font-mono text-white">{disk.mount_point}</td>
+                                    <tr key={idx} className="hover:bg-cyber-gray/10 transition-colors">
+                                        <td className="p-3 font-mono text-cyber-text">{disk.mount_point}</td>
                                         <td className="p-3">{disk.fstype}</td>
                                         <td className="p-3">{sizeGB.toFixed(0)} GB</td>
                                         <td className="p-3">{usedGB.toFixed(0)} GB</td>
                                         <td className="p-3 w-1/3">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden">
+                                                <div className="flex-1 h-2 bg-cyber-black/40 rounded-full overflow-hidden">
                                                     <div
                                                         className={`h-full rounded-full ${usage > 80 ? 'bg-red-500' : 'bg-cyan-400'}`}
                                                         style={{ width: `${Math.min(usage, 100)}%` }}

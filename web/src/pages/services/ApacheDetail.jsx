@@ -69,7 +69,7 @@ const ApacheDetail = () => {
     if (loading) {
         return (
             <div className="p-6">
-                <div className="text-cyan-400">Loading {serviceName} metrics...</div>
+                <div className="text-cyber-cyan">Loading {serviceName} metrics...</div>
             </div>
         );
     }
@@ -81,16 +81,16 @@ const ApacheDetail = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/services')}
-                        className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-cyan-500/30 transition-colors"
+                        className="p-2 rounded-lg hover:bg-cyber-gray/50 border border-cyber-dim transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5 text-cyan-400" />
+                        <ArrowLeft className="w-5 h-5 text-cyber-cyan" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-white capitalize flex items-center gap-2">
-                            <Globe className="w-6 h-6 text-cyan-400" />
+                        <h1 className="text-2xl font-bold text-cyber-text capitalize flex items-center gap-2">
+                            <Globe className="w-6 h-6 text-cyber-cyan" />
                             {serviceName} Web Server
                         </h1>
-                        <p className="text-gray-400 mt-1">Real-time traffic analysis & monitoring</p>
+                        <p className="text-cyber-muted mt-1">Real-time traffic analysis & monitoring</p>
                     </div>
                 </div>
 
@@ -149,7 +149,10 @@ const ApacheDetail = () => {
                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                             </Pie>
-                            <Tooltip />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: 'rgb(var(--cyber-dark))', borderColor: 'rgba(var(--cyber-cyan), 0.3)', color: 'rgb(var(--text-main))' }}
+                                itemStyle={{ color: 'rgb(var(--text-main))' }}
+                            />
                         </PieChart>
                     </ResponsiveContainer>
                 </ChartPanel>
@@ -157,28 +160,29 @@ const ApacheDetail = () => {
                 <ChartPanel title="Top Countries" subtitle="Requests by geographic location">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={geoStats?.top_countries || []}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                            <XAxis dataKey="country" stroke="#9ca3af" />
-                            <YAxis stroke="#9ca3af" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(156, 163, 175, 0.2)" />
+                            <XAxis dataKey="country" stroke="rgb(var(--text-muted))" />
+                            <YAxis stroke="rgb(var(--text-muted))" />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                labelStyle={{ color: '#fff' }}
+                                contentStyle={{ backgroundColor: 'rgb(var(--cyber-dark))', border: '1px solid rgba(var(--cyber-cyan), 0.3)' }}
+                                labelStyle={{ color: 'rgb(var(--text-main))' }}
+                                itemStyle={{ color: 'rgb(var(--text-main))' }}
                             />
-                            <Bar dataKey="count" fill="#06b6d4" />
+                            <Bar dataKey="count" fill="rgb(var(--cyber-cyan))" />
                         </BarChart>
                     </ResponsiveContainer>
                 </ChartPanel>
             </div>
 
             {/* Top IPs Table */}
-            <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-cyan-400" />
+            <div className="glass-panel rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-cyber-text mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-cyber-cyan" />
                     Top Client IPs
                 </h3>
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-white/5 text-gray-400 text-xs uppercase">
+                        <thead className="bg-cyber-gray/50 text-cyber-muted text-xs uppercase">
                             <tr>
                                 <th className="py-3 px-4 text-left">IP Address</th>
                                 <th className="py-3 px-4 text-left">Latest URL</th>
@@ -189,37 +193,37 @@ const ApacheDetail = () => {
                                 <th className="py-3 px-4 text-left">Bandwidth</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/10 text-sm">
+                        <tbody className="divide-y divide-cyber-gray text-sm">
                             {topIPs.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-4 text-center text-gray-500">
+                                    <td colSpan="6" className="py-4 text-center text-cyber-muted">
                                         No recent activity
                                     </td>
                                 </tr>
                             ) : (
                                 topIPs.map((ip, i) => (
-                                    <tr key={i} className="hover:bg-white/5 transition-colors">
-                                        <td className="py-3 px-4 font-mono text-cyan-400">{ip.ip}</td>
-                                        <td className="py-3 px-4 text-gray-300">
+                                    <tr key={i} className="hover:bg-cyber-gray/10 transition-colors">
+                                        <td className="py-3 px-4 font-mono text-cyber-cyan">{ip.ip}</td>
+                                        <td className="py-3 px-4 text-cyber-muted">
                                             {ip.domain && ip.domain !== 'default' && ip.domain !== 'unknown' ? (
                                                 <a
                                                     href={`http://${ip.domain}${ip.path || ''}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-cyan-400 hover:text-cyan-300 hover:underline truncate block max-w-[200px]"
+                                                    className="text-cyber-cyan hover:text-cyan-300 hover:underline truncate block max-w-[200px]"
                                                     title={`http://${ip.domain}${ip.path || ''}`}
                                                 >
                                                     {ip.domain}{ip.path}
                                                 </a>
                                             ) : (
-                                                <span className="text-gray-500">{ip.domain || '-'}</span>
+                                                <span className="text-cyber-muted/70">{ip.domain || '-'}</span>
                                             )}
                                         </td>
-                                        <td className="py-3 px-4 text-gray-300">{ip.country || 'Unknown'}</td>
-                                        <td className="py-3 px-4 text-gray-300">{ip.city || '-'}</td>
-                                        <td className="py-3 px-4 text-gray-300">{ip.region || '-'}</td>
-                                        <td className="py-3 px-4 text-white">{ip.requests?.toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-white">
+                                        <td className="py-3 px-4 text-cyber-muted">{ip.country || 'Unknown'}</td>
+                                        <td className="py-3 px-4 text-cyber-muted">{ip.city || '-'}</td>
+                                        <td className="py-3 px-4 text-cyber-muted">{ip.region || '-'}</td>
+                                        <td className="py-3 px-4 text-cyber-text">{ip.requests?.toLocaleString()}</td>
+                                        <td className="py-3 px-4 text-cyber-text">
                                             {(ip.bytes / 1024 / 1024).toFixed(2)} MB
                                         </td>
                                     </tr>
@@ -232,11 +236,11 @@ const ApacheDetail = () => {
 
             {/* Info Message */}
             {!stats && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                <div className="bg-cyber-yellow/10 border border-cyber-yellow/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-cyber-yellow mt-0.5" />
                     <div>
-                        <p className="text-yellow-200 font-medium">No Data Available</p>
-                        <p className="text-yellow-300/70 text-sm mt-1">
+                        <p className="text-cyber-text font-medium">No Data Available</p>
+                        <p className="text-cyber-muted text-sm mt-1">
                             Access log collection requires the agent to parse {serviceName} logs.
                             Ensure the agent has read access to the log files.
                         </p>

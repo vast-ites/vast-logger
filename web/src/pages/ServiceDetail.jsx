@@ -35,33 +35,34 @@ const ServiceDetail = () => {
 
     // Fallback for unsupported services
     return (
-        <div className="p-6">
+        <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
                 <button
                     onClick={() => navigate('/services')}
-                    className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-cyan-500/30 transition-colors"
+                    className="p-2 rounded-lg hover:bg-cyber-gray/50 border border-cyber-dim transition-colors"
                 >
-                    <ArrowLeft className="w-5 h-5 text-cyan-400" />
+                    <ArrowLeft className="w-5 h-5 text-cyber-cyan" />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-white capitalize">{serviceName}</h1>
-                    <p className="text-gray-400 mt-1">Service Monitoring & Analytics</p>
+                    <h1 className="text-2xl font-bold text-cyber-text capitalize">{serviceName}</h1>
+                    <p className="text-cyber-muted mt-1">Service Monitoring & Analytics</p>
                 </div>
             </div>
 
-            {/* Service-specific component */}
-            <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-8 text-center">
-                <h2 className="text-xl text-white mb-2">Service Detail Page</h2>
-                <p className="text-gray-400">
-                    Detailed monitoring for <span className="text-cyan-400 font-semibold">{serviceName}</span> will be displayed here.
+            {/* Service-specific component fallback */}
+            <div className="glass-panel rounded-lg p-8 text-center">
+                <h2 className="text-xl text-cyber-text mb-2">Service Detail Page</h2>
+                <p className="text-cyber-muted">
+                    Detailed monitoring for <span className="text-cyber-cyan font-semibold">{serviceName}</span> will be displayed here.
                 </p>
-                <p className="text-gray-500 mt-4 text-sm">
+                <p className="text-cyber-muted/70 mt-4 text-sm">
                     Implementation in progress...
                 </p>
             </div>
         </div>
     );
+
 };
 
 export default ServiceDetail;
