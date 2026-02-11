@@ -143,11 +143,11 @@ const Connections = () => {
 
             {/* Detail Modal */}
             {selectedPort && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="glass-panel w-full max-w-4xl max-h-[80vh] flex flex-col rounded-xl border border-cyan-500/30 shadow-[0_0_50px_rgba(0,243,255,0.1)]">
+                <div className="fixed inset-0 bg-cyber-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="glass-panel w-full max-w-4xl max-h-[80vh] flex flex-col rounded-xl border border-cyber-cyan/30 shadow-[0_0_50px_rgba(var(--cyber-cyan),0.1)]">
                         <div className="flex justify-between items-center p-4 border-b border-cyber-gray/20">
                             <h2 className="text-xl font-bold font-display text-cyber-text flex items-center gap-3">
-                                <Activity className="text-cyan-400" />
+                                <Activity className="text-cyber-cyan" />
                                 Port {selectedPort} Details
                             </h2>
                             <button
@@ -171,7 +171,7 @@ const Connections = () => {
                                 <tbody className="divide-y divide-cyber-gray/10">
                                     {detailsLoading && details.length === 0 ? (
                                         <tr>
-                                            <td colSpan="4" className="p-8 text-center text-cyan-500 font-mono animate-pulse">
+                                            <td colSpan="4" className="p-8 text-center text-cyber-cyan font-mono animate-pulse">
                                                 Loading Connections...
                                             </td>
                                         </tr>

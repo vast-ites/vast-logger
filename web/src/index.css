@@ -5,6 +5,8 @@
 @tailwind utilities;
 
 @layer base {
+
+  /* Default Dark Theme Variables */
   :root {
     --cyber-black: 10 10 31;
     --cyber-dark: 15 15 45;
@@ -19,12 +21,18 @@
 
     --text-main: 255 255 255;
     --text-muted: 203 213 225;
+
+    /* Glass Panel Variables - Default Dark */
+    --glass-bg: rgba(15, 15, 45, 0.8);
+    --glass-border: rgba(0, 243, 255, 0.3);
+    --glass-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
   }
 
-  .light {
+  /* Light Theme Overrides */
+  :root.light {
     --cyber-black: 248 250 252;
     --cyber-dark: 255 255 255;
-    --cyber-gray: 241 245 249;
+    --cyber-gray: 226 232 240;
 
     --cyber-cyan: 2 132 199;
     --cyber-magenta: 192 38 211;
@@ -35,6 +43,11 @@
 
     --text-main: 15 23 42;
     --text-muted: 71 85 105;
+
+    /* Glass Panel Variables - Light Mode Override */
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: #e2e8f0;
+    --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   body {
@@ -59,8 +72,14 @@
     font-family: 'Fira Code', monospace;
   }
 
+}
+
+@layer components {
   .glass-panel {
-    @apply bg-cyber-dark/80 backdrop-blur-md border border-cyber-cyan/30;
-    box-shadow: 0 0 15px rgb(var(--cyber-cyan) / 0.1);
+    background-color: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }

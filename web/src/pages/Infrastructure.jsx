@@ -36,7 +36,7 @@ const Infrastructure = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold font-display text-white flex items-center gap-3">
+                <h1 className="text-2xl font-bold font-display text-cyber-text flex items-center gap-3">
                     <Server className="text-cyber-magenta" />
                     Infrastructure Monitor
                 </h1>
@@ -44,7 +44,7 @@ const Infrastructure = () => {
                     <span className="px-3 py-1 bg-cyber-green/20 text-cyber-green rounded font-mono text-xs border border-cyber-green/30">
                         {containers.length} RUNNING
                     </span>
-                    <span className="px-3 py-1 bg-cyber-gray/20 text-gray-400 rounded font-mono text-xs border border-cyber-gray/30">
+                    <span className="px-3 py-1 bg-cyber-gray/20 text-cyber-muted rounded font-mono text-xs border border-cyber-gray/30">
                         HOST: LOCAL
                     </span>
                 </div>
@@ -59,44 +59,44 @@ const Infrastructure = () => {
                         </div>
 
                         <div className="relative z-10">
-                            <h3 className="text-lg font-bold text-white mb-1 truncate pr-8" title={c.name}>{c.name}</h3>
-                            <p className="text-sm text-gray-400 font-mono mb-4 truncate" title={c.image}>{c.image}</p>
+                            <h3 className="text-lg font-bold text-cyber-text mb-1 truncate pr-8" title={c.name}>{c.name}</h3>
+                            <p className="text-sm text-cyber-muted font-mono mb-4 truncate" title={c.image}>{c.image}</p>
 
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center text-xs font-mono">
-                                    <span className="text-gray-500">STATE</span>
+                                    <span className="text-cyber-muted">STATE</span>
                                     <span className={`px-2 py-0.5 rounded ${c.state === 'running' ? 'bg-cyber-green/10 text-cyber-green' : 'bg-red-500/10 text-red-500'}`}>
                                         {c.state.toUpperCase()}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs font-mono">
-                                    <span className="text-gray-500">UPTIME</span>
-                                    <span className="text-gray-300">{c.status}</span>
+                                    <span className="text-cyber-muted">UPTIME</span>
+                                    <span className="text-cyber-text">{c.status}</span>
                                 </div>
 
                                 <div className="h-px bg-cyber-gray/50 my-2" />
 
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div className="bg-black/30 p-2 rounded">
+                                    <div className="bg-cyber-black/30 p-2 rounded">
                                         <div className="flex items-center gap-1 text-cyber-cyan mb-1">
                                             <Cpu size={12} /> <span className="text-[10px]">CPU</span>
                                         </div>
-                                        <span className="text-lg font-bold font-mono text-white">{c.cpu.toFixed(1)}%</span>
+                                        <span className="text-lg font-bold font-mono text-cyber-text">{c.cpu.toFixed(1)}%</span>
                                     </div>
-                                    <div className="bg-black/30 p-2 rounded">
+                                    <div className="bg-cyber-black/30 p-2 rounded">
                                         <div className="flex items-center gap-1 text-cyber-magenta mb-1">
                                             <Activity size={12} /> <span className="text-[10px]">MEM</span>
                                         </div>
-                                        <span className="text-lg font-bold font-mono text-white">{Math.round(c.mem / 1024 / 1024)} MB</span>
+                                        <span className="text-lg font-bold font-mono text-cyber-text">{Math.round(c.mem / 1024 / 1024)} MB</span>
                                     </div>
                                 </div>
 
-                                <div className="bg-black/30 p-2 rounded">
+                                <div className="bg-cyber-black/30 p-2 rounded">
                                     <div className="flex items-center justify-between text-cyber-yellow mb-1">
                                         <span className="text-[10px] flex items-center gap-1"><Activity size={12} /> NET I/O</span>
-                                        <span className="text-[10px] text-gray-500">RX / TX</span>
+                                        <span className="text-[10px] text-cyber-muted">RX / TX</span>
                                     </div>
-                                    <div className="flex justify-between font-mono text-sm text-white">
+                                    <div className="flex justify-between font-mono text-sm text-cyber-text">
                                         <span>{formatBytes(c.net_rx)}</span>
                                         <span>{formatBytes(c.net_tx)}</span>
                                     </div>
@@ -107,7 +107,7 @@ const Infrastructure = () => {
                 ))}
 
                 {containers.length === 0 && !loading && (
-                    <div className="col-span-full py-12 text-center text-gray-500 italic">
+                    <div className="col-span-full py-12 text-center text-cyber-muted italic">
                         No active containers detected via Docker Socket.
                     </div>
                 )}

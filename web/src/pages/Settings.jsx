@@ -186,11 +186,11 @@ const Settings = () => {
                                     max="90"
                                     value={retention}
                                     onChange={(e) => setRetention(e.target.value)}
-                                    className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyber-magenta"
+                                    className="flex-1 h-2 bg-cyber-gray/30 rounded-lg appearance-none cursor-pointer accent-cyber-magenta"
                                 />
                                 <span className="font-mono text-xl text-cyber-text w-12 text-center">{retention}d</span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
+                            <p className="text-xs text-cyber-muted mt-2">
                                 Older logs will be automatically purged from ClickHouse to save space.
                             </p>
                         </div>
@@ -213,7 +213,7 @@ const Settings = () => {
                                     className="bg-cyber-gray/10 border border-cyber-gray/30 rounded px-4 py-2 text-cyber-text w-full focus:border-red-500 focus:outline-none transition-colors"
                                 />
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
+                            <p className="text-xs text-cyber-muted mt-2">
                                 Network traffic exceeding this rate will trigger CRITICAL alert mode.
                             </p>
                         </div>
@@ -234,7 +234,7 @@ const Settings = () => {
                         </div>
                         <div
                             onClick={() => setEmailAlerts(!emailAlerts)}
-                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${emailAlerts ? 'bg-cyber-green' : 'bg-gray-300 dark:bg-gray-700'}`}
+                            className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${emailAlerts ? 'bg-cyber-green' : 'bg-cyber-gray/40'}`}
                         >
                             <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${emailAlerts ? 'translate-x-6' : ''}`} />
                         </div>
@@ -278,12 +278,12 @@ const Settings = () => {
                                     </div>
                                     <div className="space-y-1">
                                         {alertEmails.map((email, idx) => (
-                                            <div key={idx} className="flex justify-between items-center bg-gray-800/50 px-3 py-2 rounded text-sm text-gray-300">
+                                            <div key={idx} className="flex justify-between items-center bg-cyber-gray/20 px-3 py-2 rounded text-sm text-cyber-text">
                                                 <span>{email}</span>
                                                 <button onClick={() => setAlertEmails(alertEmails.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300">×</button>
                                             </div>
                                         ))}
-                                        {alertEmails.length === 0 && <p className="text-xs text-gray-500 italic">No recipients added.</p>}
+                                        {alertEmails.length === 0 && <p className="text-xs text-cyber-muted italic">No recipients added.</p>}
                                     </div>
                                 </div>
 
@@ -297,25 +297,25 @@ const Settings = () => {
                                     </button>
 
                                     {showSMTP && (
-                                        <div className="space-y-3 bg-black/30 p-4 rounded border border-gray-700">
+                                        <div className="space-y-3 bg-cyber-black/30 p-4 rounded border border-cyber-dim">
                                             <div className="grid grid-cols-3 gap-3">
                                                 <div className="col-span-2">
-                                                    <label className="text-xs text-gray-500 block mb-1">Server Host</label>
-                                                    <input value={smtpServer} onChange={e => setSmtpServer(e.target.value)} type="text" placeholder="smtp.gmail.com" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                    <label className="text-xs text-cyber-muted block mb-1">Server Host</label>
+                                                    <input value={smtpServer} onChange={e => setSmtpServer(e.target.value)} type="text" placeholder="smtp.gmail.com" className="w-full bg-cyber-gray/20 border border-cyber-dim rounded px-2 py-1 text-sm text-cyber-text" />
                                                 </div>
                                                 <div>
-                                                    <label className="text-xs text-gray-500 block mb-1">Port</label>
-                                                    <input value={smtpPort} onChange={e => setSmtpPort(parseInt(e.target.value) || 587)} type="number" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                    <label className="text-xs text-cyber-muted block mb-1">Port</label>
+                                                    <input value={smtpPort} onChange={e => setSmtpPort(parseInt(e.target.value) || 587)} type="number" className="w-full bg-cyber-gray/20 border border-cyber-dim rounded px-2 py-1 text-sm text-cyber-text" />
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="text-xs text-gray-500 block mb-1">Username</label>
-                                                    <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} type="text" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                    <label className="text-xs text-cyber-muted block mb-1">Username</label>
+                                                    <input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} type="text" className="w-full bg-cyber-gray/20 border border-cyber-dim rounded px-2 py-1 text-sm text-cyber-text" />
                                                 </div>
                                                 <div>
-                                                    <label className="text-xs text-gray-500 block mb-1">Password</label>
-                                                    <input value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} type="password" className="w-full bg-black border border-gray-600 rounded px-2 py-1 text-sm text-white" />
+                                                    <label className="text-xs text-cyber-muted block mb-1">Password</label>
+                                                    <input value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} type="password" className="w-full bg-cyber-gray/20 border border-cyber-dim rounded px-2 py-1 text-sm text-cyber-text" />
                                                 </div>
                                             </div>
                                         </div>
@@ -360,14 +360,14 @@ const Settings = () => {
                                     </div>
                                     <div className="space-y-1">
                                         {webhookURLs.map((url, idx) => (
-                                            <div key={idx} className="flex justify-between items-center bg-gray-800/50 px-3 py-2 rounded text-sm text-gray-300 break-all">
+                                            <div key={idx} className="flex justify-between items-center bg-cyber-gray/20 px-3 py-2 rounded text-sm text-cyber-text break-all">
                                                 <span className="truncate mr-2">{url}</span>
                                                 <button onClick={() => setWebhookURLs(webhookURLs.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300 flex-shrink-0">×</button>
                                             </div>
                                         ))}
-                                        {webhookURLs.length === 0 && <p className="text-xs text-gray-500 italic">No webhooks configured.</p>}
+                                        {webhookURLs.length === 0 && <p className="text-xs text-cyber-muted italic">No webhooks configured.</p>}
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-2">
+                                    <p className="text-xs text-cyber-muted mt-2">
                                         Sends JSON payload for Critical events. Compatible with Slack, Discord, Teams.
                                     </p>
                                 </div>
@@ -387,14 +387,14 @@ const Settings = () => {
                                 <code className="bg-cyber-gray/10 border border-cyber-gray/30 rounded px-3 py-2 text-cyber-text font-mono flex-1 text-sm overflow-hidden">
                                     {showKey ? apiKey : "••••••••••••••••••••••••••••••••"}
                                 </code>
-                                <button onClick={() => setShowKey(!showKey)} className="p-2 bg-gray-700 rounded hover:bg-gray-600">
+                                <button onClick={() => setShowKey(!showKey)} className="p-2 bg-cyber-gray/20 rounded hover:bg-cyber-gray/30 text-cyber-text">
                                     {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
-                                <button onClick={() => navigator.clipboard.writeText(apiKey)} className="p-2 bg-gray-700 rounded hover:bg-gray-600">
+                                <button onClick={() => navigator.clipboard.writeText(apiKey)} className="p-2 bg-cyber-gray/20 rounded hover:bg-cyber-gray/30 text-cyber-text">
                                     <Copy size={16} />
                                 </button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
+                            <p className="text-xs text-cyber-muted mt-2">
                                 Use this key to register new agents.
                             </p>
                         </div>
@@ -423,17 +423,17 @@ const Settings = () => {
                                     QR Code Placeholder
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-400">Scan this code with Google Authenticator</p>
+                            <p className="text-xs text-cyber-muted">Scan this code with Google Authenticator</p>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
                                     placeholder="123456"
-                                    className="bg-black border border-gray-600 rounded px-3 py-2 w-24 text-center font-mono"
+                                    className="bg-cyber-black border border-cyber-dim rounded px-3 py-2 w-24 text-center font-mono text-cyber-text"
                                     value={mfaCode}
                                     onChange={e => setMfaCode(e.target.value)}
                                 />
                                 <button onClick={verifyMfa} className="bg-green-600 text-white px-3 py-2 rounded text-sm">VERIFY</button>
-                                <button onClick={() => setMfaSetup(null)} className="bg-gray-700 text-white px-3 py-2 rounded text-sm">CANCEL</button>
+                                <button onClick={() => setMfaSetup(null)} className="bg-cyber-gray/40 text-white px-3 py-2 rounded text-sm">CANCEL</button>
                             </div>
                         </div>
                     ) : (

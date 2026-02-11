@@ -3,13 +3,13 @@ import { NavLink } from 'react-router-dom';
 import { Activity, Server, Shield, Globe, Terminal, Settings, Cpu, HardDrive, Zap, CircleDashed, LayoutDashboard, ScrollText, BellRing } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
-const SidebarItem = ({ icon: Icon, label, path }) => (
+const SidebarItem = ({ path, label, icon: Icon }) => (
     <NavLink
         to={path}
         className={({ isActive }) => `
             flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all duration-300
             ${isActive
-                ? 'bg-cyan-900/20 text-cyan-400 border-l-2 border-cyan-400 shadow-[0_0_15px_rgb(0,243,255,0.1)]'
+                ? 'bg-cyber-cyan/10 text-cyber-cyan border-l-2 border-cyber-cyan shadow-[0_0_15px_rgba(var(--cyber-cyan),0.1)]'
                 : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-gray/20'}
         `}
     >
@@ -24,16 +24,16 @@ export const Sidebar = () => {
             {/* Logo */}
             <div className="flex items-center gap-3 mb-10 px-2 mt-2">
                 <div className="relative group">
-                    <div className="w-8 h-8 rounded bg-gradient-to-tr from-cyan-400 to-violet-500 flex items-center justify-center relative z-10">
+                    <div className="w-8 h-8 rounded bg-gradient-to-tr from-cyber-cyan to-violet-500 flex items-center justify-center relative z-10">
                         <Activity className="text-black" size={20} />
                     </div>
-                    <div className="absolute inset-0 bg-cyan-400 blur-lg opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute inset-0 bg-cyber-cyan blur-lg opacity-50 group-hover:opacity-100 transition-opacity"></div>
                 </div>
                 <div>
                     <h1 className="text-xl font-bold text-cyber-text tracking-widest font-display">
                         DataVAST
                     </h1>
-                    <span className="text-[10px] text-cyan-500 font-mono tracking-[0.2em] relative -top-1 block">
+                    <span className="text-[10px] text-cyber-cyan font-mono tracking-[0.2em] relative -top-1 block">
                         OBSERVABILITY
                     </span>
                 </div>

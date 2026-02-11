@@ -204,7 +204,7 @@ const Dashboard = () => {
                     <div className="flex-1 bg-cyber-black/40 overflow-auto custom-scrollbar">
                         <table className="w-full text-left font-mono text-xs">
                             <thead>
-                                <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-cyber-black/20">
+                                <tr className="border-b border-cyber-gray/50 text-cyber-magenta bg-cyber-black/20 dark:bg-cyber-black/40">
                                     <th className="p-3">NAME</th>
                                     <th className="p-3">STATUS</th>
                                     <th className="p-3">CPU</th>

@@ -66,7 +66,7 @@ const MySQLDetail = () => {
     if (loading) {
         return (
             <div className="p-6">
-                <div className="text-cyan-400">Loading MySQL metrics...</div>
+                <div className="text-cyber-cyan">Loading MySQL metrics...</div>
             </div>
         );
     }
@@ -81,16 +81,16 @@ const MySQLDetail = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/services')}
-                        className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-cyan-500/30 transition-colors"
+                        className="p-2 rounded-lg bg-cyber-gray/20 hover:bg-cyber-gray/40 border border-cyber-dim transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5 text-cyan-400" />
+                        <ArrowLeft className="w-5 h-5 text-cyber-cyan" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-cyber-text flex items-center gap-2">
                             <Database className="w-6 h-6 text-cyan-400" />
                             MySQL Database
                         </h1>
-                        <p className="text-gray-400 mt-1">
+                        <p className="text-cyber-muted mt-1">
                             Connection monitoring & query performance
                             {stats?.is_master !== undefined && (
                                 <span className="ml-2 px-2 py-0.5 text-xs rounded bg-cyan-500/20 text-cyan-300">
@@ -172,10 +172,10 @@ const MySQLDetail = () => {
                         <BarChart data={connections.slice(0, 10)} layout="horizontal">
                             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                             <XAxis type="number" stroke="#9ca3af" />
-                            <YAxis dataKey="ip" type="category" width={120} stroke="#9ca3af" />
+                            <YAxis dataKey="ip" type="category" width={120} stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
-                                labelStyle={{ color: '#fff' }}
+                                contentStyle={{ backgroundColor: 'rgb(var(--cyber-dark))', border: '1px solid rgb(var(--cyber-dim))', color: 'rgb(var(--text-main))' }}
+                                itemStyle={{ color: 'rgb(var(--text-main))' }}
                             />
                             <Bar dataKey="count" fill="#06b6d4" name="Connections" />
                         </BarChart>
@@ -188,7 +188,7 @@ const MySQLDetail = () => {
                             <div className="text-6xl font-bold text-cyan-400">
                                 {connUsagePercent}%
                             </div>
-                            <div className="text-gray-400 mt-2">
+                            <div className="text-cyber-muted mt-2">
                                 {stats?.threads_connected || 0} / {stats?.max_connections || 0} connections
                             </div>
                             <div className={`mt-4 text-sm font-medium ${connUsagePercent > 80 ? 'text-yellow-400' :
@@ -203,48 +203,48 @@ const MySQLDetail = () => {
             </div>
 
             {/* Slow Queries Table */}
-            <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className="glass-panel p-4">
+                <h3 className="text-lg font-semibold text-cyber-text mb-4 flex items-center gap-2">
                     <Clock className="w-5 h-5 text-yellow-400" />
                     Slow Queries
-                    <span className="ml-auto text-sm font-normal text-gray-400">
+                    <span className="ml-auto text-sm font-normal text-cyber-muted">
                         {slowQueries.length} queries
                     </span>
                 </h3>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="border-b border-gray-700">
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Time</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Query Time</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Rows Examined</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Client IP</th>
-                                <th className="text-left py-2 px-4 text-gray-400 font-medium">Query</th>
+                            <tr className="border-b border-cyber-dim">
+                                <th className="text-left py-2 px-4 text-cyber-muted font-medium">Time</th>
+                                <th className="text-left py-2 px-4 text-cyber-muted font-medium">Query Time</th>
+                                <th className="text-left py-2 px-4 text-cyber-muted font-medium">Rows Examined</th>
+                                <th className="text-left py-2 px-4 text-cyber-muted font-medium">Client IP</th>
+                                <th className="text-left py-2 px-4 text-cyber-muted font-medium">Query</th>
                             </tr>
                         </thead>
                         <tbody>
                             {slowQueries.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="text-center py-8 text-gray-500">
+                                    <td colSpan="5" className="text-center py-8 text-cyber-muted">
                                         No slow queries found
                                     </td>
                                 </tr>
                             ) : (
                                 slowQueries.slice(0, 20).map((query, idx) => (
-                                    <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                                        <td className="py-3 px-4 text-gray-300 text-sm">
+                                    <tr key={idx} className="border-b border-cyber-gray hover:bg-cyber-gray/30">
+                                        <td className="py-3 px-4 text-cyber-text text-sm">
                                             {new Date(query.timestamp).toLocaleTimeString()}
                                         </td>
                                         <td className="py-3 px-4 font-mono text-yellow-400">
                                             {query.query_time.toFixed(3)}s
                                         </td>
-                                        <td className="py-3 px-4 text-white">
+                                        <td className="py-3 px-4 text-cyber-text">
                                             {query.rows_examined?.toLocaleString()}
                                         </td>
-                                        <td className="py-3 px-4 font-mono text-cyan-400">
+                                        <td className="py-3 px-4 font-mono text-cyber-cyan">
                                             {query.client_ip || 'N/A'}
                                         </td>
-                                        <td className="py-3 px-4 text-gray-300 font-mono text-sm truncate max-w-md">
+                                        <td className="py-3 px-4 text-cyber-text font-mono text-sm truncate max-w-md">
                                             {query.query_text}
                                         </td>
                                     </tr>
@@ -257,11 +257,11 @@ const MySQLDetail = () => {
 
             {/* Info Message */}
             {!stats && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                <div className="bg-cyber-yellow/10 border border-cyber-yellow/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-cyber-yellow mt-0.5" />
                     <div>
-                        <p className="text-yellow-200 font-medium">No Data Available</p>
-                        <p className="text-yellow-300/70 text-sm mt-1">
+                        <p className="text-cyber-text font-medium">No Data Available</p>
+                        <p className="text-cyber-muted text-sm mt-1">
                             MySQL monitoring requires agent access to the MySQL database with appropriate credentials.
                         </p>
                     </div>

@@ -233,11 +233,11 @@ const Security = () => {
                                         <stop offset="95%" stopColor={color} stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#aaa" strokeOpacity={0.2} />
                                 <XAxis dataKey="time" hide />
-                                <YAxis stroke="#666" fontSize={10} domain={[0, 'auto']} />
+                                <YAxis stroke="#888" fontSize={10} domain={[0, 'auto']} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#000', borderColor: color }}
+                                    contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', borderColor: color, borderRadius: '8px', color: '#fff' }}
                                     itemStyle={{ color: color }}
                                     formatter={(value) => [`${value.toFixed(2)} MB/s`, 'Traffic']}
                                 />
@@ -269,13 +269,13 @@ const Security = () => {
                                 key={tab.id}
                                 onClick={() => setActiveFilter(tab.id)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-all ${activeFilter === tab.id
-                                    ? 'bg-cyan-500 text-black'
-                                    : 'bg-cyber-gray/20 text-cyber-muted hover:bg-cyber-gray/30'
+                                    ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20'
+                                    : 'bg-cyber-gray/20 text-cyber-muted hover:bg-cyber-gray/30 hover:text-cyber-text'
                                     }`}
                             >
                                 <Icon size={14} />
                                 {tab.label}
-                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${activeFilter === tab.id ? 'bg-black/30' : 'bg-black/20'}`}>
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${activeFilter === tab.id ? 'bg-cyber-black/20' : 'bg-cyber-gray/30'}`}>
                                     {tab.count}
                                 </span>
                             </button>

@@ -131,14 +131,14 @@ export const NetworkPage = () => {
     };
 
     const TimeSelector = () => (
-        <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+        <div className="flex bg-cyber-gray/20 rounded-lg p-1 gap-1">
             {['realtime', '1h', '6h', '24h', '7d'].map(range => (
                 <button
                     key={range}
                     onClick={() => setTimeRange(range)}
                     className={`px-3 py-1 text-xs rounded transition-all ${timeRange === range
-                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                        ? 'bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/30'
+                        : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-gray/20'
                         }`}
                 >
                     {range === 'realtime' ? 'Live' : range}
@@ -149,7 +149,7 @@ export const NetworkPage = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-cyber-text tracking-tight flex items-center gap-2">
                 <Network size={24} className="text-cyan-400" /> Network Traffic
             </h1>
 
@@ -164,7 +164,7 @@ export const NetworkPage = () => {
                 {/* Main Traffic Chart */}
                 <div className="lg:col-span-2 glass-panel p-4 flex flex-col min-h-0">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-gray-300 font-semibold text-sm">Bandwidth History (KB/s)</h3>
+                        <h3 className="text-cyber-muted font-semibold text-sm">Bandwidth History (KB/s)</h3>
                         <TimeSelector />
                     </div>
                     <div className="flex-1 min-h-0">
@@ -188,8 +188,9 @@ export const NetworkPage = () => {
                                 />
                                 <YAxis hide />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#0a0b1e', borderColor: '#334155' }}
+                                    contentStyle={{ backgroundColor: 'rgba(var(--cyber-dark), 0.9)', borderColor: 'rgba(var(--cyber-gray), 0.5)', color: 'rgb(var(--text-main))' }}
                                     formatter={(value) => [Number(value).toFixed(2), undefined]}
+                                    itemStyle={{ color: 'rgb(var(--text-main))' }}
                                 />
                                 <Area type="monotone" dataKey="rx" stroke="#22c55e" fill="url(#splitRx)" strokeWidth={2} isAnimationActive={false} name="Download" />
                                 <Area type="monotone" dataKey="tx" stroke="#f59e0b" fill="url(#splitTx)" strokeWidth={2} isAnimationActive={false} name="Upload" />
@@ -200,15 +201,15 @@ export const NetworkPage = () => {
 
                 {/* Interface List */}
                 <div className="glass-panel p-4 flex flex-col min-h-0">
-                    <h3 className="text-gray-300 font-semibold text-sm mb-4">Interface Status</h3>
+                    <h3 className="text-cyber-muted font-semibold text-sm mb-4">Interface Status</h3>
                     <div className="space-y-3 flex-1 overflow-y-auto min-h-0 scrollbar-thin">
                         {(metrics.interfaces || []).slice(0, 5).map((iface, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 rounded bg-white/5 border border-white/5">
+                            <div key={idx} className="flex items-center justify-between p-2 rounded bg-cyber-gray/20 border border-cyber-dim">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-2 h-2 rounded-full ${iface.is_up ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
                                     <div className="overflow-hidden">
-                                        <div className="text-xs font-bold text-gray-200 truncate w-20">{iface.name}</div>
-                                        <div className="text-[10px] text-gray-500 font-mono truncate w-20">{iface.ip || "No IP"}</div>
+                                        <div className="text-xs font-bold text-cyber-text truncate w-20">{iface.name}</div>
+                                        <div className="text-[10px] text-cyber-muted font-mono truncate w-20">{iface.ip || "No IP"}</div>
                                     </div>
                                 </div>
                                 <div className="text-right">
@@ -222,8 +223,8 @@ export const NetworkPage = () => {
 
             {/* Detailed Table */}
             <div className="glass-panel overflow-hidden">
-                <table className="w-full text-left text-sm text-gray-400">
-                    <thead className="bg-white/5 text-gray-300 font-semibold border-b border-white/10">
+                <table className="w-full text-left text-sm text-cyber-muted">
+                    <thead className="bg-cyber-gray/10 text-cyber-muted font-semibold border-b border-cyber-dim">
                         <tr>
                             <th className="p-4 w-32">Interface</th>
                             <th className="p-4 w-24">Type</th>
@@ -232,13 +233,13 @@ export const NetworkPage = () => {
                             <th className="p-4 w-24">Status</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-cyber-dim">
                         {(metrics.interfaces || []).map((iface, idx) => (
-                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                            <tr key={idx} className="hover:bg-cyber-gray/10 transition-colors">
                                 <td className="p-4 font-mono text-cyan-400">{iface.name}</td>
                                 <td className="p-4">{iface.name === "lo" ? "virtual" : "physical"}</td>
-                                <td className="p-4 font-mono">{iface.ip || "-"}</td>
-                                <td className="p-4 font-mono text-gray-500">{iface.mac || "-"}</td>
+                                <td className="p-4 font-mono text-cyber-text">{iface.ip || "-"}</td>
+                                <td className="p-4 font-mono text-cyber-muted">{iface.mac || "-"}</td>
                                 <td className="p-4">
                                     <span className={`px-2 py-0.5 rounded text-[10px] border ${iface.is_up ? 'bg-green-500/20 text-green-400 border-green-500/20' : 'bg-red-500/20 text-red-400 border-red-500/20'}`}>
                                         {iface.is_up ? "UP" : "DOWN"}

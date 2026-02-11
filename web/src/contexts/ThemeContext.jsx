@@ -10,16 +10,16 @@ export const ThemeProvider = ({ children }) => {
 
     useEffect(() => {
         const root = window.document.documentElement;
-        // Tailwind usually looks for class on HTML or BODY. 
-        // Our CSS setup uses .light override.
-        // If theme is light, add class 'light' to body (or root).
-        // Let's use document.body to match index.css targeting.
 
         // Reset classes
-        document.body.classList.remove('light');
+        root.classList.remove('light', 'dark');
+        document.body.classList.remove('light', 'dark'); // Cleanup old classes
 
-        if (theme !== 'dark') {
-            document.body.classList.add(theme);
+        if (theme === 'system') {
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            root.classList.add(systemTheme);
+        } else {
+            root.classList.add(theme);
         }
 
         localStorage.setItem('theme', theme);

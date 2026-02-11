@@ -15,7 +15,7 @@ export const TopBar = ({ onAddSource }) => {
                     </div>
                     <input
                         type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-cyber-gray/20 rounded-lg leading-5 bg-cyber-gray/10 text-cyber-text placeholder-cyber-muted focus:outline-none focus:bg-cyber-gray/20 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 sm:text-sm transition-all shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
+                        className="block w-full pl-10 pr-3 py-2 border border-cyber-gray/20 rounded-lg leading-5 bg-cyber-gray/10 text-cyber-text placeholder-cyber-muted focus:outline-none focus:bg-cyber-gray/20 focus:border-cyber-cyan/50 focus:ring-1 focus:ring-cyber-cyan/50 sm:text-sm transition-all shadow-[0_0_0_1px_rgba(var(--cyber-cyan),0.05)]"
                         placeholder="Search metrics, logs, or server events..."
                     />
                     <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
@@ -69,7 +69,7 @@ export const TopBar = ({ onAddSource }) => {
                 {/* Actions */}
                 <button
                     onClick={onAddSource}
-                    className="px-3 py-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded text-xs font-bold tracking-wider hover:bg-cyan-500/20 hover:border-cyan-500/40 transition-all shadow-[0_0_10px_rgb(0,243,255,0.1)]"
+                    className="px-3 py-1.5 bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20 rounded text-xs font-bold tracking-wider hover:bg-cyber-cyan/20 hover:border-cyber-cyan/40 transition-all shadow-[0_0_10px_rgba(var(--cyber-cyan),0.1)]"
                 >
                     + ADD SOURCE
                 </button>
