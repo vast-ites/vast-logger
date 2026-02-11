@@ -40,3 +40,4 @@ deployment/influxdb_data/
 server/server-config.json
 deployment/.env
 server-config.json
+*.gz
