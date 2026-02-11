@@ -13,6 +13,7 @@ import (
 	"github.com/datavast/datavast/server/storage"
 	"github.com/datavast/datavast/server/geoip"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
     "github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 )
@@ -88,6 +89,10 @@ func main() {
 
 	// 3. API Setup
 	r := gin.Default()
+	
+	// Enable Gzip compression
+	r.Use(gzip.Gzip(gzip.DefaultCompression))
+
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "*"},
 		AllowMethods:     []string{"GET", "POST", "OPTIONS", "PUT"},
