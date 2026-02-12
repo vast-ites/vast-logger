@@ -7,6 +7,7 @@ import Services from './pages/Services';
 import ServiceDetail from './pages/ServiceDetail';
 import Security from './pages/Security';
 import Settings from './pages/Settings';
+import UserManagement from './pages/UserManagement';
 
 import Login from './pages/Login';
 
@@ -24,6 +25,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;
+};
+
+const AdminRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  return (token && role === 'admin') ? children : <Navigate to="/" />;
 };
 
 function App() {
@@ -131,9 +138,17 @@ function App() {
               <Route
                 path="settings"
                 element={
-                  <PrivateRoute>
+                  <AdminRoute>
                     <Settings />
-                  </PrivateRoute>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <AdminRoute>
+                    <UserManagement />
+                  </AdminRoute>
                 }
               />
               <Route
@@ -153,5 +168,6 @@ function App() {
     </HostProvider>
   );
 }
+
 
 export default App;

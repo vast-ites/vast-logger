@@ -347,6 +347,38 @@ func (h *IngestionHandler) HandleGetHosts(c *gin.Context) {
         visibleHosts = []storage.HostMetadata{}
     }
 
+    // AUTH BASED FILTERING
+    // If user is authenticated and not admin, filter based on allowed_hosts
+    if role, exists := c.Get("role"); exists && role.(string) != "admin" {
+        if allowedRaw, ok := c.Get("allowed_hosts"); ok {
+            allowedHosts := allowedRaw.([]string)
+            
+            // Check for Full Access Wildcard
+            hasWildcard := false
+            allowedMap := make(map[string]bool)
+            for _, ah := range allowedHosts {
+                if ah == "*" {
+                    hasWildcard = true
+                    break
+                }
+                allowedMap[ah] = true
+            }
+
+            if !hasWildcard {
+                filtered := []storage.HostMetadata{}
+                for _, host := range visibleHosts {
+                    if allowedMap[host.Hostname] {
+                        filtered = append(filtered, host)
+                    }
+                }
+                visibleHosts = filtered
+            }
+        } else {
+            // If role exists but allowed_hosts is missing/invalid, default to denying all
+            visibleHosts = []storage.HostMetadata{}
+        }
+    }
+
     c.JSON(http.StatusOK, visibleHosts)
 }
 
@@ -396,14 +428,14 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         userRoutes.Use(OptionalAuth("user"))
         {
             userRoutes.GET("/hosts", h.HandleGetHosts) 
-            userRoutes.DELETE("/hosts", h.HandleDeleteHost)
+
             userRoutes.GET("/metrics/system", h.HandleGetLatestMetrics)
             userRoutes.GET("/metrics/containers", h.HandleGetContainers)
             userRoutes.GET("/logs/stream", h.HandleGetLogs)
             userRoutes.GET("/logs/search", h.HandleSearchLogs)
             userRoutes.GET("/metrics/history", h.HandleGetHistory)
             userRoutes.GET("/metrics/interfaces/history", h.HandleGetInterfaceHistory)
-            userRoutes.GET("/settings", h.HandleGetSettings)
+
             userRoutes.GET("/logs/services", h.HandleGetServices)
             userRoutes.GET("/processes", h.HandleGetProcesses)
             userRoutes.GET("/firewall", h.HandleGetFirewall)
@@ -426,6 +458,8 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         adminRoutes := v1.Group("/")
         adminRoutes.Use(OptionalAuth("admin"))
         {
+            adminRoutes.DELETE("/hosts", h.HandleDeleteHost)
+            adminRoutes.GET("/settings", h.HandleGetSettings)
             adminRoutes.POST("/settings", h.HandleSaveSettings)
             adminRoutes.POST("/mfa/setup", h.HandleSetupMFA)
             adminRoutes.POST("/mfa/enable", h.HandleEnableMFA)
@@ -444,8 +478,296 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             
             adminRoutes.POST("/alerts/silence", h.HandleSilenceAlert)
             adminRoutes.POST("/alerts/unsilence", h.HandleUnsilenceAlert)
+
+            // User Management
+            adminRoutes.GET("/users", h.HandleGetUsers)
+            adminRoutes.POST("/users", h.HandleCreateUser)
+            adminRoutes.PUT("/users/:username", h.HandleUpdateUser)
+            adminRoutes.PUT("/users/:username/password", h.HandleChangePassword)
+            adminRoutes.DELETE("/users/:username", h.HandleDeleteUser)
+
+            // Group Management
+            adminRoutes.GET("/groups", h.HandleGetGroups)
+            adminRoutes.POST("/groups", h.HandleCreateGroup)
+            adminRoutes.PUT("/groups/:id", h.HandleUpdateGroup)
+            adminRoutes.DELETE("/groups/:id", h.HandleDeleteGroup)
+            
+            // Helper to get all hosts for UI selectors
+            // adminRoutes.GET("/hosts", h.HandleGetHosts) // Already registered in userRoutes
         }
 	}
+}
+
+
+
+// --- User Management Handlers ---
+
+func (h *IngestionHandler) HandleGetUsers(c *gin.Context) {
+    cfg := h.Config.Get()
+    // Don't return passwords!
+    type SafeUser struct {
+        Username     string   `json:"username"`
+        Role         string   `json:"role"`
+        AllowedHosts []string `json:"allowed_hosts"`
+        Groups       []string `json:"groups"`
+    }
+    safeUsers := []SafeUser{}
+    for _, u := range cfg.Users {
+        safeUsers = append(safeUsers, SafeUser{
+            Username:     u.Username,
+            Role:         u.Role,
+            AllowedHosts: u.AllowedHosts,
+            Groups:       u.Groups,
+        })
+    }
+    c.JSON(http.StatusOK, safeUsers)
+}
+
+func (h *IngestionHandler) HandleCreateUser(c *gin.Context) {
+    var req storage.User
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+    
+    // Validation
+    if req.Username == "" || req.Password == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Username and Password required"})
+        return
+    }
+    if req.Role == "" { req.Role = "viewer" }
+
+    cfg := h.Config.Get()
+    
+    // Check duplication
+    for _, u := range cfg.Users {
+        if u.Username == req.Username {
+            c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
+            return
+        }
+    }
+    
+    cfg.Users = append(cfg.Users, req)
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
+        return
+    }
+    c.Status(http.StatusCreated)
+}
+
+func (h *IngestionHandler) HandleDeleteUser(c *gin.Context) {
+    username := c.Param("username")
+    cfg := h.Config.Get()
+    
+    newUsers := []storage.User{}
+    found := false
+    for _, u := range cfg.Users {
+        if u.Username == username {
+            found = true
+            continue
+        }
+        newUsers = append(newUsers, u)
+    }
+    
+    if !found {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+    
+    cfg.Users = newUsers
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleUpdateUser(c *gin.Context) {
+    username := c.Param("username")
+    
+    var req struct {
+        Role         string   `json:"role"`
+        AllowedHosts []string `json:"allowed_hosts"`
+    }
+    
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+    
+    cfg := h.Config.Get()
+    found := false
+    
+    for i, u := range cfg.Users {
+        if u.Username == username {
+            // Update role if provided
+            if req.Role != "" {
+                cfg.Users[i].Role = req.Role
+            }
+            // Update allowed_hosts - can be empty array
+            cfg.Users[i].AllowedHosts = req.AllowedHosts
+            found = true
+            break
+        }
+    }
+    
+    if !found {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+    
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
+        return
+    }
+    
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleChangePassword(c *gin.Context) {
+    username := c.Param("username")
+    
+    var req struct {
+        Password string `json:"password"`
+    }
+    
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+    
+    if req.Password == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Password required"})
+        return
+    }
+    
+    cfg := h.Config.Get()
+    found := false
+    
+    for i, u := range cfg.Users {
+        if u.Username == username {
+            cfg.Users[i].Password = req.Password
+            found = true
+            break
+        }
+    }
+    
+    if !found {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+    
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
+        return
+    }
+    
+    c.Status(http.StatusOK)
+}
+
+// --- Group Management Handlers ---
+
+func (h *IngestionHandler) HandleGetGroups(c *gin.Context) {
+    c.JSON(http.StatusOK, h.Config.Get().Groups)
+}
+
+func (h *IngestionHandler) HandleCreateGroup(c *gin.Context) {
+    var req storage.ServerGroup
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+    
+    if req.Name == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Group Name required"})
+        return
+    }
+    if req.ID == "" {
+        req.ID = strings.ToLower(strings.ReplaceAll(req.Name, " ", "_")) + "_" + auth.GenerateRandomString(4)
+    }
+
+    cfg := h.Config.Get()
+    cfg.Groups = append(cfg.Groups, req)
+    
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
+        return
+    }
+    c.JSON(http.StatusCreated, req)
+}
+
+func (h *IngestionHandler) HandleUpdateGroup(c *gin.Context) {
+    id := c.Param("id")
+    var req struct {
+        Name  string   `json:"name"`
+        Role  string   `json:"role"`
+        Hosts []string `json:"hosts"`
+        Users []string `json:"users"` // List of usernames to set as members
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
+
+    cfg := h.Config.Get()
+    
+    // 1. Update Group
+    found := false
+    for i, g := range cfg.Groups {
+        if g.ID == id {
+            cfg.Groups[i].Name = req.Name
+            cfg.Groups[i].Role = req.Role
+            cfg.Groups[i].Hosts = req.Hosts
+            found = true
+            break
+        }
+    }
+    if !found {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Group not found"})
+        return
+    }
+
+    // 2. Update User Membership (if Users list provided)
+    if req.Users != nil {
+        targetMembers := make(map[string]bool)
+        for _, u := range req.Users { targetMembers[u] = true }
+
+        for i := range cfg.Users {
+            u := &cfg.Users[i]
+            shouldBe := targetMembers[u.Username]
+            
+            // Check if currently in group
+            idx := -1
+            for j, gid := range u.Groups {
+                if gid == id { idx = j; break }
+            }
+            
+            if shouldBe && idx == -1 {
+                u.Groups = append(u.Groups, id)
+            } else if !shouldBe && idx != -1 {
+                // Remove
+                u.Groups = append(u.Groups[:idx], u.Groups[idx+1:]...)
+            }
+        }
+    }
+
+    if err := h.Config.Save(cfg); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
+        return
+    }
+    c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleDeleteGroup(c *gin.Context) {
+    id := c.Param("id")
+    cfg := h.Config.Get()
+    
+    newGroups := []storage.ServerGroup{}
+    for _, g := range cfg.Groups {
+        if g.ID == id { continue }
+        newGroups = append(newGroups, g)
+    }
+    
+    cfg.Groups = newGroups
+    h.Config.Save(cfg)
+    c.Status(http.StatusOK)
 }
 
 func (h *IngestionHandler) HandleGetServices(c *gin.Context) {
@@ -698,6 +1020,7 @@ func (h *IngestionHandler) HandleGetInterfaceHistory(c *gin.Context) {
 
 func (h *IngestionHandler) HandleLogin(c *gin.Context) {
     var req struct {
+        Username string `json:"username"`
         Password string `json:"password"`
     }
     if err := c.BindJSON(&req); err != nil {
@@ -705,18 +1028,59 @@ func (h *IngestionHandler) HandleLogin(c *gin.Context) {
         return
     }
     
-    if !h.Auth.ValidatePassword(req.Password) {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+    // Default to admin if username not provided for backward compatibility (or UI not updated yet)
+    if req.Username == "" {
+        req.Username = "admin"
+    }
+
+    role, allowed, ok := h.Auth.ValidateUser(req.Username, req.Password)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
         return
     }
     
-    token, err := h.Auth.GenerateToken()
+    token, err := h.Auth.GenerateToken(req.Username, role, allowed)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
         return
     }
     
-    c.JSON(http.StatusOK, gin.H{"token": token})
+    c.JSON(http.StatusOK, gin.H{
+        "token": token,
+        "role": role,
+        "username": req.Username,
+    })
+}
+
+// Helper to check if user has access to a host
+func (h *IngestionHandler) checkAccess(c *gin.Context, host string) bool {
+    // 1. If Auth Disabled, Allow All
+    if os.Getenv("AUTH_ENABLED") == "false" {
+        return true
+    }
+
+    // 2. Get Claims from Context (set by AuthRequired middleware)
+    // Note: We need to ensure middleware sets this. 
+    // Currently relying on parsing token here or assuming middleware injected claims.
+    // Let's parse token again for safety or update middleware later.
+    tokenString := c.GetHeader("Authorization")
+    if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+        tokenString = tokenString[7:]
+    }
+    
+    token, _ := jwt.ParseWithClaims(tokenString, &auth.Claims{}, func(token *jwt.Token) (interface{}, error) {
+        return auth.JwtSecret, nil
+    })
+    
+    if claims, ok := token.Claims.(*auth.Claims); ok && token.Valid {
+        // Admin or All Access
+        if claims.Role == "admin" { return true }
+        for _, a := range claims.Allowed {
+            if a == "*" || a == host { return true }
+        }
+    }
+    
+    return false
 }
 
 func (h *IngestionHandler) HandleRegisterAgent(c *gin.Context) {
@@ -851,6 +1215,18 @@ func AuthRequired(role string) gin.HandlerFunc {
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
+		}
+
+		if claims, ok := token.Claims.(*auth.Claims); ok {
+			c.Set("username", claims.Username)
+			c.Set("role", claims.Role)
+			c.Set("allowed_hosts", claims.Allowed)
+
+            // Enforce Role
+            if role == "admin" && claims.Role != "admin" {
+                c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin privileges required"})
+                return
+            }
 		}
 
 		c.Next()
