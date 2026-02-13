@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/datavast/datavast/server/api"
+	"github.com/datavast/datavast/server/api/ip_intelligence"
 	"github.com/datavast/datavast/server/auth"
 	"github.com/datavast/datavast/server/alert"
 	"github.com/datavast/datavast/server/storage"
@@ -105,11 +106,25 @@ func main() {
 	handler := &api.IngestionHandler{
 		Metrics: influx,
 		Logs:    clickh,
-        Config:  config,
-        Auth:    authMgr,
-        Alerts:  alertMgr,
+		Config:  config,
+		Auth:    authMgr,
+		Alerts:  alertMgr,
 	}
 	api.SetupRoutes(r, handler)
+
+    // Phase 43: IP Intelligence Routes
+    ipHandler := ip_intelligence.NewIPHandler(clickh)
+    v1 := r.Group("/api/v1")
+    ipRoutes := v1.Group("/ip")
+    // Reuse OptionalAuth from api package? No, it's internal.
+    // We should expose it or replicate logic. 
+    // For now, let's assume we need to mount these inside handler.go or duplicate auth middleware.
+    // Better approach: Pass r to a SetupIPRoutes function.
+    
+    // Quick inline mount for now to keep it simple
+    ipRoutes.GET("/:ip", ipHandler.GetIPDetails)
+    ipRoutes.POST("/block", ipHandler.BlockIP)
+    ipRoutes.POST("/unblock", ipHandler.UnblockIP)
 
     // Serve Frontend (Static Files)
     // accessible at root "/"

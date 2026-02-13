@@ -217,6 +217,76 @@ func NewLogStore(dsn string) (*LogStore, error) {
         return nil, err
     }
 
+    // -------------------------------------------------------------------------
+    // PHASE 43: IP INTELLIGENCE TABLES
+    // -------------------------------------------------------------------------
+
+    // 1. IP Geo Cache (Optimized for frequent lookups)
+    err = conn.Exec(context.Background(), `
+        CREATE TABLE IF NOT EXISTS datavast.ip_geo_cache (
+            ip_address String,
+            country String,
+            state String,
+            city String,
+            last_updated DateTime DEFAULT now()
+        ) ENGINE = MergeTree()
+        ORDER BY ip_address
+        TTL last_updated + INTERVAL 30 DAY
+    `)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create ip_geo_cache: %w", err)
+    }
+
+    // 2. Blocked IPs (Source-Aware)
+    err = conn.Exec(context.Background(), `
+        CREATE TABLE IF NOT EXISTS datavast.blocked_ips (
+            ip_address String,
+            agent_id String,
+            blocked_at DateTime DEFAULT now(),
+            blocked_by String,
+            reason String
+        ) ENGINE = ReplacingMergeTree()
+        ORDER BY (agent_id, ip_address)
+    `)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create blocked_ips: %w", err)
+    }
+
+    // 3. IP Activity Aggregation (Materialized View Target)
+    err = conn.Exec(context.Background(), `
+        CREATE TABLE IF NOT EXISTS datavast.ip_activity_daily (
+            day Date,
+            agent_id String,
+            ip_address String,
+            service_type String,
+            total_requests UInt64,
+            first_seen DateTime,
+            last_seen DateTime
+        ) ENGINE = SummingMergeTree(total_requests)
+        ORDER BY (day, agent_id, ip_address, service_type)
+    `)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create ip_activity_daily: %w", err)
+    }
+
+    // 4. IP Activity MV (Feed from access_logs)
+    err = conn.Exec(context.Background(), `
+        CREATE MATERIALIZED VIEW IF NOT EXISTS datavast.ip_activity_mv TO datavast.ip_activity_daily AS
+        SELECT
+            toDate(timestamp) as day,
+            host as agent_id,
+            ip as ip_address,
+            service as service_type,
+            count() as total_requests,
+            min(timestamp) as first_seen,
+            max(timestamp) as last_seen
+        FROM datavast.access_logs
+        GROUP BY day, agent_id, ip_address, service_type
+    `)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create ip_activity_mv: %w", err)
+    }
+
 	// [Fix] Apply Retention Policy to System Tables to prevent Disk Exhaustion
 	// We use standard SQL execution. Errors here (e.g. if table doesn't exist) should be logged but not fatal.
 	systemTables := []string{"text_log", "trace_log", "metric_log", "query_log", "part_log"}
@@ -702,4 +772,88 @@ func (s *LogStore) GetConnectionDetails(host string, port uint16) ([]ConnectionE
         entries = append(entries, e)
     }
     return entries, nil
+}
+
+// Phase 43: IP Intelligence Methods
+
+func (s *LogStore) IsIPBlocked(ip, agentID string) (bool, error) {
+    query := `SELECT count() FROM datavast.blocked_ips WHERE ip_address = ?`
+    args := []interface{}{ip}
+    
+    if agentID != "" && agentID != "all" {
+        query += ` AND agent_id = ?`
+        args = append(args, agentID)
+    }
+    
+    // We need to use ReplaceingMergeTree logic (FINAL is heavy, but for single IP lookup is ok)
+    query += ` LIMIT 1`
+
+    rows, err := s.Query(query, args...)
+    if err != nil {
+        return false, err
+    }
+    defer rows.Close()
+    
+    var count uint64
+    if rows.Next() {
+        if err := rows.Scan(&count); err != nil {
+            return false, err
+        }
+    }
+    return count > 0, nil
+}
+
+func (s *LogStore) BlockIP(ip, agentID, reason string) error {
+    // Insert into blocked_ips
+    // Note: In ReplacingMergeTree, inserting a new row with same keys updates it.
+    // To 'Unblock', we might need a 'status' column or DELETE (lightweight delete).
+    // For now, let's assume existence = blocked.
+    
+    query := `INSERT INTO datavast.blocked_ips (ip_address, agent_id, blocked_at, blocked_by, reason) VALUES (?, ?, now(), 'admin', ?)`
+    return s.conn.Exec(context.Background(), query, ip, agentID, reason)
+}
+
+func (s *LogStore) UnblockIP(ip, agentID string) error {
+    // Lightweight delete
+    query := `ALTER TABLE datavast.blocked_ips DELETE WHERE ip_address = ? AND agent_id = ?`
+    return s.conn.Exec(context.Background(), query, ip, agentID)
+}
+
+type IPActivityStats struct {
+    Service       string    `json:"service"`
+    TotalRequests uint64    `json:"total_requests"`
+    FirstSeen     time.Time `json:"first_seen"`
+    LastSeen      time.Time `json:"last_seen"`
+}
+
+func (s *LogStore) GetIPActivity(ip, agentID string) ([]IPActivityStats, error) {
+    query := `
+        SELECT service_type, sum(total_requests), min(first_seen), max(last_seen)
+        FROM datavast.ip_activity_daily
+        WHERE ip_address = ?
+    `
+    args := []interface{}{ip}
+    
+    if agentID != "" && agentID != "all" {
+        query += ` AND agent_id = ?`
+        args = append(args, agentID)
+    }
+    
+    query += ` GROUP BY service_type`
+    
+    rows, err := s.Query(query, args...)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    
+    var results []IPActivityStats
+    for rows.Next() {
+        var stat IPActivityStats
+        if err := rows.Scan(&stat.Service, &stat.TotalRequests, &stat.FirstSeen, &stat.LastSeen); err != nil {
+            return nil, err
+        }
+        results = append(results, stat)
+    }
+    return results, nil
 }
