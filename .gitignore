@@ -29,6 +29,11 @@ id_ed25519.pub
 *.key
 *.pem
 
+# Local Utility Scripts
+debug_remote.py
+deploy.py
+get_config.py
+
 # IDE
 .vscode
 .idea

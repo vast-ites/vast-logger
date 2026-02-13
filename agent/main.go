@@ -255,10 +255,54 @@ func main() {
                 }
             }
             
-            // Collect Firewall
+            // Collect Firewall Rules (existing raw text)
             if fw, err := fwCol.Collect(); err == nil {
                 if err := senderClient.SendFirewall(fw); err != nil {
                     log.Printf("Failed to send firewall: %v", err)
+                }
+            }
+
+            // Firewall Sync: Parse actual blocked IPs from iptables and sync to server
+            if blockedIPs, err := fwCol.CollectBlockedIPs(); err == nil {
+                if err := senderClient.SendFirewallSync(blockedIPs); err != nil {
+                    log.Printf("Failed to sync blocked IPs: %v", err)
+                } else if len(blockedIPs) > 0 {
+                    log.Printf(">> Synced %d blocked IPs to server", len(blockedIPs))
+                }
+            } else {
+                log.Printf("Failed to collect blocked IPs: %v", err)
+            }
+        }
+    }()
+
+    // Command Poll: Check for pending commands from server every 10s
+    cmdTicker := time.NewTicker(10 * time.Second)
+    defer cmdTicker.Stop()
+
+    go func() {
+        for range cmdTicker.C {
+            cmds, err := senderClient.FetchCommands()
+            if err != nil {
+                // Silent fail - server may be unreachable
+                continue
+            }
+
+            for _, cmd := range cmds {
+                log.Printf(">> Executing command: %s on IP %s", cmd.Action, cmd.TargetIP)
+                output, execErr := fwCol.ExecuteIPTablesCommand(cmd.Action, cmd.TargetIP)
+                
+                status := "completed"
+                if execErr != nil {
+                    status = "failed"
+                    output = execErr.Error()
+                    log.Printf(">> Command FAILED: %s", output)
+                } else {
+                    log.Printf(">> Command SUCCESS: %s %s", cmd.Action, cmd.TargetIP)
+                }
+
+                // Acknowledge
+                if err := senderClient.AckCommand(cmd.ID, status, output); err != nil {
+                    log.Printf("Failed to ack command %s: %v", cmd.ID, err)
                 }
             }
         }

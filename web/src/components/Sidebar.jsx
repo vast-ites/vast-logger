@@ -45,6 +45,7 @@ export const Sidebar = () => {
                     <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" />
                     <SidebarItem icon={Activity} label="Services" path="/services" />
                     <SidebarItem icon={ScrollText} label="Logs" path="/logs" />
+                    <SidebarItem icon={Shield} label="IP Intelligence" path="/ip-intelligence" />
                 </div>
 
                 <div className="mb-6">
