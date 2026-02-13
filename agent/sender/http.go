@@ -133,3 +133,73 @@ func (c *Client) SendFirewall(rules string) error {
     }
     return c.post("/ingest/firewall", data)
 }
+
+// --- Agent Command System ---
+
+type Command struct {
+    ID       string `json:"id"`
+    AgentID  string `json:"agent_id"`
+    Action   string `json:"action"`
+    TargetIP string `json:"target_ip"`
+    Status   string `json:"status"`
+}
+
+func (c *Client) get(endpoint string) (*http.Response, error) {
+    req, err := http.NewRequest("GET", c.BackendURL+endpoint, nil)
+    if err != nil {
+        return nil, err
+    }
+    req.Header.Set("Content-Type", "application/json")
+    if c.AgentSecret != "" {
+        req.Header.Set("X-Agent-Secret", c.AgentSecret)
+    }
+    return c.client.Do(req)
+}
+
+// FetchCommands polls the server for pending commands assigned to this agent.
+func (c *Client) FetchCommands() ([]Command, error) {
+    resp, err := c.get("/agent/commands?agent_id=" + c.Hostname)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+
+    var result struct {
+        Commands []Command `json:"commands"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+        return nil, err
+    }
+    return result.Commands, nil
+}
+
+// AckCommand reports command execution result back to the server.
+func (c *Client) AckCommand(id, status, output string) error {
+    payload := map[string]interface{}{
+        "id":     id,
+        "status": status,
+        "output": output,
+    }
+    data, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+    return c.post("/agent/commands/ack", data)
+}
+
+// SendFirewallSync sends the list of actually-blocked IPs from iptables to the server.
+func (c *Client) SendFirewallSync(blockedIPs []string) error {
+    if blockedIPs == nil {
+        blockedIPs = []string{}
+    }
+    payload := map[string]interface{}{
+        "host":        c.Hostname,
+        "blocked_ips": blockedIPs,
+    }
+    data, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+    return c.post("/ingest/firewall-sync", data)
+}
+

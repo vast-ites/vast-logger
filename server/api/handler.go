@@ -420,6 +420,9 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             userRoutes.GET("/services/mysql/status", h.HandleGetMySQLStatus)
             userRoutes.GET("/services/mysql/slow-queries", h.HandleGetMySQLSlowQueries)
             userRoutes.GET("/services/mysql/connections", h.HandleGetMySQLConnections)
+
+            // Blocked IPs list (for IP Intelligence quick-block panel)
+            userRoutes.GET("/blocked-ips", h.HandleGetBlockedIPs)
         }
 
         // Admin endpoints (always require auth when AUTH_ENABLED=true)
@@ -528,6 +531,51 @@ func (h *IngestionHandler) HandleIngestFirewall(c *gin.Context) {
          return
     }
     c.Status(http.StatusAccepted)
+}
+
+// HandleIngestFirewallSync receives the list of actually-blocked IPs from an agent
+// and syncs the blocked_ips table to match reality.
+func (h *IngestionHandler) HandleIngestFirewallSync(c *gin.Context) {
+    var req struct {
+        Host       string   `json:"host"`
+        BlockedIPs []string `json:"blocked_ips"`
+    }
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    if req.Host == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "host required"})
+        return
+    }
+
+    if err := h.Logs.SyncBlockedIPs(req.Host, req.BlockedIPs); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"synced": len(req.BlockedIPs)})
+}
+
+// HandleGetBlockedIPs returns all currently blocked IPs for a given agent
+func (h *IngestionHandler) HandleGetBlockedIPs(c *gin.Context) {
+    agentID := c.Query("agent_id")
+    if agentID == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "agent_id required"})
+        return
+    }
+
+    ips, err := h.Logs.GetBlockedIPs(agentID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    if ips == nil {
+        ips = []map[string]interface{}{}
+    }
+    c.JSON(http.StatusOK, gin.H{"blocked_ips": ips, "count": len(ips)})
 }
 
 func (h *IngestionHandler) HandleGetProcesses(c *gin.Context) {
