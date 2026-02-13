@@ -7,14 +7,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/datavast/datavast/server/api"
-	"github.com/datavast/datavast/server/auth"
 	"github.com/datavast/datavast/server/alert"
-	"github.com/datavast/datavast/server/storage"
+	"github.com/datavast/datavast/server/api"
+	"github.com/datavast/datavast/server/api/ip_intelligence"
+	"github.com/datavast/datavast/server/auth"
 	"github.com/datavast/datavast/server/geoip"
+	"github.com/datavast/datavast/server/storage"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
-    "github.com/gin-contrib/static"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 )
 
@@ -75,21 +76,21 @@ func main() {
 		log.Fatalf("❌ ClickHouse connection failed: %v", err)
 	}
 
-    // 3. Load Persistent Config
-    config := storage.NewConfigStore("server-config.json")
-    authMgr := auth.NewAuthManager(config)
-    alertMgr := alert.NewAlertService(config, clickh)
+	// 3. Load Persistent Config
+	config := storage.NewConfigStore("server-config.json")
+	authMgr := auth.NewAuthManager(config)
+	alertMgr := alert.NewAlertService(config, clickh)
 
-    // Initialize GeoIP
-    if err := geoip.GetInstance().Initialize("GeoLite2-City.mmdb"); err != nil {
-        log.Printf("[WARNING] GeoIP init failed (maps will be empty): %v", err)
-    } else {
-        log.Println("🌍 GeoIP Service Initialized")
-    }
+	// Initialize GeoIP
+	if err := geoip.GetInstance().Initialize("GeoLite2-City.mmdb"); err != nil {
+		log.Printf("[WARNING] GeoIP init failed (maps will be empty): %v", err)
+	} else {
+		log.Println("🌍 GeoIP Service Initialized")
+	}
 
 	// 3. API Setup
 	r := gin.Default()
-	
+
 	// Enable Gzip compression
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
@@ -105,23 +106,46 @@ func main() {
 	handler := &api.IngestionHandler{
 		Metrics: influx,
 		Logs:    clickh,
-        Config:  config,
-        Auth:    authMgr,
-        Alerts:  alertMgr,
+		Config:  config,
+		Auth:    authMgr,
+		Alerts:  alertMgr,
 	}
 	api.SetupRoutes(r, handler)
 
-    // Serve Frontend (Static Files)
-    // accessible at root "/"
-    r.Use(static.Serve("/", static.LocalFile("./dist", true)))
-    
-    // SPA Fallback: For React Router paths that don't match API or static files
-    r.NoRoute(func(c *gin.Context) {
-        // Avoid hijacking API 404s if possible, but for simplicity:
-        // Only serve index.html if it looks like a page request? 
-        // Actually, typical SPA fallback serves index.html for everything non-api.
-        c.File("./dist/index.html")
-    })
+	// Phase 43: IP Intelligence Routes
+	ipHandler := ip_intelligence.NewIPHandler(clickh)
+	v1 := r.Group("/api/v1")
+	ipRoutes := v1.Group("/ip")
+	// Reuse OptionalAuth from api package? No, it's internal.
+	// We should expose it or replicate logic.
+	// For now, let's assume we need to mount these inside handler.go or duplicate auth middleware.
+	// Better approach: Pass r to a SetupIPRoutes function.
+
+	// Quick inline mount for now to keep it simple
+	// Specific routes MUST come before wildcard /:ip route
+	ipRoutes.POST("/block", ipHandler.BlockIP)
+	ipRoutes.POST("/unblock", ipHandler.UnblockIP)
+	ipRoutes.GET("/:ip", ipHandler.GetIPDetails)
+
+	// Agent Command Dispatch (agents poll these)
+	agentRoutes := v1.Group("/agent")
+	agentRoutes.GET("/commands", ipHandler.GetPendingCommands)
+	agentRoutes.POST("/commands/ack", ipHandler.AckCommand)
+
+	// Firewall Sync (agent pushes actual iptables state)
+	v1.POST("/ingest/firewall-sync", handler.HandleIngestFirewallSync)
+
+	// Serve Frontend (Static Files)
+	// accessible at root "/"
+	r.Use(static.Serve("/", static.LocalFile("./dist", true)))
+
+	// SPA Fallback: For React Router paths that don't match API or static files
+	r.NoRoute(func(c *gin.Context) {
+		// Avoid hijacking API 404s if possible, but for simplicity:
+		// Only serve index.html if it looks like a page request?
+		// Actually, typical SPA fallback serves index.html for everything non-api.
+		c.File("./dist/index.html")
+	})
 
 	// 3. Start
 	log.Println(">> Ingestion API listening on :8080")

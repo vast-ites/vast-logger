@@ -17,6 +17,7 @@ import { Storage } from './pages/Storage';
 import { NetworkPage } from './pages/Network';
 import { Alerts } from './pages/Alerts';
 import Connections from './pages/Connections';
+import IpIntelligence from './pages/IpIntelligence';
 
 import { HostProvider } from './contexts/HostContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -48,6 +49,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Logs />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="ip-intelligence"
+                element={
+                  <PrivateRoute>
+                    <IpIntelligence />
                   </PrivateRoute>
                 }
               />
