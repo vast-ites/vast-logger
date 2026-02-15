@@ -6,6 +6,7 @@ export const Alerts = () => {
     const [rules, setRules] = useState([]);
     const [channels, setChannels] = useState([]);
     const [loading, setLoading] = useState(true);
+    const role = localStorage.getItem('role');
 
     const [showRuleModal, setShowRuleModal] = useState(false);
     const [showChannelModal, setShowChannelModal] = useState(false);
@@ -130,11 +131,13 @@ export const Alerts = () => {
             {/* Rules Content */}
             {activeTab === 'rules' && (
                 <div className="space-y-4">
-                    <div className="flex justify-end">
-                        <button onClick={() => { setEditingRuleId(null); setNewRule({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true }); setShowRuleModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition text-sm font-semibold">
-                            <Plus size={16} /> Create Rule
-                        </button>
-                    </div>
+                    {role === 'admin' && (
+                        <div className="flex justify-end">
+                            <button onClick={() => { setEditingRuleId(null); setNewRule({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true }); setShowRuleModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition text-sm font-semibold">
+                                <Plus size={16} /> Create Rule
+                            </button>
+                        </div>
+                    )}
 
                     <div className="grid gap-4">
                         {rules.map(rule => (
@@ -142,9 +145,15 @@ export const Alerts = () => {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-bold text-lg text-cyber-text">{rule.name}</h3>
-                                        <button onClick={() => handleToggleRule(rule.id)} className={`px-2 py-0.5 text-[10px] rounded cursor-pointer hover:opacity-80 transition ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-cyber-gray/20 text-cyber-muted'}`}>
-                                            {rule.enabled ? 'ENABLED' : 'DISABLED'}
-                                        </button>
+                                        {role === 'admin' ? (
+                                            <button onClick={() => handleToggleRule(rule.id)} className={`px-2 py-0.5 text-[10px] rounded cursor-pointer hover:opacity-80 transition ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-cyber-gray/20 text-cyber-muted'}`}>
+                                                {rule.enabled ? 'ENABLED' : 'DISABLED'}
+                                            </button>
+                                        ) : (
+                                            <span className={`px-2 py-0.5 text-[10px] rounded ${rule.enabled ? 'bg-green-500/20 text-green-400' : 'bg-cyber-gray/20 text-cyber-muted'}`}>
+                                                {rule.enabled ? 'ENABLED' : 'DISABLED'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="text-sm text-gray-500 mt-1 font-mono font-medium">
                                         if <span className="text-cyan-600 dark:text-cyan-400 font-bold">{rule.metric}</span> {rule.operator} <span className="text-amber-600 dark:text-amber-400 font-bold">{rule.threshold}</span> on <span className="text-violet-600 dark:text-violet-400 font-bold">{rule.host}</span>
@@ -159,22 +168,24 @@ export const Alerts = () => {
                                                     <div key={host} className="flex items-center gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-500">
                                                         <VolumeX size={10} />
                                                         <span>Silenced on <b>{host}</b> until {new Date(expire).toLocaleTimeString()}</span>
-                                                        <button onClick={() => handleUnsilence(rule.id, host)} className="hover:text-white"><X size={10} /></button>
+                                                        {role === 'admin' && <button onClick={() => handleUnsilence(rule.id, host)} className="hover:text-white"><X size={10} /></button>}
                                                     </div>
                                                 ))}
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => { setSelectedRule(rule); setSilenceHost(rule.host === '*' ? '' : rule.host); setShowSilenceModal(true); }}
-                                        className="p-2 bg-cyber-gray/5 hover:bg-cyber-gray/10 rounded text-amber-500 hover:text-amber-600 transition-colors" title="Silence Rule"
-                                    >
-                                        <VolumeX size={18} />
-                                    </button>
-                                    <button onClick={() => handleEditRule(rule)} className="p-2 bg-cyber-gray/5 hover:bg-cyan-500/10 rounded text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors" title="Edit Rule"><Pencil size={18} /></button>
-                                    <button onClick={() => handleDeleteRule(rule.id)} className="p-2 bg-cyber-gray/5 hover:bg-red-500/10 rounded text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 transition-colors" title="Delete Rule"><Trash2 size={18} /></button>
-                                </div>
+                                {role === 'admin' && (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => { setSelectedRule(rule); setSilenceHost(rule.host === '*' ? '' : rule.host); setShowSilenceModal(true); }}
+                                            className="p-2 bg-cyber-gray/5 hover:bg-cyber-gray/10 rounded text-amber-500 hover:text-amber-600 transition-colors" title="Silence Rule"
+                                        >
+                                            <VolumeX size={18} />
+                                        </button>
+                                        <button onClick={() => handleEditRule(rule)} className="p-2 bg-cyber-gray/5 hover:bg-cyan-500/10 rounded text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 transition-colors" title="Edit Rule"><Pencil size={18} /></button>
+                                        <button onClick={() => handleDeleteRule(rule.id)} className="p-2 bg-cyber-gray/5 hover:bg-red-500/10 rounded text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 transition-colors" title="Delete Rule"><Trash2 size={18} /></button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {rules.length === 0 && !loading && <div className="text-center text-gray-500 py-10">No alert rules defined. Creates one to get started.</div>}
@@ -185,11 +196,13 @@ export const Alerts = () => {
             {/* Channels Content */}
             {activeTab === 'channels' && (
                 <div className="space-y-4">
-                    <div className="flex justify-end">
-                        <button onClick={() => setShowChannelModal(true)} className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded transition text-sm font-semibold">
-                            <Plus size={16} /> Add Channel
-                        </button>
-                    </div>
+                    {role === 'admin' && (
+                        <div className="flex justify-end">
+                            <button onClick={() => setShowChannelModal(true)} className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded transition text-sm font-semibold">
+                                <Plus size={16} /> Add Channel
+                            </button>
+                        </div>
+                    )}
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         {channels.map(ch => (
                             <div key={ch.id} className="glass-panel p-4 border border-cyber-gray/20 rounded-lg">
@@ -199,7 +212,7 @@ export const Alerts = () => {
                                         <div className="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-1 uppercase">{ch.type}</div>
                                         <div className="text-sm text-gray-500 mt-2 break-all">{ch.config.url || ch.config.email}</div>
                                     </div>
-                                    <button onClick={() => handleDeleteChannel(ch.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>
+                                    {role === 'admin' && <button onClick={() => handleDeleteChannel(ch.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>}
                                 </div>
                             </div>
                         ))}

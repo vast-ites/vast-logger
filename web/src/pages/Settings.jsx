@@ -28,12 +28,29 @@ const Settings = () => {
 
     // Load settings on mount
     React.useEffect(() => {
-        fetch('/api/v1/settings')
-            .then(res => res.json())
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        fetch('/api/v1/settings', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(res => {
+                if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    throw new Error("Unauthorized");
+                }
+                return res.json();
+            })
             .then(data => {
-                if (data) {
-                    setRetention(data.retention_days);
-                    setDdosThreshold(data.ddos_threshold);
+                if (data && !data.error) {
+                    setRetention(data.retention_days || 7);
+                    setDdosThreshold(data.ddos_threshold || 50);
                     setEmailAlerts(data.email_alerts || false);
                     setAlertEmails(data.alert_emails || []);
                     setWebhookURLs(data.webhook_urls || []);
@@ -42,8 +59,8 @@ const Settings = () => {
                     setSmtpUser(data.smtp_user || "");
                     setSmtpPassword(data.smtp_password || "");
 
-                    setApiKey(data.system_api_key);
-                    setMfaEnabled(data.mfa_enabled);
+                    setApiKey(data.system_api_key || "");
+                    setMfaEnabled(data.mfa_enabled || false);
                 }
             })
             .catch(err => console.error("Failed to load settings:", err));
@@ -446,9 +463,14 @@ const Settings = () => {
                     )}
                 </div>
 
+                {/* User Governance */}
+                {/* Moved to separate page /users */}
+
             </div>
         </div>
     );
 };
+
+// End of Settings Component
 
 export default Settings;
