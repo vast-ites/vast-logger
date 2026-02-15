@@ -18,6 +18,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func connectWithRetry(dsn string, maxRetries int) (*storage.LogStore, error) {
@@ -43,6 +44,14 @@ func connectWithRetry(dsn string, maxRetries int) (*storage.LogStore, error) {
 }
 
 func main() {
+	// Load .env file from parent directory (../.env) if it exists
+	if err := godotenv.Load("../.env"); err != nil {
+		// Try loading from current directory
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println("⚠️  No .env file found (this is OK if using environment variables)")
+		}
+	}
+
 	log.Println("🚀 DataVast Backend Starting...")
 
 	// Security warnings

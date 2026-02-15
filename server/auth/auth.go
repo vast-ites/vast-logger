@@ -1,6 +1,7 @@
 package auth
 
 import (
+    "os"
     "time"
     "math/rand"
     
@@ -30,8 +31,16 @@ func NewAuthManager(cfg *storage.ConfigStore) *AuthManager {
     mgr := &AuthManager{Config: cfg}
     // Ensure admin password exists
     c := cfg.Get()
-    if c.AdminPassword == "" {
-        // Generate random password
+    
+    // Priority 1: Use environment variable if set
+    if envPass := os.Getenv("ADMIN_PASSWORD"); envPass != "" {
+        if c.AdminPassword != envPass {
+            c.AdminPassword = envPass
+            cfg.Save(c)
+            println("\n [SECURITY] ✅ Admin password loaded from .env file")
+        }
+    } else if c.AdminPassword == "" {
+        // Priority 2: Generate random password if not in env or config
         newPass := GenerateRandomString(12)
         c.AdminPassword = newPass
         cfg.Save(c)
