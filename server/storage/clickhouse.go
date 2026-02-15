@@ -307,17 +307,57 @@ func NewLogStore(dsn string) (*LogStore, error) {
 		return nil, fmt.Errorf("failed to create ip_activity_mv: %w", err)
 	}
 
-	// [Fix] Apply Retention Policy to System Tables to prevent Disk Exhaustion
-	// We use standard SQL execution. Errors here (e.g. if table doesn't exist) should be logged but not fatal.
-	systemTables := []string{"text_log", "trace_log", "metric_log", "query_log", "part_log"}
-	for _, table := range systemTables {
-		// Context: system tables might not support TTL modification if they are not MergeTree,
-		// but default ClickHouse config usually uses MergeTree for these.
-		// We ignore errors to prevent startup failure if permissions are strict.
-		_ = conn.Exec(context.Background(), fmt.Sprintf("ALTER TABLE system.%s MODIFY TTL event_time + INTERVAL 3 DAY", table))
+	store := &LogStore{conn: conn}
+
+	// Apply retention policy at startup (default 7 days for app tables, 3 days for system tables)
+	store.ApplyRetentionPolicy(7)
+
+	return store, nil
+}
+
+// ApplyRetentionPolicy applies TTL-based data retention to both application and system tables.
+// `days` controls app table retention (logs, connections, etc.).
+// System tables always get a 3-day TTL to prevent disk exhaustion.
+// This is called at startup and whenever the user changes the Data Retention setting in the UI.
+func (s *LogStore) ApplyRetentionPolicy(days int) {
+	if days < 1 {
+		days = 7 // Safety fallback
 	}
 
-	return &LogStore{conn: conn}, nil
+	log.Printf("[RETENTION] Applying data retention policy: %d days for app tables, 3 days for system tables", days)
+
+	// 1. Application tables — use configured retention_days
+	appTables := []struct {
+		Table  string
+		Column string
+	}{
+		{"datavast.logs", "timestamp"},
+		{"datavast.connections", "timestamp"},
+		{"datavast.processes", "timestamp"},
+		{"datavast.firewall", "timestamp"},
+		{"datavast.access_logs", "timestamp"},
+	}
+	for _, t := range appTables {
+		err := s.conn.Exec(context.Background(), fmt.Sprintf(
+			"ALTER TABLE %s MODIFY TTL %s + INTERVAL %d DAY", t.Table, t.Column, days))
+		if err != nil {
+			log.Printf("[RETENTION] Warning: could not set TTL on %s: %v", t.Table, err)
+		} else {
+			log.Printf("[RETENTION] ✅ %s → %d day retention", t.Table, days)
+		}
+	}
+
+	// 2. ClickHouse system tables — fixed 3-day TTL to prevent disk exhaustion
+	systemTables := []string{
+		"text_log", "trace_log", "metric_log", "query_log", "part_log",
+		"processors_profile_log", "asynchronous_metric_log",
+		"background_schedule_pool_log", "error_log",
+	}
+	for _, table := range systemTables {
+		_ = s.conn.Exec(context.Background(), fmt.Sprintf(
+			"ALTER TABLE system.%s MODIFY TTL event_time + INTERVAL 3 DAY", table))
+	}
+	log.Printf("[RETENTION] ✅ System tables → 3 day retention")
 }
 
 // Query executes a query with parameters

@@ -723,6 +723,11 @@ func (h *IngestionHandler) HandleSaveSettings(c *gin.Context) {
         return
     }
 
+    // Apply retention policy to ClickHouse tables immediately
+    if req.RetentionDays > 0 {
+        go h.Logs.ApplyRetentionPolicy(req.RetentionDays)
+    }
+
     c.Status(http.StatusAccepted)
 }
 
