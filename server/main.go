@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/datavast/datavast/server/alert"
@@ -17,6 +18,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func connectWithRetry(dsn string, maxRetries int) (*storage.LogStore, error) {
@@ -42,6 +44,14 @@ func connectWithRetry(dsn string, maxRetries int) (*storage.LogStore, error) {
 }
 
 func main() {
+	// Load .env file from parent directory (../.env) if it exists
+	if err := godotenv.Load("../.env"); err != nil {
+		// Try loading from current directory
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println("⚠️  No .env file found (this is OK if using environment variables)")
+		}
+	}
+
 	log.Println("🚀 DataVast Backend Starting...")
 
 	// Security warnings
@@ -140,15 +150,26 @@ func main() {
 	// Firewall Sync (agent pushes actual iptables state)
 	v1.POST("/ingest/firewall-sync", handler.HandleIngestFirewallSync)
 
+	// Cache-Control: prevent browsers from caching index.html (stale frontend builds)
+	r.Use(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		// Hashed assets (js/css with hash in filename) can be cached forever
+		// Everything else (HTML, SPA routes) must not be cached
+		if path == "/" || path == "/index.html" || !strings.Contains(path, ".") {
+			c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+			c.Header("Pragma", "no-cache")
+			c.Header("Expires", "0")
+		}
+		c.Next()
+	})
+
 	// Serve Frontend (Static Files)
 	// accessible at root "/"
 	r.Use(static.Serve("/", static.LocalFile("./dist", true)))
 
 	// SPA Fallback: For React Router paths that don't match API or static files
 	r.NoRoute(func(c *gin.Context) {
-		// Avoid hijacking API 404s if possible, but for simplicity:
-		// Only serve index.html if it looks like a page request?
-		// Actually, typical SPA fallback serves index.html for everything non-api.
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 		c.File("./dist/index.html")
 	})
 

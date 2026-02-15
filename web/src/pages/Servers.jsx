@@ -10,6 +10,7 @@ export const Servers = () => {
     const [agents, setAgents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const role = localStorage.getItem('role');
 
     const fetchAgents = async () => {
         try {
@@ -111,12 +112,14 @@ export const Servers = () => {
                         Monitor remote servers via Vast Agent
                     </p>
                 </div>
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20"
-                >
-                    <Plus size={18} /> Connect Server
-                </button>
+                {role === 'admin' && (
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg shadow-blue-500/20"
+                    >
+                        <Plus size={18} /> Connect Server
+                    </button>
+                )}
             </div>
 
             {/* Overview Stats */}
@@ -156,13 +159,15 @@ export const Servers = () => {
                                 <div className="group/title relative">
                                     <h3 className="text-lg font-bold text-cyber-text flex items-center gap-2">
                                         {agent.hostname}
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); deleteHost(agent.hostname); }}
-                                            className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-red-500/20 rounded text-red-500 transition-all"
-                                            title="Remove Node"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                        {role === 'admin' && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deleteHost(agent.hostname); }}
+                                                className="opacity-0 group-hover/title:opacity-100 p-1 hover:bg-red-500/20 rounded text-red-500 transition-all"
+                                                title="Remove Node"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
                                     </h3>
                                     <p className="text-xs text-cyber-muted font-mono">{agent.platform}</p>
                                 </div>
