@@ -1,12 +1,19 @@
-import React from 'react';
-import { Search, Bell, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Bell, HelpCircle, LogOut, User, Settings, Shield } from 'lucide-react';
 import { useHost } from '../contexts/HostContext';
+import { useNavigate } from 'react-router-dom';
 
 export const TopBar = ({ onAddSource }) => {
     const { selectedHost, setSelectedHost, hosts, refreshInterval, setRefreshInterval } = useHost();
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const navigate = useNavigate();
+
+    const role = localStorage.getItem('role');
+    const username = localStorage.getItem('username') || 'Operator';
+    const initials = username.substring(0, 2).toUpperCase();
 
     return (
-        <header className="h-16 border-b border-cyber-gray/20 flex items-center justify-between px-6 glass-panel rounded-none border-t-0 border-l-0 border-r-0 z-10">
+        <header className="h-16 border-b border-cyber-gray/20 flex items-center justify-between px-6 glass-panel rounded-none border-t-0 border-l-0 border-r-0 z-[9999] relative">
             {/* Search Bar */}
             <div className="flex-1 max-w-xl">
                 <div className="relative group">
@@ -66,17 +73,19 @@ export const TopBar = ({ onAddSource }) => {
                     </select>
                 </div>
 
-                {/* Actions */}
-                <button
-                    onClick={onAddSource}
-                    className="px-3 py-1.5 bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20 rounded text-xs font-bold tracking-wider hover:bg-cyber-cyan/20 hover:border-cyber-cyan/40 transition-all shadow-[0_0_10px_rgba(var(--cyber-cyan),0.1)]"
-                >
-                    + ADD SOURCE
-                </button>
+                {/* Actions - Only visible to Admins */}
+                {role === 'admin' && (
+                    <button
+                        onClick={onAddSource}
+                        className="px-3 py-1.5 bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20 rounded text-xs font-bold tracking-wider hover:bg-cyber-cyan/20 hover:border-cyber-cyan/40 transition-all shadow-[0_0_10px_rgba(var(--cyber-cyan),0.1)]"
+                    >
+                        + ADD SOURCE
+                    </button>
+                )}
 
                 <div className="w-px h-6 bg-cyber-gray/20 mx-2"></div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 relative">
                     <button className="text-cyber-muted hover:text-cyber-text transition-colors relative">
                         <Bell size={18} />
                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
@@ -84,9 +93,74 @@ export const TopBar = ({ onAddSource }) => {
                     <button className="text-cyber-muted hover:text-cyber-text transition-colors">
                         <HelpCircle size={18} />
                     </button>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyber-gray to-cyber-black border border-cyber-gray/20 flex items-center justify-center text-xs font-bold text-cyber-muted">
-                        OP
-                    </div>
+
+                    {/* User Profile Dropdown Trigger */}
+                    <button
+                        onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        className={`w-8 h-8 rounded-full bg-gradient-to-br from-cyber-gray to-cyber-black border border-cyber-gray/20 flex items-center justify-center text-xs font-bold text-cyber-muted hover:border-cyber-cyan hover:text-cyber-cyan hover:shadow-[0_0_10px_rgba(var(--cyber-cyan),0.3)] transition-all ${showProfileMenu ? 'border-cyber-cyan text-cyber-cyan shadow-[0_0_10px_rgba(var(--cyber-cyan),0.3)]' : ''}`}
+                    >
+                        {initials}
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {showProfileMenu && (
+                        <div className="absolute top-12 right-0 w-64 bg-cyber-black/95 backdrop-blur-xl border border-cyber-gray/30 rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.8)] z-[99999] text-left pointer-events-auto isolate">
+                            {/* User Header */}
+                            <div className="p-4 border-b border-cyber-gray/20 bg-cyber-gray/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-cyber-gray/20 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan font-bold text-sm shadow-[0_0_10px_rgba(var(--cyber-cyan),0.1)]">
+                                        {initials}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-cyber-text truncate font-display tracking-wide">{username}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            {role === 'admin' ? <Shield size={10} className="text-red-400" /> : <User size={10} className="text-blue-400" />}
+                                            <p className="text-[10px] text-cyber-muted font-mono uppercase tracking-wider">{role || 'Viewer'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Menu Items */}
+                            <div className="p-1">
+                                {role === 'admin' && (
+                                    <button
+                                        onClick={() => {
+                                            navigate('/settings');
+                                            setShowProfileMenu(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2.5 text-xs font-mono text-cyber-muted hover:text-cyber-cyan hover:bg-cyber-cyan/10 rounded-md transition-all flex items-center gap-3 group"
+                                    >
+                                        <Settings size={14} className="group-hover:rotate-90 transition-transform duration-500" />
+                                        SETTINGS
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setShowProfileMenu(false);
+                                        alert("Feature coming soon: Integration with detailed support documentation.");
+                                    }}
+                                    className="w-full text-left px-3 py-2.5 text-xs font-mono text-cyber-muted hover:text-cyber-cyan hover:bg-cyber-cyan/10 rounded-md transition-all flex items-center gap-3"
+                                >
+                                    <HelpCircle size={14} />
+                                    SUPPORT
+                                </button>
+                            </div>
+
+                            {/* Footer / Logout */}
+                            <div className="p-1 border-t border-cyber-gray/20 bg-red-900/5">
+                                <button
+                                    onClick={() => {
+                                        localStorage.clear();
+                                        window.location.href = '/login';
+                                    }}
+                                    className="mt-4 w-full flex items-center justify-center gap-2 p-2 rounded bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-all text-xs font-bold border border-red-900/30"
+                                >
+                                    <LogOut size={14} /> LOGOUT
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>
