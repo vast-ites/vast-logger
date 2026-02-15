@@ -81,6 +81,11 @@ func main() {
 	authMgr := auth.NewAuthManager(config)
 	alertMgr := alert.NewAlertService(config, clickh)
 
+	// Apply configured retention policy to ClickHouse
+	if retDays := config.Get().RetentionDays; retDays > 0 {
+		clickh.ApplyRetentionPolicy(retDays)
+	}
+
 	// Initialize GeoIP
 	if err := geoip.GetInstance().Initialize("GeoLite2-City.mmdb"); err != nil {
 		log.Printf("[WARNING] GeoIP init failed (maps will be empty): %v", err)
