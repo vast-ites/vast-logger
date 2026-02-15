@@ -48,6 +48,24 @@ type SystemConfig struct {
     MFASecret      string    `json:"mfa_secret"`     
     AgentSecrets   map[string]string `json:"agent_secrets"` 
     IgnoredHosts   []string `json:"ignored_hosts"` 
+
+    Users  []User        `json:"users"`
+    Groups []ServerGroup `json:"groups"`
+}
+
+type User struct {
+    Username     string   `json:"username"`
+    Password     string   `json:"password"` // Plain or Hashed
+    Role         string   `json:"role"`     // "admin", "viewer"
+    AllowedHosts []string `json:"allowed_hosts"`
+    Groups       []string `json:"groups"`   // Group IDs
+}
+
+type ServerGroup struct {
+    ID    string   `json:"id"`
+    Name  string   `json:"name"`
+    Role  string   `json:"role"`
+    Hosts []string `json:"hosts"`
 }
 
 type ConfigStore struct {

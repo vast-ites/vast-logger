@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, AlertTriangle } from 'lucide-react';
 
 const Login = () => {
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -17,13 +18,14 @@ const Login = () => {
             const res = await fetch('/api/v1/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password }),
+                body: JSON.stringify({ username, password }),
             });
 
             if (res.ok) {
                 const data = await res.json();
                 localStorage.setItem('token', data.token);
-                localStorage.setItem('role', 'admin');
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('username', data.username);
                 // Force reload to ensure HostContext picks up the new token immediately
                 window.location.href = '/';
             } else {
@@ -54,7 +56,21 @@ const Login = () => {
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div className="space-y-2">
                         <label className="text-xs font-mono text-cyber-cyan flex items-center gap-2">
-                            <Lock size={12} /> ENTER PASSPHRASE
+                            <Shield size={12} /> USERNAME
+                        </label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full bg-cyber-black/50 border border-cyber-gray rounded p-3 text-cyber-text focus:border-cyber-cyan focus:outline-none focus:ring-1 focus:ring-cyber-cyan font-mono transition-all"
+                            placeholder="admin"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-mono text-cyber-cyan flex items-center gap-2">
+                            <Lock size={12} /> PASSWORD
                         </label>
                         <input
                             type="password"
@@ -62,7 +78,6 @@ const Login = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full bg-cyber-black/50 border border-cyber-gray rounded p-3 text-cyber-text focus:border-cyber-cyan focus:outline-none focus:ring-1 focus:ring-cyber-cyan font-mono transition-all"
                             placeholder="••••••••••••"
-                            autoFocus
                         />
                     </div>
 
@@ -77,7 +92,7 @@ const Login = () => {
                         type="submit"
                         disabled={loading}
                         className={`w-full py-3 px-4 rounded font-bold text-sm tracking-wider transition-all
-                            ${loading
+                        ${loading
                                 ? 'bg-cyber-gray/50 text-cyber-muted cursor-not-allowed'
                                 : 'bg-cyber-cyan text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,243,255,0.4)]'
                             }`}
