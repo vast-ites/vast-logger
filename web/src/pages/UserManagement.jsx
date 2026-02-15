@@ -4,47 +4,82 @@ import { Users, Server, Shield, Trash2, UserPlus, Folder, Edit, X, Check, Search
 /* HostSelector */
 const HostSelector = ({ onSelectionChange, initialSelected = [] }) => {
     const [availableHosts, setAvailableHosts] = useState([]);
-    const [selectedHosts, setSelectedHosts] = useState(initialSelected);
-    const [isOpen, setIsOpen] = useState(false);
+    const [selected, setSelected] = useState([...initialSelected]);
+    const [open, setOpen] = useState(false);
+    const wrapperRef = useRef(null);
 
-    useEffect(() => { setSelectedHosts(initialSelected); }, [initialSelected]);
+    useEffect(() => { setSelected([...initialSelected]); }, [JSON.stringify(initialSelected)]);
 
     useEffect(() => {
         fetch('/api/v1/hosts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
-            .then(res => res.ok ? res.json() : [])
-            .then(data => setAvailableHosts(Array.isArray(data) ? data.map(h => h.name || h.hostname || h) : []))
-            .catch(console.error);
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+                const hosts = Array.isArray(data) ? data.map(h => (typeof h === 'string' ? h : h.hostname || h.name || String(h))) : [];
+                setAvailableHosts(hosts);
+            })
+            .catch(() => setAvailableHosts([]));
     }, []);
 
-    const toggleHost = (host) => {
-        let newHosts;
-        if (host === '*') newHosts = selectedHosts.includes('*') ? [] : ['*'];
-        else {
-            const current = selectedHosts.filter(h => h !== '*');
-            if (selectedHosts.includes(host)) newHosts = current.filter(h => h !== host);
-            else newHosts = [...current, host];
-        }
-        setSelectedHosts(newHosts);
-        onSelectionChange(newHosts);
+    // Close on click outside
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const pick = (host) => {
+        setSelected(prev => {
+            let next;
+            if (host === '*') {
+                next = prev.includes('*') ? [] : ['*'];
+            } else {
+                const without = prev.filter(h => h !== '*');
+                next = without.includes(host) ? without.filter(h => h !== host) : [...without, host];
+            }
+            onSelectionChange(next);
+            return next;
+        });
     };
 
+    const label = selected.includes('*')
+        ? <span className="text-green-400 font-bold">ALL HOSTS (*)</span>
+        : selected.length === 0
+            ? <span className="text-gray-500">Select Hosts...</span>
+            : selected.length > 2
+                ? `${selected.length} hosts selected`
+                : selected.join(', ');
+
     return (
-        <div className="relative flex-1">
-            <div onClick={() => setIsOpen(!isOpen)} className="bg-cyber-black border border-cyber-dim rounded px-3 py-2 text-sm text-cyber-text h-10 flex items-center gap-2 cursor-pointer overflow-hidden whitespace-nowrap">
-                {selectedHosts.includes('*') ? <span className="text-green-400 font-bold">ALL HOSTS (*)</span> :
-                    selectedHosts.length === 0 ? <span className="text-gray-500">Select Hosts...</span> :
-                        selectedHosts.length > 2 ? `${selectedHosts.length} hosts selected` : selectedHosts.join(', ')}
+        <div className="relative flex-1" ref={wrapperRef}>
+            <div
+                onMouseDown={(e) => { e.preventDefault(); setOpen(o => !o); }}
+                className="bg-cyber-black border border-cyber-dim rounded px-3 py-2 text-sm text-cyber-text h-10 flex items-center gap-2 cursor-pointer overflow-hidden whitespace-nowrap select-none"
+            >
+                {label}
             </div>
-            {isOpen && (
-                <div className="absolute top-11 left-0 z-50 w-64 bg-gray-900 border border-cyber-cyan rounded shadow-xl p-2 max-h-60 overflow-y-auto">
-                    <div onClick={() => { setSelectedHosts([]); onSelectionChange([]); setIsOpen(false); }} className="px-2 py-1 hover:bg-white/10 cursor-pointer text-xs text-red-400 border-b border-white/10 mb-1">Clear Selection</div>
+            {open && (
+                <div className="absolute top-11 left-0 z-[9999] w-64 bg-gray-900 border border-cyber-cyan rounded shadow-xl p-2 max-h-60 overflow-y-auto">
+                    <div
+                        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setSelected([]); onSelectionChange([]); setOpen(false); }}
+                        className="px-2 py-1 hover:bg-white/10 cursor-pointer text-xs text-red-400 border-b border-white/10 mb-1 select-none"
+                    >Clear Selection</div>
                     {availableHosts.map(host => (
-                        <div key={host} onClick={() => toggleHost(host)} className={`px-2 py-1 cursor-pointer text-sm flex items-center justify-between hover:bg-white/10 ${selectedHosts.includes(host) ? 'text-cyber-cyan font-bold' : 'text-gray-300'}`}>
-                            {host} {selectedHosts.includes(host) && <span>✓</span>}
+                        <div
+                            key={host}
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); pick(host); }}
+                            className={`px-2 py-1 cursor-pointer text-sm flex items-center justify-between hover:bg-white/10 select-none ${selected.includes(host) ? 'text-cyber-cyan font-bold' : 'text-gray-300'}`}
+                        >
+                            {host} {selected.includes(host) && <span>✓</span>}
                         </div>
                     ))}
                     <div className="mt-2 pt-2 border-t border-white/10">
-                        <div onClick={() => toggleHost('*')} className={`px-2 py-1 cursor-pointer text-sm hover:bg-white/10 ${selectedHosts.includes('*') ? 'text-green-400 font-bold' : 'text-gray-400'}`}>ALL HOSTS (*)</div>
+                        <div
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); pick('*'); }}
+                            className={`px-2 py-1 cursor-pointer text-sm hover:bg-white/10 select-none ${selected.includes('*') ? 'text-green-400 font-bold' : 'text-gray-400'}`}
+                        >ALL HOSTS (*)</div>
                     </div>
                 </div>
             )}
