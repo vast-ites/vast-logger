@@ -52,7 +52,27 @@ docker-compose up -d
 ```
 *Wait ~15 seconds for databases to be ready.*
 
-### 2. Start Backend Server
+### 2. Configure Environment
+Create `.env` file with your credentials.
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit the file
+nano .env
+```
+
+**Important: Set your admin password in `.env` file:**
+```bash
+# Line 17 - Change this to your own password
+ADMIN_PASSWORD=your-secure-password-here
+```
+
+**Default credentials (if you don't change):**
+- **Username:** `admin`
+- **Password:** `admin123`
+
+### 3. Start Backend Server
 Runs on port `8080`. Connects to databases.
 ```bash
 cd server
@@ -61,7 +81,9 @@ go build -o datavast-server
 ./datavast-server
 ```
 
-### 3. Start Agent
+**✅ Server will automatically load credentials from `.env` file**
+
+### 4. Start Agent
 Runs as `root` to discover logs and metrics. Sends data to Server.
 ```bash
 cd agent
@@ -70,7 +92,7 @@ go build -o datavast-agent
 sudo ./datavast-agent
 ```
 
-### 4. Start Frontend Dashboard
+### 5. Start Frontend Dashboard
 Runs on port `5173`.
 ```bash
 cd web
@@ -78,9 +100,13 @@ npm install
 npm run dev
 ```
 
-### 5. Access the Platform
+### 6. Access the Platform
 Open your browser and navigate to:
 **http://localhost:5173**
+
+**Login with the credentials you set in Step 2:**
+- **Username:** `admin`
+- **Password:** (the one you set in `.env` file)
 
 ---
 
@@ -129,10 +155,17 @@ Open your browser and navigate to:
 ## 🔐 Authentication
 
 The platform uses a secure-by-default approach:
-- **Default Credentials**: `admin` / `admin`
+- **Credentials**: Set in `.env` file (`ADMIN_PASSWORD`)
+- **Default Username**: `admin`
+- **Default Password**: `admin123` (if you use the provided `.env` file as-is)
 - **Enforcement**: Public API endpoints require a valid JWT token.
-- **Bypass**: Set `AUTH_ENABLED=false` environment variable (NOT recommended for production).
+- **Disable Auth**: Set `AUTH_ENABLED=false` in `.env` (NOT recommended for production).
 - **Frontend**: Automatically handles token storage and injection in `HostContext`.
+
+**To change password:**
+1. Edit `/home/parag/vast/testing/.env`
+2. Update `ADMIN_PASSWORD=your-new-password`
+3. Restart the server
 
 ---
 
