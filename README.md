@@ -510,10 +510,6 @@ This project is proprietary software. All rights reserved.
 - [ ] Configurable connection thresholds with visual alarms
 - [ ] Dynamic retention controls for connection history
 
-#### Integrations
-- [ ] Kubernetes support
-- [ ] Cloud provider metrics (AWS, GCP, Azure)
-
 #### Security & Architecture
 - [ ] Extensible agent module loading
 - [ ] SSH brute-force detection
@@ -524,6 +520,10 @@ This project is proprietary software. All rights reserved.
 - [ ] Webhook URL masking (click-to-reveal)
 - [ ] Browser notification system
 - [ ] Mobile-native dashboard app
+
+#### Integrations
+- [ ] Kubernetes support
+- [ ] Cloud provider metrics (AWS, GCP, Azure)
 
 ---
 
