@@ -508,7 +508,6 @@ This project is proprietary software. All rights reserved.
 
 #### Connection Tracking Enhancements
 - [ ] Configurable connection thresholds with visual alarms
-- [ ] Dynamic retention controls for connection history in Settings
 
 #### Security & Architecture
 - [ ] Extensible agent module loading
