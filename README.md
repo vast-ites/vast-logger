@@ -53,24 +53,28 @@ docker-compose up -d
 *Wait ~15 seconds for databases to be ready.*
 
 ### 2. Configure Environment
-Create `.env` file with your credentials.
+Create a `.env` file in the project root with your credentials.
 ```bash
-# Copy the example file
-cp .env.example .env
-
-# Edit the file
 nano .env
 ```
 
-**Important: Set your admin password in `.env` file:**
+**Required environment variables:**
 ```bash
-# Line 17 - Change this to your own password
+# Authentication
+AUTH_ENABLED=true
 ADMIN_PASSWORD=your-secure-password-here
+JWT_SECRET=your-random-secret-key-here
+
+# Database
+INFLUX_TOKEN=your-influxdb-token
+# CLICKHOUSE_DSN=clickhouse://localhost:9000  (optional, uses default if unset)
 ```
 
-**Default credentials (if you don't change):**
+> **Note:** Passwords are automatically hashed with bcrypt on first startup. The `JWT_SECRET` is used to sign authentication tokens — if not set, a random one is generated (tokens won't survive server restarts).
+
+**Default credentials:**
 - **Username:** `admin`
-- **Password:** `admin123`
+- **Password:** (whatever you set in `ADMIN_PASSWORD`)
 
 ### 3. Start Backend Server
 Runs on port `8080`. Connects to databases.
@@ -145,27 +149,32 @@ Open your browser and navigate to:
 - Tailwind CSS for styling
 
 **Security**:
-- **Authentication**: JWT-based auth encapsulated in `OptionalAuth` middleware.
+- **Authentication**: JWT-based auth with bcrypt password hashing.
+- **Agent Auth**: API key authentication (`X-Agent-Secret`) for all ingestion endpoints.
 - **Default State**: Secure by default (`AUTH_ENABLED=true`).
-- **Authorization**: Role-based access control (RBAC) foundation.
+- **Authorization**: Role-based access control (RBAC) with scoped user accounts.
+- **CORS**: Strict origin allowlisting (no wildcard).
+- **Secrets**: JWT secret and database tokens loaded from environment variables.
+- **Randomness**: Cryptographically secure random generation (`crypto/rand`).
 - **Frontend Security**: Automatic token injection and session management.
 
 ---
 
-## 🔐 Authentication
+## 🔐 Authentication & Security
 
 The platform uses a secure-by-default approach:
-- **Credentials**: Set in `.env` file (`ADMIN_PASSWORD`)
-- **Default Username**: `admin`
-- **Default Password**: `admin123` (if you use the provided `.env` file as-is)
-- **Enforcement**: Public API endpoints require a valid JWT token.
+- **Password Hashing**: All passwords (admin and user) are hashed with **bcrypt** (cost factor 12). Plaintext passwords are automatically migrated to bcrypt on first startup.
+- **JWT Tokens**: Signed with a secret loaded from the `JWT_SECRET` environment variable.
+- **Agent Authentication**: All ingestion endpoints require a valid `X-Agent-Secret` header. Secrets are generated during agent enrollment.
+- **IP Intelligence**: Block/unblock and IP analysis routes require admin authentication.
+- **Enforcement**: API endpoints require a valid JWT token when `AUTH_ENABLED=true` (default).
 - **Disable Auth**: Set `AUTH_ENABLED=false` in `.env` (NOT recommended for production).
+- **User Accounts**: Create scoped viewer accounts with access limited to specific hosts.
 - **Frontend**: Automatically handles token storage and injection in `HostContext`.
 
 **To change password:**
-1. Edit the `.env` file in your project root
-2. Update `ADMIN_PASSWORD=your-new-password`
-3. Restart the server
+1. Edit the `.env` file: update `ADMIN_PASSWORD=your-new-password`
+2. Restart the server (the new password is automatically bcrypt-hashed)
 
 ---
 
@@ -179,21 +188,59 @@ The platform uses a secure-by-default approach:
    docker-compose -f docker-compose.yml up -d
    ```
 
-2. **Build Server**:
+2. **Configure Environment**:
    ```bash
-   cd server
-   go build -o server
-   ./server
+   sudo mkdir -p /opt/datavast
+   sudo tee /opt/datavast/.env << 'EOF'
+   AUTH_ENABLED=true
+   JWT_SECRET=$(openssl rand -hex 32)
+   INFLUX_TOKEN=your-influxdb-token
+   ADMIN_PASSWORD=your-secure-password
+   EOF
+   sudo chmod 600 /opt/datavast/.env
    ```
 
-3. **Build Frontend**:
+3. **Build & Deploy Server**:
+   ```bash
+   cd server
+   go build -o datavast-server
+   sudo cp datavast-server /opt/datavast/
+   ```
+
+   Create the server systemd service:
+   ```bash
+   sudo tee /etc/systemd/system/datavast-server.service << 'EOF'
+   [Unit]
+   Description=DataVast Server
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=root
+   WorkingDirectory=/opt/datavast
+   EnvironmentFile=/opt/datavast/.env
+   Environment=GIN_MODE=release
+   ExecStart=/opt/datavast/datavast-server
+   Restart=always
+   RestartSec=10
+
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+   
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now datavast-server
+   ```
+
+4. **Build Frontend**:
    ```bash
    cd web
    npm run build
-   # Serve dist/ with Nginx or copy to server
+   # The built-in server serves the frontend via gin-contrib/static
+   # Copy dist/ to the server's web/dist/ directory
    ```
 
-4. **Deploy Agent** (on each monitored host):
+5. **Deploy Agent** (on each monitored host):
    ```bash
    cd agent
    go build -o datavast-agent
@@ -204,26 +251,25 @@ The platform uses a secure-by-default approach:
    
    # Create systemd service
    sudo tee /etc/systemd/system/datavast-agent.service << 'EOF'
-[Unit]
-Description=DataVast Agent
-After=network.target
+   [Unit]
+   Description=DataVast Agent
+   After=network.target
 
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/datavast
-ExecStart=/opt/datavast/datavast-agent
-Restart=always
-RestartSec=10
+   [Service]
+   Type=simple
+   User=root
+   WorkingDirectory=/opt/datavast
+   ExecStart=/opt/datavast/datavast-agent
+   Restart=always
+   RestartSec=10
 
-[Install]
-WantedBy=multi-user.target
-EOF
+   [Install]
+   WantedBy=multi-user.target
+   EOF
    
    # Enable and start service
    sudo systemctl daemon-reload
-   sudo systemctl enable datavast-agent
-   sudo systemctl start datavast-agent
+   sudo systemctl enable --now datavast-agent
    ```
 
 ### Agent Configuration
@@ -253,14 +299,26 @@ Create `/opt/datavast/agent-config.json`:
 
 ### Environment Variables
 
-**Server**:
-- `CLICKHOUSE_ADDR` - ClickHouse address (default: localhost:9000)
-- `INFLUXDB_URL` - InfluxDB URL (default: http://localhost:8086)
-- `SERVER_PORT` - API port (default: 8080)
+**Server (Required)**:
+| Variable | Description | Default |
+|----------|-------------|--------|
+| `INFLUX_TOKEN` | InfluxDB authentication token | *(required, fatal if missing)* |
+| `AUTH_ENABLED` | Enable JWT authentication | `true` |
+| `ADMIN_PASSWORD` | Admin account password | *(auto-generated if unset)* |
+| `JWT_SECRET` | JWT signing key | *(random per restart if unset)* |
+
+**Server (Optional)**:
+| Variable | Description | Default |
+|----------|-------------|--------|
+| `INFLUX_URL` | InfluxDB URL | `http://localhost:8086` |
+| `CLICKHOUSE_DSN` | ClickHouse connection string | `clickhouse://localhost:9000` |
+| `GIN_MODE` | Gin framework mode | `debug` (use `release` in prod) |
 
 **Agent**:
-- `SERVER_URL` - Backend server URL (default: http://localhost:8080)
-- `AGENT_ID` - Unique agent identifier
+| Variable | Description | Default |
+|----------|-------------|--------|
+| `SERVER_URL` | Backend server URL | `http://localhost:8080` |
+| `AGENT_ID` | Unique agent identifier | *(required)* |
 
 ---
 
@@ -464,7 +522,7 @@ This project is proprietary software. All rights reserved.
 </details>
 
 <details>
-<summary><strong>🚀 Advanced Platform (Phases 32–38)</strong></summary>
+<summary><strong>🚀 Advanced Platform (Phases 32–39)</strong></summary>
 
 #### Phase 32: Historical Network Analytics ✅
 - [x] InfluxDB derivative rate calculation (B/s)
@@ -495,6 +553,7 @@ This project is proprietary software. All rights reserved.
 - [x] Backend ingest, summary, and detail API handlers
 - [x] High-frequency (1s) agent collector with process resolution
 - [x] Frontend connection monitoring UI with per-port cards and detail modals
+- [x] Configurable connection thresholds with visual alarms and alert rule deep-linking
 
 #### Phase 38: Dependency Security Hardening ✅
 - [x] Upgraded `golang.org/x/crypto` to v0.45.0 (SSH handshake CVE fix)
@@ -502,23 +561,30 @@ This project is proprietary software. All rights reserved.
 - [x] 3 moderate-severity Dependabot alerts resolved
 - [x] Full fleet redeployment with MD5 integrity verification
 
+#### Phase 39: Application Security Hardening ✅
+- [x] Bcrypt password hashing (cost 12) with automatic plaintext migration
+- [x] JWT secret loaded from `JWT_SECRET` environment variable
+- [x] API key authentication (`X-Agent-Secret`) for all ingestion endpoints
+- [x] IP Intelligence routes secured with admin authentication
+- [x] CORS hardened: removed wildcard origin, added `DELETE` method and `X-Agent-Secret` header
+- [x] `crypto/rand` replaces `math/rand` for all security-sensitive random generation
+- [x] Hardcoded InfluxDB token fallback removed (fatal if `INFLUX_TOKEN` unset)
+- [x] Production `.env` file with `600` permissions and `EnvironmentFile` in systemd
+
 </details>
 
 ### Upcoming
-
-#### Connection Tracking Enhancements
-- [ ] Configurable connection thresholds with visual alarms
-
-#### Security & Architecture
-- [ ] Extensible agent module loading
-- [ ] SSH brute-force detection
-- [ ] Automated IP blocking remediation
 
 #### Observability Enhancements
 - [ ] Resource speedometer gauges (RAM, Disk, CPU)
 - [ ] Webhook URL masking (click-to-reveal)
 - [ ] Browser notification system
 - [ ] Mobile-native dashboard app
+
+#### Architecture
+- [ ] Extensible agent module loading
+- [ ] SSH brute-force detection
+- [ ] Automated IP blocking remediation
 
 #### Integrations
 - [ ] Kubernetes support
