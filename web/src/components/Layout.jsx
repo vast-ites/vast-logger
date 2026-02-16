@@ -13,19 +13,22 @@ const Layout = () => {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col overflow-hidden relative">
-                {/* Background Grid */}
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+                {/* Background Grid — single lightweight element */}
                 <div
-                    className="absolute inset-0 opacity-30 pointer-events-none"
+                    className="absolute inset-0 opacity-20 pointer-events-none"
                     style={{
                         backgroundImage: `linear-gradient(rgb(var(--cyber-muted) / 0.1) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--cyber-muted) / 0.1) 1px, transparent 1px)`,
                         backgroundSize: '40px 40px'
                     }}
                 ></div>
 
-                {/* Ambient Glows */}
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-violet-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+                {/* Ambient Glows — use radial-gradient instead of blur filter */}
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] pointer-events-none"
+                    style={{ background: 'radial-gradient(circle, rgba(0,243,255,0.06) 0%, transparent 70%)' }}
+                ></div>
+                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] pointer-events-none"
+                    style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)' }}
+                ></div>
 
                 <TopBar onAddSource={() => setIsModalOpen(true)} />
 
