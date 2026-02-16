@@ -25,14 +25,16 @@ type ConnectionEntry struct {
 type ConnectionCollector struct {
 	ServerURL    string
 	Host         string
+	AgentSecret  string
 	Interval     time.Duration
 	ProcessCache map[int32]string
 }
 
-func NewConnectionCollector(serverURL, host string) *ConnectionCollector {
+func NewConnectionCollector(serverURL, host, agentSecret string) *ConnectionCollector {
 	return &ConnectionCollector{
 		ServerURL:    serverURL,
 		Host:         host,
+		AgentSecret:  agentSecret,
 		Interval:     1 * time.Second, // 1s Interval (High Frequency)
 		ProcessCache: make(map[int32]string),
 	}
@@ -108,7 +110,17 @@ func (c *ConnectionCollector) send(entries []ConnectionEntry) {
 		return
 	}
 
-	resp, err := http.Post(c.ServerURL+"/api/v1/ingest/connections", "application/json", bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", c.ServerURL+"/api/v1/ingest/connections", bytes.NewBuffer(data))
+	if err != nil {
+		log.Printf("[WARN] Failed to create connection request: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.AgentSecret != "" {
+		req.Header.Set("X-Agent-Secret", c.AgentSecret)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("[WARN] Failed to send connections: %v", err)
 		return

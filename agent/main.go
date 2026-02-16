@@ -226,7 +226,7 @@ func main() {
     }
 
     // Initialize Connection Collector
-    connCol := collector.NewConnectionCollector(strings.TrimSuffix(cfg.ServerURL, "/"), cfg.AgentID)
+    connCol := collector.NewConnectionCollector(strings.TrimSuffix(cfg.ServerURL, "/"), cfg.AgentID, cfg.AgentSecret)
     go connCol.Start()
     fmt.Println(">> Starting Connection Tracking (1s interval)...")
     

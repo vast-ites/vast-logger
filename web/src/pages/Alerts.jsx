@@ -16,6 +16,7 @@ export const Alerts = () => {
     const [selectedRule, setSelectedRule] = useState(null); // For silencing
     const [editingRuleId, setEditingRuleId] = useState(null); // For editing
     const [customPort, setCustomPort] = useState('');
+    const [isCustomPort, setIsCustomPort] = useState(false);
 
     // Form States
     const [newRule, setNewRule] = useState({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true });
@@ -260,11 +261,14 @@ export const Alerts = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Metric</label>
-                                    <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.metric.startsWith('connection_port_') && !['connection_port_443', 'connection_port_80', 'connection_port_22', 'connection_port_3306', 'connection_port_5432'].includes(newRule.metric) ? 'custom_port' : newRule.metric} onChange={e => {
+                                    <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={isCustomPort ? 'custom_port' : newRule.metric} onChange={e => {
                                         if (e.target.value === 'custom_port') {
+                                            setIsCustomPort(true);
                                             setCustomPort('');
                                             setNewRule({ ...newRule, metric: 'connection_port_' });
                                         } else {
+                                            setIsCustomPort(false);
+                                            setCustomPort('');
                                             setNewRule({ ...newRule, metric: e.target.value });
                                         }
                                     }}>
@@ -288,18 +292,16 @@ export const Alerts = () => {
                                             <option value="custom_port" className="bg-cyber-background text-cyber-text">🔧 Custom Port...</option>
                                         </optgroup>
                                     </select>
-                                    {(newRule.metric === 'connection_port_' || (newRule.metric.startsWith('connection_port_') && !['connection_port_443', 'connection_port_80', 'connection_port_22', 'connection_port_3306', 'connection_port_5432'].includes(newRule.metric))) && (
+                                    {isCustomPort && (
                                         <input
                                             type="number"
                                             min="1"
                                             max="65535"
                                             placeholder="Enter port number (e.g. 8080)"
-                                            value={customPort || newRule.metric.replace('connection_port_', '')}
+                                            value={customPort}
                                             onChange={(e) => {
                                                 setCustomPort(e.target.value);
-                                                if (e.target.value) {
-                                                    setNewRule({ ...newRule, metric: `connection_port_${e.target.value}` });
-                                                }
+                                                setNewRule({ ...newRule, metric: e.target.value ? `connection_port_${e.target.value}` : 'connection_port_' });
                                             }}
                                             className="w-full mt-2 bg-cyber-gray/10 border border-cyan-500/30 rounded p-2 text-cyan-400 font-mono text-sm outline-none focus:border-cyan-500/60 transition-colors"
                                             autoFocus
