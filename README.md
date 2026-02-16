@@ -327,6 +327,13 @@ This project is proprietary software. All rights reserved.
 
 ## 🚧 Roadmap
 
+### Phase 110: Dependency Security Hardening ✅
+- [x] Upgraded `golang.org/x/crypto` to v0.45.0 (fixes CVE in SSH server handshake)
+- [x] Upgraded `github.com/quic-go/quic-go` to v0.57.0 (fixes QUIC connection handling vulnerability)
+- [x] Resolved 3 moderate-severity Dependabot alerts on both agent and server modules
+- [x] Full fleet redeployment with patched binaries (server + 3 agents)
+- [x] MD5 integrity verification across all production nodes
+
 ### Phase 41: Integrations
 - [ ] Kubernetes support
 - [ ] Cloud provider metrics (AWS, GCP, Azure)
