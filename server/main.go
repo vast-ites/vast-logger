@@ -72,7 +72,7 @@ func main() {
 	}
 	influxToken := os.Getenv("INFLUX_TOKEN")
 	if influxToken == "" {
-		influxToken = "my-super-secret-auth-token" // Fallback for dev
+		log.Fatal("INFLUX_TOKEN environment variable is required")
 	}
 	clickhouseDSN := os.Getenv("CLICKHOUSE_DSN")
 
@@ -110,9 +110,9 @@ func main() {
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "*"},
-		AllowMethods:     []string{"GET", "POST", "OPTIONS", "PUT"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://<SERVER_IP>:8080"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Agent-Secret"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -131,24 +131,24 @@ func main() {
 	ipHandler := ip_intelligence.NewIPHandler(clickh)
 	v1 := r.Group("/api/v1")
 	ipRoutes := v1.Group("/ip")
-	// Reuse OptionalAuth from api package? No, it's internal.
-	// We should expose it or replicate logic.
-	// For now, let's assume we need to mount these inside handler.go or duplicate auth middleware.
-	// Better approach: Pass r to a SetupIPRoutes function.
+	ipRoutes.Use(api.OptionalAuth("admin"))
+	{
+		// Specific routes MUST come before wildcard /:ip route
+		ipRoutes.POST("/block", ipHandler.BlockIP)
+		ipRoutes.POST("/unblock", ipHandler.UnblockIP)
+		ipRoutes.GET("/:ip", ipHandler.GetIPDetails)
+	}
 
-	// Quick inline mount for now to keep it simple
-	// Specific routes MUST come before wildcard /:ip route
-	ipRoutes.POST("/block", ipHandler.BlockIP)
-	ipRoutes.POST("/unblock", ipHandler.UnblockIP)
-	ipRoutes.GET("/:ip", ipHandler.GetIPDetails)
-
-	// Agent Command Dispatch (agents poll these)
+	// Agent Command Dispatch (agents poll these — requires agent secret)
 	agentRoutes := v1.Group("/agent")
+	agentRoutes.Use(api.AgentSecretAuth(config))
 	agentRoutes.GET("/commands", ipHandler.GetPendingCommands)
 	agentRoutes.POST("/commands/ack", ipHandler.AckCommand)
 
-	// Firewall Sync (agent pushes actual iptables state)
-	v1.POST("/ingest/firewall-sync", handler.HandleIngestFirewallSync)
+	// Firewall Sync (agent pushes actual iptables state — requires agent secret)
+	fwSyncGroup := v1.Group("/")
+	fwSyncGroup.Use(api.AgentSecretAuth(config))
+	fwSyncGroup.POST("/ingest/firewall-sync", handler.HandleIngestFirewallSync)
 
 	// Cache-Control: prevent browsers from caching index.html (stale frontend builds)
 	r.Use(func(c *gin.Context) {
