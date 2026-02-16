@@ -327,88 +327,196 @@ This project is proprietary software. All rights reserved.
 
 ## 🚧 Roadmap
 
-### Phase 110: Dependency Security Hardening ✅
-- [x] Upgraded `golang.org/x/crypto` to v0.45.0 (fixes CVE in SSH server handshake)
-- [x] Upgraded `github.com/quic-go/quic-go` to v0.57.0 (fixes QUIC connection handling vulnerability)
-- [x] Resolved 3 moderate-severity Dependabot alerts on both agent and server modules
-- [x] Full fleet redeployment with patched binaries (server + 3 agents)
-- [x] MD5 integrity verification across all production nodes
+### Completed Phases
 
-### Phase 41: Integrations
+<details>
+<summary><strong>🏗️ Foundation (Phases 5–9)</strong></summary>
+
+#### Phase 5: Production Hardening & Settings ✅
+- [x] Settings module with JSON-backed persistence (retention policies, alert thresholds)
+- [x] JWT-based authentication & secrets management (env vars for DB tokens)
+- [x] Per-interface network breakdown with InfluxDB derivatives
+
+#### Phase 6: Agent Enrollment & MFA ✅
+- [x] Interactive agent handshake with System API Keys
+- [x] TOTP-based MFA for admin actions
+- [x] Authenticated agent sessions
+
+#### Phase 7: Modular Agent Configuration ✅
+- [x] Togglable collectors (System, Docker, Kubernetes, Nginx, Apache, PM2)
+- [x] Permission-aware discovery for non-root execution
+- [x] Persistent config via `agent-config.json`
+
+#### Phase 8: Production Deployment ✅
+- [x] Single-binary backend serving React frontend via `gin-contrib/static`
+- [x] Remote provisioning automation (SSH/SCP)
+- [x] Security hardening (localhost-bound databases, random admin password)
+
+#### Phase 9: Multi-Node Architecture ✅
+- [x] Global host selector with reactive UI pivoting
+- [x] Dynamic node discovery via InfluxDB/ClickHouse tagging
+- [x] Agent self-identification and persistence
+
+</details>
+
+<details>
+<summary><strong>🔍 Core Features (Phases 10–23)</strong></summary>
+
+#### Phase 10: UX Enhancements ✅
+- [x] Configurable refresh rates (1s–60s), log export (CSV/JSON), advanced filtering
+
+#### Phase 11: UI Refinements & Pagination ✅
+- [x] Client-side pagination for 5000+ log results, universal refresh controls
+
+#### Phase 12: Integrated Agent Enrollment ✅
+- [x] In-HUD "Connect Agent" modal with auto-generated install commands
+
+#### Phase 13: UI Stability & Bug Fixes ✅
+- [x] Host selection persistence via `localStorage`, regex search stability
+
+#### Phase 14: Advanced Search ✅
+- [x] Omnibox syntax (`host:`, `level:`, `service:`, `before:`, `after:`, `order:`)
+- [x] Dynamic ClickHouse query engine with structured filtering
+
+#### Phase 15: Enhanced Node Insight ✅
+- [x] Real-time process monitoring, firewall rule auditing (iptables/ufw)
+
+#### Phase 16: UI Overhaul & Migration ✅
+- [x] High-fidelity UI migration from `vast-pulse` repository
+
+#### Phase 17: Detailed Resource Monitoring ✅
+- [x] Specialized CPU, Memory, Disk, Network pages with `StatCard` and `ResourceChart` widgets
+
+#### Phase 18–20: Capacity, Discovery & Stabilization ✅
+- [x] Auto-detection of CPU model, Swap, partitions, network interfaces
+- [x] Fixed OFFLINE false positives and 0% display bugs
+
+#### Phase 21: Dashboard UI Overhaul ✅
+- [x] High-density OverviewCard row (Uptime, Load, RAM, Disk), dark-card neon aesthetic
+
+#### Phase 22: Live Terminal View ✅
+- [x] Real-time `top -b` stream with ANSI-aware rendering
+
+#### Phase 23: Real-Time Storage Analytics ✅
+- [x] Kernel I/O counters, dynamic GB/TB scaling, ClickHouse TTL maintenance
+
+</details>
+
+<details>
+<summary><strong>⚡ Scale & Reliability (Phases 24–40)</strong></summary>
+
+#### Phases 24–28: Schema & UI Resilience ✅
+- [x] API schema standardization, VFS filtering (overlay/snap), React purity enforcement
+
+#### Phases 29–31: Performance Optimization ✅
+- [x] Tiered metric collection (1s volatile / 10s hardware), `atomic.Value` decoupling, cache busting
+
+#### Phases 32–33: Fleet Hardening ✅
+- [x] Fleet-wide systemd migration, `SERVER_URL` standardization, self-monitoring hub
+
+#### Phase 34: UI Metadata & Orchestration ✅
+- [x] Source selector shows `Hostname (IP)`, real-time Online/Offline status, node removal
+
+#### Phase 35: High-Frequency Monitoring ✅
+- [x] Container network I/O delta rates, enhanced log discovery, global refresh state
+
+#### Phase 36: Reliability & Resource Governance ✅
+- [x] CPU/RAM limits for databases, feedback loop protection, emergency space recovery
+
+#### Phase 37: Advanced Alerting & Notification Hub ✅
+- [x] Webhook integration (Slack/Discord/PagerDuty), email notifications, threshold evaluation
+
+#### Phase 38: Docker Log Streaming ✅
+- [x] Native Docker SDK log streaming with `stdcopy`, auto container-name tagging
+
+#### Phase 39: Services & Integrations Hub ✅
+- [x] Categorized service dashboard, integration wizard, cross-page deep-linking
+
+#### Phase 40: Optional API Authentication ✅
+- [x] Environment-driven JWT enforcement (`AUTH_ENABLED`), role-based access, open ingestion paths
+
+</details>
+
+<details>
+<summary><strong>🔬 Deep Monitoring (Phases 41–71)</strong></summary>
+
+#### Phase 41: Per-Service Deep Monitoring ✅
+- [x] Apache/Nginx access log forensics with GeoIP enrichment
+- [x] MySQL/MariaDB connection & slow query auditing
+- [x] PostgreSQL performance introspection (`pg_stat_activity`)
+- [x] Redis memory & hit-rate analysis
+- [x] MongoDB document statistics
+
+#### Phase 71: Production Hardening & Remediation ✅
+- [x] SQL injection mitigation (type-safe integer casting)
+- [x] Git history sanitization (multi-branch `git-filter-repo` cleanup)
+- [x] GeoIP deployment (`GeoLite2-City.mmdb`)
+- [x] Connection retry logic with exponential backoff
+- [x] 10-test automated API health suite (100% pass rate)
+
+</details>
+
+<details>
+<summary><strong>🚀 Advanced Platform (Phases 88–110)</strong></summary>
+
+#### Phase 88: Historical Network Analytics ✅
+- [x] InfluxDB derivative rate calculation (B/s)
+- [x] Multi-tier downsampling (10s, 1m, 5m, 1h) for time ranges
+- [x] Dual-mode UI (Live real-time vs. Historical aggregated views)
+- [x] Strict host-context isolation in multi-agent queries
+
+#### Phase 89: User-Configurable Alerting Engine ✅
+- [x] Generic rule engine for all telemetry metrics
+- [x] CRUD API for rules, channels, and silencing
+- [x] Pluggable notifications (Email, Webhooks, Slack)
+- [x] Alert silencing with duration controls (15m–3d)
+- [x] Rule editing, toggling, and network metric expansion
+
+#### Phase 98: Dynamic Theme System ✅
+- [x] Full Light/Dark mode with RGB-channel CSS variables
+- [x] Theme persistence via `localStorage` + system preference detection
+
+#### Phase 107: Dark Mode Contrast Hardening ✅
+- [x] Boosted `--text-muted` contrast, semantic token migration, native dropdown fixes
+
+#### Phase 108: Per-Container Log Discovery ✅
+- [x] Docker container name tagging in Log Explorer
+- [x] `<optgroup>` categorization separating containers from host services
+
+#### Phase 109: L4 Connection Tracking ✅
+- [x] ClickHouse `datavast.connections` table with TTL
+- [x] Backend ingest, summary, and detail API handlers
+- [x] High-frequency (1s) agent collector with process resolution
+
+#### Phase 110: Dependency Security Hardening ✅
+- [x] Upgraded `golang.org/x/crypto` to v0.45.0 (SSH handshake CVE fix)
+- [x] Upgraded `github.com/quic-go/quic-go` to v0.57.0 (QUIC vulnerability fix)
+- [x] 3 moderate-severity Dependabot alerts resolved
+- [x] Full fleet redeployment with MD5 integrity verification
+
+</details>
+
+### Upcoming
+
+#### Connection Tracking UI
+- [ ] Frontend module for L4 connection monitoring
+- [ ] Configurable connection thresholds with visual alarms
+- [ ] Dynamic retention controls for connection history
+
+#### Integrations
 - [ ] Kubernetes support
 - [ ] Cloud provider metrics (AWS, GCP, Azure)
-- [ ] Slack/Teams notifications
 
-### Phase 42: Performance
-- [x] Log compression
-- [x] Metric aggregation
-- [x] Query optimization
+#### Security & Architecture
+- [ ] Extensible agent module loading
+- [ ] SSH brute-force detection
+- [ ] Automated IP blocking remediation
 
-### Phase 43: Security & Core Architecture
-
-**1. Feature: IP Intelligence (Source Filter + GeoIP)**
-*Goal: Dedicated page for IP search, analysis, and management with full source-scoping.*
-
-*   **Source Filter Behavior:**
-    *   Strict adherence to selected Source (Server/Agent).
-    *   Data aggregation respects source selection.
-    *   No cross-server data leakage unless "All Sources" is active.
-
-*   **IP Search & GeoIP:**
-    *   Search displays: Total occurrences, First/Last seen, Services, Block status.
-    *   **Automatic Geo Lookup** (MaxMind DB): Country, State, City.
-    *   Composite view when "All Sources" is selected.
-
-*   **Activity Aggregation:**
-    *   Breakdown by service (Apache, Nginx, SSH, DB).
-    *   Request counts and last activity timestamps.
-
-*   **Source-Aware Blocking:**
-    *   Block/Unblock actions apply ONLY to the selected source.
-    *   Visual indicators for Blocked/Active status.
-    *   Safety: Blocking disabled or requires specific source when "All Sources" is active.
-
-*   **Backend & Optimization:**
-    *   **GeoIP Integration**: Local MaxMind DB with caching layer (`ip_geo_cache` table) to minimize lookups.
-    *   **Data Model**: `ip_activity` (tracking counts/services) and `blocked_ips` (source-specific blocking).
-    *   **Performance**: Composite index on `(agent_id, ip_address)`.
-
-**2. Architecture: Extensible Agent Design**
-*   **Goal**: Modularize agent functionality.
-*   New capabilities (e.g., log parsers) must be added as separate files/modules.
-*   Dynamic loading of modules to prevent core logic modification.
-
-**3. Integration: 1Password Watchtower**
-*   **Goal**: Fetch and display security insights.
-*   UI to show: Security alerts, compromised items, weak passwords, actionable recommendations.
-
-### Phase 44: Enhanced Observability & UI
-
-**1. Resource Speedometer**
-*   Visual gauges for RAM, Disk, CPU.
-*   Configurable thresholds with color states (Green/Red).
-
-**2. Webhook Security**
-*   Hide Webhook URLs by default.
-*   "Show URL" click-to-reveal interaction.
-
-**3. Search UI Update**
-*   Remove `Cmd+K` icon.
-*   Move keyboard shortcuts to Help (?) section.
-
-**4. Data Retention & Log Management**
-*   User-defined data retention periods.
-*   Auto-archival of logs older than retention period.
-*   UI for manual retrieval of archived logs.
-
-**5. Connection Monitoring (`/connections`)**
-*   Configurable connection thresholds (default: 50).
-*   Visual alarms (color change) when thresholds exceeded.
-*   Sorting options (highest connections first).
-
-**6. Notification System**
-*   Browser notification popups.
-*   In-app notification center and controls.
+#### Observability Enhancements
+- [ ] Resource speedometer gauges (RAM, Disk, CPU)
+- [ ] Webhook URL masking (click-to-reveal)
+- [ ] Browser notification system
+- [ ] Mobile-native dashboard app
 
 ---
 
