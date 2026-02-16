@@ -23,7 +23,7 @@
     --text-muted: 203 213 225;
 
     /* Glass Panel Variables - Default Dark */
-    --glass-bg: rgba(15, 15, 45, 0.8);
+    --glass-bg: rgba(15, 15, 45, 0.95);
     --glass-border: rgba(0, 243, 255, 0.3);
     --glass-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
   }
@@ -79,8 +79,12 @@
     background-color: var(--glass-bg);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    contain: layout style paint;
+  }
+
+  /* Optimize scroll container for compositor */
+  .custom-scrollbar {
+    will-change: scroll-position;
   }
 }
 
@@ -89,6 +93,7 @@
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -97,4 +102,20 @@
 
 .animate-fade-in-up {
   animation: fadeInUp 0.5s ease-out both;
+}
+
+@keyframes pulse-subtle {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
 }

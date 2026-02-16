@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BellRing, Plus, Trash2, VolumeX, Volume2, Save, X, Pencil } from 'lucide-react';
 
 export const Alerts = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState('rules');
     const [rules, setRules] = useState([]);
     const [channels, setChannels] = useState([]);
@@ -13,6 +15,8 @@ export const Alerts = () => {
     const [showSilenceModal, setShowSilenceModal] = useState(false);
     const [selectedRule, setSelectedRule] = useState(null); // For silencing
     const [editingRuleId, setEditingRuleId] = useState(null); // For editing
+    const [customPort, setCustomPort] = useState('');
+    const [isCustomPort, setIsCustomPort] = useState(false);
 
     // Form States
     const [newRule, setNewRule] = useState({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true });
@@ -23,6 +27,30 @@ export const Alerts = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Check for pre-fill params from Connections page (e.g. ?metric=connection_count&threshold=50&host=fusionpbx)
+    useEffect(() => {
+        const metric = searchParams.get('metric');
+        const threshold = searchParams.get('threshold');
+        const host = searchParams.get('host');
+        if (metric) {
+            const hostLabel = host && host !== '*' ? ` on ${host}` : '';
+            const metricLabel = metric === 'connection_count' ? 'Total Connections' : metric.replace('connection_port_', 'Port ');
+            setNewRule({
+                name: `${metricLabel} Alert${hostLabel}`,
+                metric: metric,
+                host: host || '*',
+                operator: '>',
+                threshold: threshold ? parseFloat(threshold) : 50,
+                channels: [],
+                enabled: true,
+            });
+            setEditingRuleId(null);
+            setShowRuleModal(true);
+            // Clear params so refreshing doesn't re-open
+            setSearchParams({}, { replace: true });
+        }
+    }, [searchParams]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -233,14 +261,52 @@ export const Alerts = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Metric</label>
-                                    <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={newRule.metric} onChange={e => setNewRule({ ...newRule, metric: e.target.value })}>
-                                        <option value="cpu_percent" className="bg-cyber-background text-cyber-text">CPU Usage (%)</option>
-                                        <option value="memory_usage" className="bg-cyber-background text-cyber-text">Memory Usage (%)</option>
-                                        <option value="disk_usage" className="bg-cyber-background text-cyber-text">Disk Usage (%)</option>
-                                        <option value="net_recv_rate" className="bg-cyber-background text-cyber-text">Net Download (B/s)</option>
-                                        <option value="net_sent_rate" className="bg-cyber-background text-cyber-text">Net Upload (B/s)</option>
-                                        <option value="net_total_rate" className="bg-cyber-background text-cyber-text">Net Total (B/s)</option>
+                                    <select className="w-full bg-cyber-gray/10 border border-cyber-gray/30 rounded p-2 text-cyber-text outline-none transition-colors" value={isCustomPort ? 'custom_port' : newRule.metric} onChange={e => {
+                                        if (e.target.value === 'custom_port') {
+                                            setIsCustomPort(true);
+                                            setCustomPort('');
+                                            setNewRule({ ...newRule, metric: 'connection_port_' });
+                                        } else {
+                                            setIsCustomPort(false);
+                                            setCustomPort('');
+                                            setNewRule({ ...newRule, metric: e.target.value });
+                                        }
+                                    }}>
+                                        <optgroup label="System" className="bg-cyber-background text-cyber-text">
+                                            <option value="cpu_percent" className="bg-cyber-background text-cyber-text">CPU Usage (%)</option>
+                                            <option value="memory_usage" className="bg-cyber-background text-cyber-text">Memory Usage (%)</option>
+                                            <option value="disk_usage" className="bg-cyber-background text-cyber-text">Disk Usage (%)</option>
+                                        </optgroup>
+                                        <optgroup label="Network" className="bg-cyber-background text-cyber-text">
+                                            <option value="net_recv_rate" className="bg-cyber-background text-cyber-text">Net Download (B/s)</option>
+                                            <option value="net_sent_rate" className="bg-cyber-background text-cyber-text">Net Upload (B/s)</option>
+                                            <option value="net_total_rate" className="bg-cyber-background text-cyber-text">Net Total (B/s)</option>
+                                        </optgroup>
+                                        <optgroup label="Connections" className="bg-cyber-background text-cyber-text">
+                                            <option value="connection_count" className="bg-cyber-background text-cyber-text">Total Connections</option>
+                                            <option value="connection_port_443" className="bg-cyber-background text-cyber-text">Port 443 Connections</option>
+                                            <option value="connection_port_80" className="bg-cyber-background text-cyber-text">Port 80 Connections</option>
+                                            <option value="connection_port_22" className="bg-cyber-background text-cyber-text">Port 22 (SSH) Connections</option>
+                                            <option value="connection_port_3306" className="bg-cyber-background text-cyber-text">Port 3306 (MySQL) Connections</option>
+                                            <option value="connection_port_5432" className="bg-cyber-background text-cyber-text">Port 5432 (Postgres) Connections</option>
+                                            <option value="custom_port" className="bg-cyber-background text-cyber-text">🔧 Custom Port...</option>
+                                        </optgroup>
                                     </select>
+                                    {isCustomPort && (
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="65535"
+                                            placeholder="Enter port number (e.g. 8080)"
+                                            value={customPort}
+                                            onChange={(e) => {
+                                                setCustomPort(e.target.value);
+                                                setNewRule({ ...newRule, metric: e.target.value ? `connection_port_${e.target.value}` : 'connection_port_' });
+                                            }}
+                                            className="w-full mt-2 bg-cyber-gray/10 border border-cyan-500/30 rounded p-2 text-cyan-400 font-mono text-sm outline-none focus:border-cyan-500/60 transition-colors"
+                                            autoFocus
+                                        />
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs uppercase text-cyber-muted font-bold mb-1">Target Host</label>

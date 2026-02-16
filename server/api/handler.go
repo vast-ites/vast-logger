@@ -19,6 +19,7 @@ import (
 
     "encoding/json"
     "github.com/golang-jwt/jwt/v5"
+    "golang.org/x/crypto/bcrypt"
 )
 
 type IngestionHandler struct {
@@ -415,13 +416,19 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
         // Public (always accessible)
         v1.POST("/auth/login", h.HandleLogin)
         
-        // Agent Ingestion (no auth - agents use internal network trust)
+        // Agent Registration (validates system_api_key in handler, no middleware)
 		v1.POST("/agent/register", h.HandleRegisterAgent)
-        v1.POST("/ingest/metrics", h.HandleMetrics)
-	    v1.POST("/ingest/logs", h.HandleLogs)
-        v1.POST("/ingest/processes", h.HandleIngestProcesses)
-        v1.POST("/ingest/firewall", h.HandleIngestFirewall)
-        v1.POST("/ingest/connections", h.HandleIngestConnections)
+
+        // Agent Ingestion (requires X-Agent-Secret header)
+        agentRoutes := v1.Group("/")
+        agentRoutes.Use(AgentSecretAuth(h.Config))
+        {
+            agentRoutes.POST("/ingest/metrics", h.HandleMetrics)
+            agentRoutes.POST("/ingest/logs", h.HandleLogs)
+            agentRoutes.POST("/ingest/processes", h.HandleIngestProcesses)
+            agentRoutes.POST("/ingest/firewall", h.HandleIngestFirewall)
+            agentRoutes.POST("/ingest/connections", h.HandleIngestConnections)
+        }
 
         // User-facing endpoints (optional auth based on AUTH_ENABLED)
         userRoutes := v1.Group("/")
@@ -550,6 +557,14 @@ func (h *IngestionHandler) HandleCreateUser(c *gin.Context) {
         }
     }
     
+    // Hash password before storing
+    hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+        return
+    }
+    req.Password = string(hash)
+    
     cfg.Users = append(cfg.Users, req)
     if err := h.Config.Save(cfg); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save"})
@@ -646,7 +661,13 @@ func (h *IngestionHandler) HandleChangePassword(c *gin.Context) {
     
     for i, u := range cfg.Users {
         if u.Username == username {
-            cfg.Users[i].Password = req.Password
+            // Hash password before storing
+            hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+            if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+                return
+            }
+            cfg.Users[i].Password = string(hash)
             found = true
             break
         }
@@ -1231,6 +1252,25 @@ func (h *IngestionHandler) HandleDisableMFA(c *gin.Context) {
      c.JSON(http.StatusOK, gin.H{"message": "MFA Disabled"})
 }
 
+// AgentSecretAuth validates the X-Agent-Secret header against registered agent secrets
+func AgentSecretAuth(config *storage.ConfigStore) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        secret := c.GetHeader("X-Agent-Secret")
+        if secret == "" {
+            c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Missing agent secret"})
+            return
+        }
+        cfg := config.Get()
+        for _, s := range cfg.AgentSecrets {
+            if s == secret {
+                c.Next()
+                return
+            }
+        }
+        c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid agent secret"})
+    }
+}
+
 // OptionalAuth wraps AuthRequired but makes it optional based on AUTH_ENABLED env var
 // SECURITY: Authentication is ENABLED by default for production
 func OptionalAuth(role string) gin.HandlerFunc {
@@ -1509,6 +1549,28 @@ func (h *IngestionHandler) HandleIngestConnections(c *gin.Context) {
         return
     }
     c.Status(http.StatusAccepted)
+
+    // Evaluate connection-based alert rules
+    if h.Alerts != nil && req.Host != "" {
+        // Count active (non-LISTEN) connections total and per-port
+        portCounts := make(map[uint16]float64)
+        totalActive := 0.0
+        for _, conn := range req.Connections {
+            if conn.Status != "LISTEN" {
+                totalActive++
+                portCounts[conn.LocalPort]++
+            }
+        }
+
+        metrics := map[string]float64{
+            "connection_count": totalActive,
+        }
+        for port, count := range portCounts {
+            metrics[fmt.Sprintf("connection_port_%d", port)] = count
+        }
+
+        h.Alerts.EvaluateRules(req.Host, metrics, "")
+    }
 }
 
 func (h *IngestionHandler) HandleGetConnectionSummary(c *gin.Context) {
