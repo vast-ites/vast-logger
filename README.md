@@ -494,6 +494,7 @@ This project is proprietary software. All rights reserved.
 - [x] ClickHouse `datavast.connections` table with TTL
 - [x] Backend ingest, summary, and detail API handlers
 - [x] High-frequency (1s) agent collector with process resolution
+- [x] Frontend connection monitoring UI with per-port cards and detail modals
 
 #### Phase 38: Dependency Security Hardening ✅
 - [x] Upgraded `golang.org/x/crypto` to v0.45.0 (SSH handshake CVE fix)
@@ -505,10 +506,9 @@ This project is proprietary software. All rights reserved.
 
 ### Upcoming
 
-#### Connection Tracking UI
-- [ ] Frontend module for L4 connection monitoring
+#### Connection Tracking Enhancements
 - [ ] Configurable connection thresholds with visual alarms
-- [ ] Dynamic retention controls for connection history
+- [ ] Dynamic retention controls for connection history in Settings
 
 #### Security & Architecture
 - [ ] Extensible agent module loading
