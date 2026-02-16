@@ -163,7 +163,7 @@ The platform uses a secure-by-default approach:
 - **Frontend**: Automatically handles token storage and injection in `HostContext`.
 
 **To change password:**
-1. Edit `/home/parag/vast/testing/.env`
+1. Edit the `.env` file in your project root
 2. Update `ADMIN_PASSWORD=your-new-password`
 3. Restart the server
 
