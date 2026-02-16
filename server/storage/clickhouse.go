@@ -760,34 +760,18 @@ func (s *LogStore) GetConnectionSummary(host string) ([]ConnectionSummary, error
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Logic: Get the LATEST snapshot for the host.
-	// Since we ingest every 1s, we take data from the last 5 seconds to be safe, filtering by max timestamp.
+	// Optimized: bound the scan to last 30 seconds so ClickHouse skips older data
+	// using the MergeTree's timestamp-first index. Then find max(timestamp) within
+	// that narrow window instead of scanning the entire table.
 	query := `
-        SELECT local_port, any(process_name) as process_name, count() as count
-        FROM datavast.connections
-        WHERE host = ? 
-          AND timestamp = (SELECT max(timestamp) FROM datavast.connections WHERE host = ?)
-          AND status != 'LISTEN' 
-        GROUP BY local_port
-        ORDER BY count DESC
-    `
-	// Note: status != 'LISTEN' gives us active connections.
-	// We might also want to know WHICH ports are Listening even if 0 connections?
-	// User asked "automatically determine which ports are open... live total counts".
-	// So we probably want:
-	// 1. Find all ports in 'LISTEN' state from latest snapshot.
-	// 2. Count connections for those ports.
-
-	// Improved Query:
-	// This is a bit complex in one go. Let's stick to "Active Connections count per port".
-	// And separately we can get "Listening Ports".
-
-	// Let's do a robust aggregation:
-	query = `
         SELECT local_port, any(process_name), countIf(status != 'LISTEN') as active
         FROM datavast.connections
         WHERE host = ?
-          AND timestamp = (SELECT max(timestamp) FROM datavast.connections WHERE host = ?)
+          AND timestamp > now() - INTERVAL 30 SECOND
+          AND timestamp = (
+              SELECT max(timestamp) FROM datavast.connections
+              WHERE host = ? AND timestamp > now() - INTERVAL 30 SECOND
+          )
         GROUP BY local_port
         ORDER BY active DESC
     `
@@ -818,7 +802,11 @@ func (s *LogStore) GetConnectionDetails(host string, port uint16) ([]ConnectionE
         FROM datavast.connections
         WHERE host = ? 
           AND local_port = ?
-          AND timestamp = (SELECT max(timestamp) FROM datavast.connections WHERE host = ?)
+          AND timestamp > now() - INTERVAL 30 SECOND
+          AND timestamp = (
+              SELECT max(timestamp) FROM datavast.connections
+              WHERE host = ? AND timestamp > now() - INTERVAL 30 SECOND
+          )
           AND status != 'LISTEN'
         ORDER BY status, remote_ip
     `, host, port, host)

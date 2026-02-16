@@ -9,7 +9,7 @@ const Connections = () => {
     const [selectedPort, setSelectedPort] = useState(null);
     const [details, setDetails] = useState([]);
     const [detailsLoading, setDetailsLoading] = useState(false);
-    const [refreshInterval, setRefreshInterval] = useState(1000);
+    const [refreshInterval, setRefreshInterval] = useState(5000); // 5 sec default
     const [threshold, setThreshold] = useState(() => {
         const saved = localStorage.getItem('connectionThreshold');
         return saved ? Number(saved) : 50;
@@ -160,8 +160,8 @@ const Connections = () => {
                         <button
                             onClick={() => { setTempThreshold(threshold); setShowThresholdConfig(!showThresholdConfig); }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all border ${stats.overThreshold > 0
-                                    ? 'bg-red-950/30 border-red-500/40 text-red-400 hover:bg-red-950/50'
-                                    : 'bg-cyber-gray/10 border-cyber-gray/20 text-cyber-muted hover:text-cyan-400 hover:border-cyan-500/30'
+                                ? 'bg-red-950/30 border-red-500/40 text-red-400 hover:bg-red-950/50'
+                                : 'bg-cyber-gray/10 border-cyber-gray/20 text-cyber-muted hover:text-cyan-400 hover:border-cyan-500/30'
                                 }`}
                             title="Configure connection threshold"
                         >
@@ -198,8 +198,8 @@ const Connections = () => {
                                             key={preset}
                                             onClick={() => setTempThreshold(preset)}
                                             className={`flex-1 text-xs py-1.5 rounded-md font-mono transition-all ${tempThreshold === preset
-                                                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                                                    : 'bg-cyber-gray/10 text-cyber-muted hover:text-cyan-400 border border-cyber-gray/20'
+                                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                                                : 'bg-cyber-gray/10 text-cyber-muted hover:text-cyan-400 border border-cyber-gray/20'
                                                 }`}
                                         >
                                             {preset}
@@ -330,8 +330,8 @@ const Connections = () => {
                                     <div className="w-full h-1 bg-cyber-gray/20 rounded-full overflow-hidden">
                                         <div
                                             className={`h-full rounded-full transition-all duration-500 ${alarmState === 'critical' ? 'bg-red-500' :
-                                                    alarmState === 'warning' ? 'bg-amber-500' :
-                                                        'bg-cyan-500/50'
+                                                alarmState === 'warning' ? 'bg-amber-500' :
+                                                    'bg-cyan-500/50'
                                                 }`}
                                             style={{ width: `${Math.min(100, (item.count / threshold) * 100)}%` }}
                                         />
