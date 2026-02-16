@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useHost } from '../contexts/HostContext';
-import { Network, Activity, Search, Server, ArrowRight, X, Clock, Shield, AlertTriangle, Settings, Zap } from 'lucide-react';
+import { Network, Activity, Search, Server, ArrowRight, X, Clock, Shield, AlertTriangle, Settings, Zap, BellRing } from 'lucide-react';
 
 const Connections = () => {
     const { selectedHost } = useHost();
+    const navigate = useNavigate();
     const [summary, setSummary] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPort, setSelectedPort] = useState(null);
@@ -223,6 +225,16 @@ const Connections = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Create Alert Button */}
+                    <button
+                        onClick={() => navigate(`/alerts?metric=connection_count&threshold=${threshold}&host=${selectedHost || '*'}`)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-violet-500/10 border border-violet-500/30 text-violet-400 hover:bg-violet-500/20 hover:text-violet-300 transition-all"
+                        title="Create a server-side alert rule for connections"
+                    >
+                        <BellRing size={13} />
+                        <span>CREATE ALERT</span>
+                    </button>
 
                     {/* Refresh Rate */}
                     <div className="flex items-center gap-2">

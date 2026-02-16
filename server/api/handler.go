@@ -1509,6 +1509,28 @@ func (h *IngestionHandler) HandleIngestConnections(c *gin.Context) {
         return
     }
     c.Status(http.StatusAccepted)
+
+    // Evaluate connection-based alert rules
+    if h.Alerts != nil && req.Host != "" {
+        // Count active (non-LISTEN) connections total and per-port
+        portCounts := make(map[uint16]float64)
+        totalActive := 0.0
+        for _, conn := range req.Connections {
+            if conn.Status != "LISTEN" {
+                totalActive++
+                portCounts[conn.LocalPort]++
+            }
+        }
+
+        metrics := map[string]float64{
+            "connection_count": totalActive,
+        }
+        for port, count := range portCounts {
+            metrics[fmt.Sprintf("connection_port_%d", port)] = count
+        }
+
+        h.Alerts.EvaluateRules(req.Host, metrics, "")
+    }
 }
 
 func (h *IngestionHandler) HandleGetConnectionSummary(c *gin.Context) {
