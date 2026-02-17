@@ -30,7 +30,7 @@ func main() {
     flag.Parse()
 
 	fmt.Println("🚀 DataVast Agent Starting... [Sci-Fi Mode]")
-    log.Println(">> DataVast Agent v2.2.0 (Phase 19 - Full Dynamic Metrics)")
+    log.Println(">> DataVast Agent v2.21.0 (Phase 40 - Service Detection & Advanced Diagnostics)")
     
     // Load Config
     cfg, err := config.LoadConfig()
