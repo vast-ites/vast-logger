@@ -20,7 +20,7 @@ const SidebarItem = ({ path, label, icon: Icon }) => (
 
 export const Sidebar = () => {
     return (
-        <aside className="w-64 border-r border-cyber-gray/20 glass-panel p-4 flex flex-col h-full rounded-none border-l-0 border-t-0 border-b-0">
+        <aside className="w-64 border-r border-cyber-gray/20 glass-panel p-4 flex flex-col h-screen sticky top-0 overflow-hidden rounded-none border-l-0 border-t-0 border-b-0">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-10 px-2 mt-2">
                 <div className="relative group">

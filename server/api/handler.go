@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,7 +18,6 @@ import (
     "github.com/datavast/datavast/server/alert"
 	"github.com/gin-gonic/gin"
 
-    "encoding/json"
     "github.com/golang-jwt/jwt/v5"
     "golang.org/x/crypto/bcrypt"
 )
@@ -206,11 +206,71 @@ func (h *IngestionHandler) HandleLogs(c *gin.Context) {
 	// Filter by service name or source path
 	isWebLog := false
 	svc := strings.ToLower(entry.Service)
-	if svc == "apache" || svc == "nginx" || svc == "httpd" || strings.Contains(svc, "web") {
+	if svc == "apache" || svc == "nginx" || svc == "httpd" || svc == "caddy" || svc == "traefik" || strings.Contains(svc, "web") {
 		isWebLog = true
 	}
 
 	if isWebLog {
+		// Try JSON format first (used by Caddy)
+		if strings.HasPrefix(strings.TrimSpace(entry.Message), "{") {
+			var caddyLog struct {
+				Request struct {
+					RemoteIP  string              `json:"remote_ip"`
+					ClientIP  string              `json:"client_ip"`
+					Method    string              `json:"method"`
+					URI       string              `json:"uri"`
+					Proto     string              `json:"proto"`
+					Host      string              `json:"host"`
+					Headers   map[string][]string `json:"headers"`
+				} `json:"request"`
+				Status int    `json:"status"`
+				Size   int    `json:"size"`
+			}
+			if err := json.Unmarshal([]byte(entry.Message), &caddyLog); err == nil && caddyLog.Request.Method != "" {
+				ip := caddyLog.Request.ClientIP
+				if ip == "" {
+					ip = caddyLog.Request.RemoteIP
+				}
+				// Strip IPv6 prefix
+				ip = strings.TrimPrefix(ip, "::ffff:")
+				if ip == "::1" {
+					ip = "127.0.0.1"
+				}
+
+				userAgent := "Unknown"
+				if ua, ok := caddyLog.Request.Headers["User-Agent"]; ok && len(ua) > 0 {
+					userAgent = ua[0]
+				}
+
+				accessEntry := storage.AccessLogEntry{
+					Timestamp:  entry.Timestamp,
+					Service:    entry.Service,
+					Host:       entry.Host,
+					IP:         ip,
+					Method:     caddyLog.Request.Method,
+					Path:       caddyLog.Request.URI,
+					StatusCode: uint16(caddyLog.Status),
+					BytesSent:  uint64(caddyLog.Size),
+					UserAgent:  userAgent,
+					Domain:     caddyLog.Request.Host,
+				}
+
+				// Resolve GeoIP
+				if geoInfo, err := geoip.GetInstance().Lookup(ip); err == nil {
+					accessEntry.Country = geoInfo.Country
+					accessEntry.Region = geoInfo.Region
+					accessEntry.City = geoInfo.City
+					accessEntry.Latitude = geoInfo.Latitude
+					accessEntry.Longitude = geoInfo.Longitude
+				}
+
+				if err := h.Logs.InsertAccessLog(accessEntry); err != nil {
+					fmt.Printf("[ERROR] Failed to insert Caddy/JSON access log: %v\n", err)
+				}
+			}
+		}
+
+		// Try CLF/Combined Log Format (Apache, Nginx, Traefik)
 		matches := commonLogFormat.FindStringSubmatch(entry.Message)
         // Check for vhost_combined format (starts with vhost:port then IP)
         // If standard regex fails, try skipping the first token
@@ -428,6 +488,7 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             agentRoutes.POST("/ingest/processes", h.HandleIngestProcesses)
             agentRoutes.POST("/ingest/firewall", h.HandleIngestFirewall)
             agentRoutes.POST("/ingest/connections", h.HandleIngestConnections)
+            agentRoutes.POST("/ingest/service-stats", h.HandleIngestServiceStats)
         }
 
         // User-facing endpoints (optional auth based on AUTH_ENABLED)
@@ -454,11 +515,7 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             userRoutes.GET("/services/:service/access-logs", h.HandleGetAccessLogs)
             userRoutes.GET("/services/:service/geo", h.HandleGetGeoStats)
             userRoutes.GET("/services/:service/top-ips", h.HandleGetTopIPs)
-            
-            // MySQL endpoints
-            userRoutes.GET("/services/mysql/status", h.HandleGetMySQLStatus)
-            userRoutes.GET("/services/mysql/slow-queries", h.HandleGetMySQLSlowQueries)
-            userRoutes.GET("/services/mysql/connections", h.HandleGetMySQLConnections)
+            userRoutes.GET("/services/:service/db-stats", h.HandleGetServiceDBStats)
 
             // Blocked IPs list (for IP Intelligence quick-block panel)
             userRoutes.GET("/blocked-ips", h.HandleGetBlockedIPs)

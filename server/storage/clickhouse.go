@@ -307,6 +307,21 @@ func NewLogStore(dsn string) (*LogStore, error) {
 		return nil, fmt.Errorf("failed to create ip_activity_mv: %w", err)
 	}
 
+	// Create Service Stats Table (for DB metrics from agents)
+	err = conn.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS datavast.service_stats (
+			timestamp DateTime,
+			host String,
+			service String,
+			stats String
+		) ENGINE = MergeTree()
+		ORDER BY (host, service, timestamp)
+		TTL timestamp + INTERVAL 7 DAY
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service_stats: %w", err)
+	}
+
 	store := &LogStore{conn: conn}
 
 	// Apply retention policy at startup (default 7 days for app tables, 3 days for system tables)
@@ -336,6 +351,7 @@ func (s *LogStore) ApplyRetentionPolicy(days int) {
 		{"datavast.processes", "timestamp"},
 		{"datavast.firewall", "timestamp"},
 		{"datavast.access_logs", "timestamp"},
+		{"datavast.service_stats", "timestamp"},
 	}
 	for _, t := range appTables {
 		err := s.conn.Exec(context.Background(), fmt.Sprintf(
@@ -1149,4 +1165,45 @@ func (s *LogStore) CountAuthFailuresForIP(ip, agentID string) (int, error) {
 		return 0, err
 	}
 	return int(count), nil
+}
+
+// Service Stats methods
+
+type ServiceStatsEntry struct {
+	Timestamp time.Time `json:"timestamp"`
+	Host      string    `json:"host"`
+	Service   string    `json:"service"`
+	Stats     string    `json:"stats"`
+}
+
+func (s *LogStore) InsertServiceStats(entry ServiceStatsEntry) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.conn.Exec(context.Background(), `
+		INSERT INTO datavast.service_stats (timestamp, host, service, stats)
+		VALUES (?, ?, ?, ?)
+	`, entry.Timestamp, entry.Host, entry.Service, entry.Stats)
+}
+
+func (s *LogStore) GetLatestServiceStats(host, service string) (string, time.Time, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	query := `SELECT stats, timestamp FROM datavast.service_stats WHERE service = ?`
+	args := []interface{}{service}
+
+	if host != "" {
+		query += " AND host = ?"
+		args = append(args, host)
+	}
+
+	query += " ORDER BY timestamp DESC LIMIT 1"
+
+	var stats string
+	var ts time.Time
+	err := s.conn.QueryRow(context.Background(), query, args...).Scan(&stats, &ts)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return stats, ts, nil
 }

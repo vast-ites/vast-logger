@@ -34,7 +34,14 @@ type MySQLStats struct {
 	InnoDBBufferPoolSize int64
 	AbortedConnections   int
 	Uptime               int64
+	
+	// Performance diagnostics
+	TablesWithoutIndexes      []TableInfo            `json:"tables_without_indexes,omitempty"`
+	HighIOTables              []TableIOStats         `json:"high_io_tables,omitempty"`
+	SlowQueriesFromPerfSchema []SlowQueryInfo        `json:"slow_queries,omitempty"`
+	PerformanceSchema         PerformanceSchemaInfo  `json:"performance_schema"`
 }
+
 
 // SlowQuery represents a slow query log entry
 type SlowQuery struct {
@@ -58,6 +65,37 @@ type ProcessListEntry struct {
 	State    string
 	Info     string
 }
+
+// TableInfo represents a table without indexes
+type TableInfo struct {
+	Schema string `json:"schema"`
+	Table  string `json:"table"`
+	Rows   int64  `json:"rows"`
+}
+
+// TableIOStats represents I/O statistics for a table
+type TableIOStats struct {
+	Database  string  `json:"database"`
+	Table     string  `json:"table"`
+	Reads     int64   `json:"reads"`
+	Writes    int64   `json:"writes"`
+	ReadTime  float64 `json:"read_time_sec"`
+	WriteTime float64 `json:"write_time_sec"`
+}
+
+// SlowQueryInfo represents slow query from performance_schema
+type SlowQueryInfo struct {
+	Query       string  `json:"query"`
+	ExecCount   int64   `json:"exec_count"`
+	AvgTime     float64 `json:"avg_time_sec"`
+	AvgRowsExam float64 `json:"avg_rows_examined"`
+}
+
+// PerformanceSchemaInfo tracks if performance_schema is enabled
+type PerformanceSchemaInfo struct {
+	Enabled bool `json:"enabled"`
+}
+
 
 // NewMySQLCollector creates a new MySQL collector
 func NewMySQLCollector(dsn string) (*MySQLCollector, error) {
@@ -128,6 +166,9 @@ func (c *MySQLCollector) GetStats() (*MySQLStats, error) {
 
 	// Get current connection count
 	stats.TotalConnections = stats.ThreadsConnected
+	
+	// Collect performance diagnostics
+	c.CollectDiagnostics(stats)
 
 	return stats, nil
 }

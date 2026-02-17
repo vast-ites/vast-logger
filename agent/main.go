@@ -12,11 +12,13 @@ import (
 	"strings"
 	"encoding/json"
     "net/http"
+    "net"
     "bytes"
     "sync/atomic"
     "context"
 
 	"github.com/datavast/datavast/agent/collector"
+	"github.com/datavast/datavast/agent/collector/services"
 	"github.com/datavast/datavast/agent/discovery"
 	"github.com/datavast/datavast/agent/sender"
     "github.com/datavast/datavast/agent/config"
@@ -81,8 +83,13 @@ func main() {
                 sourceType := "manual_selection"
                 if strings.Contains(path, "apache") || strings.Contains(path, "httpd") { sourceType = "apache" }
                 if strings.Contains(path, "nginx") { sourceType = "nginx" }
+                if strings.Contains(path, "caddy") { sourceType = "caddy" }
+                if strings.Contains(path, "traefik") { sourceType = "traefik" }
                 if strings.Contains(path, "pm2") { sourceType = "pm2" }
                 if strings.Contains(path, "mysql") { sourceType = "mysql" }
+                if strings.Contains(path, "redis") { sourceType = "redis" }
+                if strings.Contains(path, "mongodb") || strings.Contains(path, "mongod") { sourceType = "mongodb" }
+                if strings.Contains(path, "postgresql") || strings.Contains(path, "postgres") { sourceType = "postgresql" }
                 
                 logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: sourceType})
             }
@@ -107,7 +114,12 @@ func main() {
         sourceType := "manual_selection"
         if strings.Contains(path, "apache") || strings.Contains(path, "httpd") { sourceType = "apache" }
         if strings.Contains(path, "nginx") { sourceType = "nginx" }
+        if strings.Contains(path, "caddy") { sourceType = "caddy" }
+        if strings.Contains(path, "traefik") { sourceType = "traefik" }
         if strings.Contains(path, "mysql") { sourceType = "mysql" }
+        if strings.Contains(path, "redis") { sourceType = "redis" }
+        if strings.Contains(path, "mongodb") || strings.Contains(path, "mongod") { sourceType = "mongodb" }
+        if strings.Contains(path, "postgresql") || strings.Contains(path, "postgres") { sourceType = "postgresql" }
 
         logs = append(logs, discovery.DiscoveredLog{Path: path, SourceType: sourceType})
     }
@@ -274,6 +286,9 @@ func main() {
             }
         }
     }()
+
+    // Start Service Collectors (MySQL, Redis, PostgreSQL, MongoDB)
+    go startServiceCollectors(senderClient, cfg)
 
     // Command Poll: Check for pending commands from server every 10s
     cmdTicker := time.NewTicker(10 * time.Second)
@@ -536,3 +551,247 @@ func postRegister(url string, payload interface{}) (*http.Response, error) {
     data, _ := json.Marshal(payload)
     return http.Post(url+"/api/v1/agent/register", "application/json", bytes.NewBuffer(data))
 }
+
+// dbProbe represents a database service to detect and collect metrics from.
+type dbProbe struct {
+    name    string
+    address string
+    port    string
+}
+
+// startServiceCollectors auto-detects running database services and periodically collects their metrics.
+func startServiceCollectors(client *sender.Client, cfg *config.AgentConfig) {
+    probes := []dbProbe{
+        {"mysql", "127.0.0.1:3306", "3306"},
+        {"redis", "127.0.0.1:6379", "6379"},
+        {"postgresql", "127.0.0.1:5432", "5432"},
+        {"mongodb", "127.0.0.1:27017", "27017"},
+    }
+
+    // Check which services are running
+    var activeServices []dbProbe
+    for _, p := range probes {
+        conn, err := net.DialTimeout("tcp", p.address, 2*time.Second)
+        if err == nil {
+            conn.Close()
+            activeServices = append(activeServices, p)
+            fmt.Printf(">> Service Detected: %s on port %s\n", p.name, p.port)
+        }
+    }
+
+    if len(activeServices) == 0 {
+        log.Println(">> No database services detected on localhost")
+        return
+    }
+
+    fmt.Printf(">> Starting DB metrics collection for %d services (30s interval)\n", len(activeServices))
+
+    // Collect immediately, then every 30s
+    collectDBStats(client, activeServices, cfg)
+
+    ticker := time.NewTicker(30 * time.Second)
+    defer ticker.Stop()
+
+    for range ticker.C {
+        collectDBStats(client, activeServices, cfg)
+    }
+}
+
+func collectDBStats(client *sender.Client, activeServices []dbProbe, cfg *config.AgentConfig) {
+    for _, svc := range activeServices {
+        var statsJSON string
+        var err error
+
+        switch svc.name {
+        case "mysql":
+            statsJSON, err = collectMySQLStats(cfg)
+        case "redis":
+            statsJSON, err = collectRedisStats()
+        case "postgresql":
+            statsJSON, err = collectPostgreSQLStats(cfg)
+        case "mongodb":
+            statsJSON, err = collectMongoDBStats()
+        }
+
+        if err != nil {
+            log.Printf("[%s] Failed to collect stats: %v", svc.name, err)
+            continue
+        }
+
+        if err := client.SendServiceStats(svc.name, statsJSON); err != nil {
+            log.Printf("[%s] Failed to send stats: %v", svc.name, err)
+        }
+    }
+}
+
+func collectMySQLStats(cfg *config.AgentConfig) (string, error) {
+    user := "root"
+    if cfg.MySQLUser != "" { user = cfg.MySQLUser }
+    pass := ""
+    if cfg.MySQLPassword != "" { pass = ":" + cfg.MySQLPassword }
+    
+    dsn := fmt.Sprintf("%s%s@tcp(127.0.0.1:3306)/", user, pass)
+    col, err := services.NewMySQLCollector(dsn)
+    if err != nil {
+        return "", err
+    }
+    defer col.Close()
+
+    stats, err := col.GetStats()
+    if err != nil {
+        return "", err
+    }
+
+    // Get process list for active queries
+    processList, _ := col.GetProcessList()
+
+    result := map[string]interface{}{
+        "total_connections":      stats.TotalConnections,
+        "max_connections":        stats.MaxConnections,
+        "threads_connected":      stats.ThreadsConnected,
+        "threads_running":        stats.ThreadsRunning,
+        "slow_queries":           stats.SlowQueries,
+        "queries_per_second":     stats.QueriesPerSecond,
+        "is_master":              stats.IsMaster,
+        "replication_lag":        stats.ReplicationLag,
+        "query_cache_hit_rate":   stats.QueryCacheHitRate,
+        "innodb_buffer_pool_size": stats.InnoDBBufferPoolSize,
+        "aborted_connections":    stats.AbortedConnections,
+        "uptime":                 stats.Uptime,
+        "process_list":           processList,
+        "performance_schema":     stats.PerformanceSchema,
+        "tables_without_indexes": stats.TablesWithoutIndexes,
+        "high_io_tables":         stats.HighIOTables,
+        "slow_queries_perf":      stats.SlowQueriesFromPerfSchema,
+    }
+
+    data, err := json.Marshal(result)
+    return string(data), err
+}
+
+func collectRedisStats() (string, error) {
+    col, err := services.NewRedisCollector("127.0.0.1:6379", "")
+    if err != nil {
+        return "", err
+    }
+    defer col.Close()
+
+    stats, err := col.GetStats()
+    if err != nil {
+        return "", err
+    }
+
+    keyspace, _ := col.GetKeyspaceInfo()
+    slowLog, _ := col.GetSlowLog(10)
+
+    result := map[string]interface{}{
+        "version":              stats.Version,
+        "uptime_seconds":       stats.UptimeSeconds,
+        "connected_clients":    stats.ConnectedClients,
+        "blocked_clients":      stats.BlockedClients,
+        "used_memory":          stats.UsedMemory,
+        "max_memory":           stats.MaxMemory,
+        "memory_fragmentation": stats.MemoryFragmentation,
+        "total_commands":       stats.TotalCommands,
+        "ops_per_sec":          stats.OpsPerSec,
+        "keyspace_hits":        stats.KeyspaceHits,
+        "keyspace_misses":      stats.KeyspaceMisses,
+        "hit_rate":             stats.HitRate,
+        "evicted_keys":         stats.EvictedKeys,
+        "expired_keys":         stats.ExpiredKeys,
+        "role":                 stats.Role,
+        "replication_lag":      stats.ReplicationLag,
+        "keyspace":             keyspace,
+        "slow_log":             slowLog,
+    }
+
+    data, err := json.Marshal(result)
+    return string(data), err
+}
+
+func collectPostgreSQLStats(cfg *config.AgentConfig) (string, error) {
+    user := "postgres"
+    if cfg.PostgresUser != "" { user = cfg.PostgresUser }
+    pass := ""
+    if cfg.PostgresPassword != "" { pass = ":" + cfg.PostgresPassword }
+    
+    dsn := fmt.Sprintf("postgres://%s%s@127.0.0.1:5432/postgres?sslmode=disable", user, pass)
+    col, err := services.NewPostgreSQLCollector(dsn)
+    if err != nil {
+        return "", err
+    }
+    defer col.Close()
+
+    stats, err := col.GetStats()
+    if err != nil {
+        return "", err
+    }
+
+    activity, _ := col.GetActivity()
+    locks, _ := col.GetLocks()
+    tableStats, _ := col.GetTableStats()
+
+    result := map[string]interface{}{
+        "total_connections":    stats.TotalConnections,
+        "max_connections":      stats.MaxConnections,
+        "active_connections":   stats.ActiveConnections,
+        "idle_connections":     stats.IdleConnections,
+        "database_size":        stats.DatabaseSize,
+        "dead_tuples":          stats.DeadTuples,
+        "cache_hit_ratio":      stats.CacheHitRatio,
+        "transactions_per_sec": stats.TransactionsPerSec,
+        "replication_lag":      stats.ReplicationLag,
+        "locks_count":          stats.LocksCount,
+        "long_running_queries": stats.LongRunningQueries,
+        "activity":             activity,
+        "locks":                locks,
+        "table_stats":          tableStats,
+        "pg_stat_statements":   stats.PgStatStatements,
+        "tables_without_indexes": stats.TablesWithoutIndexes,
+        "high_io_tables":       stats.HighIOTables,
+        "slow_queries":         stats.SlowQueries,
+    }
+
+    data, err := json.Marshal(result)
+    return string(data), err
+}
+
+func collectMongoDBStats() (string, error) {
+    col, err := services.NewMongoDBCollector("mongodb://127.0.0.1:27017")
+    if err != nil {
+        return "", err
+    }
+    defer col.Close()
+
+    stats, err := col.GetStats()
+    if err != nil {
+        return "", err
+    }
+
+    currentOps, _ := col.GetCurrentOps()
+
+    result := map[string]interface{}{
+        "version":          stats.Version,
+        "uptime":           stats.Uptime,
+        "connections":      stats.Connections,
+        "max_connections":  stats.MaxConnections,
+        "memory_used":      stats.MemoryUsed,
+        "op_counters":      stats.OpCounters,
+        "replication_lag":  stats.ReplicationLag,
+        "role":             stats.Role,
+        "replica_set_name": stats.ReplicaSetName,
+        "doc_count":        stats.DocCount,
+        "data_size":        stats.DataSize,
+        "storage_size":     stats.StorageSize,
+        "index_size":       stats.IndexSize,
+        "current_ops":      currentOps,
+        "profiling_enabled": stats.ProfilingEnabled,
+        "collections_without_indexes": stats.CollectionsWithoutIndexes,
+        "slow_operations":  stats.SlowOperations,
+        "collection_stats": stats.CollectionStats,
+    }
+
+    data, err := json.Marshal(result)
+    return string(data), err
+}
+

@@ -81,6 +81,33 @@ func FindLogs() ([]DiscoveredLog, error) {
 	return logs, nil
 }
 
+// inferServiceType determines the service type from a log file path
+func inferServiceType(path string, fallback string) string {
+	lower := strings.ToLower(path)
+	switch {
+	case strings.Contains(lower, "/nginx/"):
+		return "nginx"
+	case strings.Contains(lower, "/apache2/") || strings.Contains(lower, "/httpd/"):
+		return "apache"
+	case strings.Contains(lower, "/caddy/"):
+		return "caddy"
+	case strings.Contains(lower, "/traefik/"):
+		return "traefik"
+	case strings.Contains(lower, "/mysql/"):
+		return "mysql"
+	case strings.Contains(lower, "/postgresql/") || strings.Contains(lower, "/postgres/"):
+		return "postgresql"
+	case strings.Contains(lower, "/redis/"):
+		return "redis"
+	case strings.Contains(lower, "/mongodb/") || strings.Contains(lower, "/mongod"):
+		return "mongodb"
+	case strings.Contains(lower, "/pm2/") || strings.Contains(lower, ".pm2/"):
+		return "pm2"
+	default:
+		return fallback
+	}
+}
+
 // scanProcForOpenLogs iterates over /proc/[pid]/fd to find open .log files
 func scanProcForOpenLogs() ([]DiscoveredLog, error) {
 	var results []DiscoveredLog
@@ -132,7 +159,7 @@ func scanProcForOpenLogs() ([]DiscoveredLog, error) {
 
 				results = append(results, DiscoveredLog{
 					Path:        linkPath,
-					SourceType:  "process_open_file",
+					SourceType:  inferServiceType(linkPath, "process_open_file"),
 					ProcessName: procName,
 				})
 			}
@@ -189,7 +216,7 @@ func scanDirectory(root string) []DiscoveredLog {
             if canRead(path) {
                 results = append(results, DiscoveredLog{
                     Path:       path,
-                    SourceType: "filesystem_scan",
+                    SourceType: inferServiceType(path, "filesystem_scan"),
                 })
             }
 		}
@@ -209,6 +236,10 @@ func FindServiceLogs(service string) []DiscoveredLog {
         patterns = []string{"/var/log/nginx/*.log"}
     case "apache":
         patterns = []string{"/var/log/apache2/*.log", "/var/log/httpd/*.log"}
+    case "caddy":
+        patterns = []string{"/var/log/caddy/*.log"}
+    case "traefik":
+        patterns = []string{"/var/log/traefik/*.log"}
     case "pm2":
         home, _ := os.UserHomeDir()
         patterns = []string{filepath.Join(home, ".pm2/logs/*.log")}

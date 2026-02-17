@@ -203,3 +203,16 @@ func (c *Client) SendFirewallSync(blockedIPs []string) error {
     return c.post("/ingest/firewall-sync", data)
 }
 
+// SendServiceStats sends database service metrics to the server.
+func (c *Client) SendServiceStats(service, statsJSON string) error {
+    payload := map[string]interface{}{
+        "host":    c.Hostname,
+        "service": service,
+        "stats":   statsJSON,
+    }
+    data, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+    return c.post("/ingest/service-stats", data)
+}

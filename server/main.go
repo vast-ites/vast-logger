@@ -5,7 +5,7 @@ import (
 	"log"
 	"math"
 	"os"
-	"strings"
+	// "strings"
 	"time"
 
 	"github.com/datavast/datavast/server/alert"
@@ -15,8 +15,8 @@ import (
 	"github.com/datavast/datavast/server/geoip"
 	"github.com/datavast/datavast/server/storage"
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/gzip"
-	"github.com/gin-contrib/static"
+	// "github.com/gin-contrib/gzip"
+	// "github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -107,7 +107,7 @@ func main() {
 	r := gin.Default()
 
 	// Enable Gzip compression
-	r.Use(gzip.Gzip(gzip.DefaultCompression))
+	// r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "http://<SERVER_IP>:8080"},
@@ -151,21 +151,28 @@ func main() {
 	fwSyncGroup.POST("/ingest/firewall-sync", handler.HandleIngestFirewallSync)
 
 	// Cache-Control: prevent browsers from caching index.html (stale frontend builds)
-	r.Use(func(c *gin.Context) {
-		path := c.Request.URL.Path
-		// Hashed assets (js/css with hash in filename) can be cached forever
-		// Everything else (HTML, SPA routes) must not be cached
-		if path == "/" || path == "/index.html" || !strings.Contains(path, ".") {
-			c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
-			c.Header("Pragma", "no-cache")
-			c.Header("Expires", "0")
-		}
-		c.Next()
-	})
+	// r.Use(func(c *gin.Context) {
+	// 	path := c.Request.URL.Path
+	// 	// Hashed assets (js/css with hash in filename) can be cached forever
+	// 	// Everything else (HTML, SPA routes) must not be cached
+	// 	if path == "/" || path == "/index.html" || !strings.Contains(path, ".") {
+	// 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+	// 		c.Header("Pragma", "no-cache")
+	// 		c.Header("Expires", "0")
+	// 	}
+	// 	c.Next()
+	// })
 
-	// Serve Frontend (Static Files)
-	// accessible at root "/"
-	r.Use(static.Serve("/", static.LocalFile("./dist", true)))
+	// Serve Frontend (Static Files) - EXPLICIT ROUTES ONLY
+	// Avoid using wildcard static.Serve("/") as it interferes with API routes
+	r.Static("/assets", "./dist/assets")
+	r.StaticFile("/vite.svg", "./dist/vite.svg")
+	r.StaticFile("/index.html", "./dist/index.html")
+    
+    // Serve favicon if it exists (optional)
+    if _, err := os.Stat("./dist/favicon.ico"); err == nil {
+        r.StaticFile("/favicon.ico", "./dist/favicon.ico")
+    }
 
 	// SPA Fallback: For React Router paths that don't match API or static files
 	r.NoRoute(func(c *gin.Context) {

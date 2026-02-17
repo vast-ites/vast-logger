@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/datavast/datavast/server/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -342,211 +343,40 @@ func parseDuration(s string) (time.Duration, error) {
 		return time.ParseDuration(s)
 	}
 }
-// MySQL-specific API endpoints
-
-// HandleGetMySQLStatus returns MySQL server status and metrics
-func (h *IngestionHandler) HandleGetMySQLStatus(c *gin.Context) {
-	host := c.Query("host")
-	duration := c.DefaultQuery("duration", "1h")
-
-	dur, err := parseDuration(duration)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid duration"})
+// HandleIngestServiceStats accepts DB metrics from the agent
+func (h *IngestionHandler) HandleIngestServiceStats(c *gin.Context) {
+	var entry storage.ServiceStatsEntry
+	if err := c.BindJSON(&entry); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	startTime := time.Now().Add(-dur)
-
-	// Query mysql_stats table for latest stats
-	query := `
-		SELECT 
-			timestamp,
-			total_connections,
-			max_connections,
-			threads_connected,
-			threads_running,
-			slow_queries,
-			queries_per_second,
-			is_master,
-			replication_lag_seconds,
-			query_cache_hit_rate,
-			innodb_buffer_pool_size,
-			aborted_connections
-		FROM datavast.mysql_stats
-		WHERE timestamp >= ?
-	`
-
-	args := []interface{}{startTime}
-	if host != "" {
-		query += " AND host = ?"
-		args = append(args, host)
+	if entry.Timestamp.IsZero() {
+		entry.Timestamp = time.Now()
 	}
 
-	query += " ORDER BY timestamp DESC LIMIT 1"
-
-	rows, err := h.Logs.Query(query, args...)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"stats": nil})
+	if err := h.Logs.InsertServiceStats(entry); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store service stats"})
 		return
 	}
-	defer rows.Close()
 
-	if rows.Next() {
-		var (
-			timestamp            time.Time
-			totalConn, maxConn   int
-			threadsConn, threadsRun int
-			slowQueries          int64
-			qps                  float64
-			isMaster             bool
-			repLag               int
-			queryCacheHitRate    float64
-			bufferPool           int64
-			abortedConn          int
-		)
-
-		if err := rows.Scan(&timestamp, &totalConn, &maxConn, &threadsConn, &threadsRun,
-			&slowQueries, &qps, &isMaster, &repLag, &queryCacheHitRate, &bufferPool, &abortedConn); err == nil {
-			
-			c.JSON(http.StatusOK, gin.H{
-				"timestamp":            timestamp,
-				"total_connections":     totalConn,
-				"max_connections":       maxConn,
-				"threads_connected":     threadsConn,
-				"threads_running":       threadsRun,
-				"slow_queries":          slowQueries,
-				"queries_per_second":    qps,
-				"is_master":             isMaster,
-				"replication_lag":       repLag,
-				"query_cache_hit_rate":  queryCacheHitRate,
-				"innodb_buffer_pool_size": bufferPool,
-				"aborted_connections":   abortedConn,
-			})
-			return
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"stats": nil})
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// HandleGetMySQLSlowQueries returns slow query log entries
-func (h *IngestionHandler) HandleGetMySQLSlowQueries(c *gin.Context) {
+// HandleGetServiceDBStats returns the latest stats for any database service
+// Used for MySQL, Redis, PostgreSQL, MongoDB
+func (h *IngestionHandler) HandleGetServiceDBStats(c *gin.Context) {
+	service := c.Param("service")
 	host := c.Query("host")
-	limit := c.DefaultQuery("limit", "50")
-	duration := c.DefaultQuery("duration", "1h")
 
-	dur, err := parseDuration(duration)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid duration"})
+	statsJSON, ts, err := h.Logs.GetLatestServiceStats(host, service)
+	if err != nil || statsJSON == "" {
+		c.JSON(http.StatusOK, gin.H{"stats": nil, "timestamp": nil})
 		return
 	}
 
-	startTime := time.Now().Add(-dur)
-
-	query := `
-		SELECT timestamp, query_time, lock_time, rows_examined, rows_sent, query_text, client_ip
-		FROM datavast.slow_queries
-		WHERE service = 'mysql' AND timestamp >= ?
-	`
-
-	args := []interface{}{startTime}
-	if host != "" {
-		query += " AND host = ?"
-		args = append(args, host)
-	}
-
-	// Validate limit to prevent SQL injection
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil || limitInt < 1 || limitInt > 1000 {
-		limitInt = 50
-	}
-	query += fmt.Sprintf(" ORDER BY query_time DESC LIMIT %d", limitInt)
-
-	rows, err := h.Logs.Query(query, args...)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"queries": []gin.H{}})
-		return
-	}
-	defer rows.Close()
-
-	var queries []gin.H
-	for rows.Next() {
-		var (
-			timestamp              time.Time
-			queryTime, lockTime    float64
-			rowsExam, rowsSent     int64
-			queryText, clientIP    string
-		)
-
-		if err := rows.Scan(&timestamp, &queryTime, &lockTime, &rowsExam, &rowsSent, &queryText, &clientIP); err == nil {
-			queries = append(queries, gin.H{
-				"timestamp":      timestamp,
-				"query_time":     queryTime,
-				"lock_time":      lockTime,
-				"rows_examined":  rowsExam,
-				"rows_sent":      rowsSent,
-				"query_text":     queryText,
-				"client_ip":      clientIP,
-			})
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"queries": queries,
-		"count":   len(queries),
-	})
+	// Return raw JSON to frontend
+	c.Data(http.StatusOK, "application/json", []byte(fmt.Sprintf(
+		`{"stats":%s,"timestamp":"%s"}`, statsJSON, ts.Format(time.RFC3339))))
 }
 
-// HandleGetMySQLConnections returns connection statistics
-func (h *IngestionHandler) HandleGetMySQLConnections(c *gin.Context) {
-	host := c.Query("host")
-	duration := c.DefaultQuery("duration", "1h")
-
-	dur, err := parseDuration(duration)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid duration"})
-		return
-	}
-
-	startTime := time.Now().Add(-dur)
-
-	// Get connections by IP from service_connections table
-	query := `
-		SELECT client_ip, count() as connection_count, any(country) as country
-		FROM datavast.service_connections
-		WHERE service = 'mysql' AND timestamp >= ?
-	`
-
-	args := []interface{}{startTime}
-	if host != "" {
-		query += " AND host = ?"
-		args = append(args, host)
-	}
-
-	query += " GROUP BY client_ip ORDER BY connection_count DESC LIMIT 20"
-
-	rows, err := h.Logs.Query(query, args...)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"connections": []gin.H{}})
-		return
-	}
-	defer rows.Close()
-
-	var connections []gin.H
-	for rows.Next() {
-		var ip, country string
-		var count int64
-
-		if err := rows.Scan(&ip, &count, &country); err == nil {
-			connections = append(connections, gin.H{
-				"ip":      ip,
-				"count":   count,
-				"country": country,
-			})
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"connections": connections,
-	})
-}

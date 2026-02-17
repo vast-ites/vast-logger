@@ -1,25 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Database, Activity, HardDrive, FileText } from 'lucide-react';
+import { ArrowLeft, Database, Activity, HardDrive, FileText, AlertTriangle, Zap, Clock } from 'lucide-react';
 import StatCard from '../../components/service/StatCard';
 import ChartPanel from '../../components/service/ChartPanel';
 import TimeRangeSelector from '../../components/service/TimeRangeSelector';
 import RefreshRateSelector from '../../components/service/RefreshRateSelector';
+import SetupInstructionBanner from '../../components/service/SetupInstructionBanner';
+import { TablesWithoutIndexes, SlowQueries } from '../../components/service/DiagnosticSections';
 
 const MongoDBDetail = () => {
     const navigate = useNavigate();
     const [timeRange, setTimeRange] = useState('5m');
-    const [refreshRate, setRefreshRate] = useState(1);
+    const [refreshRate, setRefreshRate] = useState(5);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     const fetchData = async () => {
         try {
             const token = localStorage.getItem('token');
             const headers = { Authorization: `Bearer ${token}` };
 
-            const res = await fetch(`/api/v1/services/mongodb/status?duration=${timeRange}`, { headers });
-            if (res.ok) setStats(await res.json());
+            const res = await fetch(`/api/v1/services/mongodb/db-stats`, { headers });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.stats) {
+                    setStats(data.stats);
+                    setLastUpdated(data.timestamp);
+                }
+            }
             setLoading(false);
         } catch (err) {
             console.error('Failed to fetch MongoDB data:', err);
@@ -36,6 +45,11 @@ const MongoDBDetail = () => {
 
     if (loading) return <div className="p-6 text-cyber-cyan">Loading MongoDB metrics...</div>;
 
+    const s = stats || {};
+    const opCounters = s.op_counters || {};
+    const totalOps = Object.values(opCounters).reduce((sum, v) => sum + (v || 0), 0);
+    const currentOps = s.current_ops || [];
+
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -51,9 +65,19 @@ const MongoDBDetail = () => {
                         </h1>
                         <p className="text-cyber-muted mt-1">
                             Document database monitoring
-                            {stats?.replica_set_name && (
+                            {s.replica_set_name && (
                                 <span className="ml-2 px-2 py-0.5 text-xs rounded bg-green-500/20 text-green-300">
-                                    {stats.replica_set_name} - {stats.role}
+                                    {s.replica_set_name} — {s.role || 'standalone'}
+                                </span>
+                            )}
+                            {!s.replica_set_name && (
+                                <span className="ml-2 px-2 py-0.5 text-xs rounded bg-gray-500/20 text-gray-300">
+                                    Standalone
+                                </span>
+                            )}
+                            {s.version && (
+                                <span className="ml-2 px-2 py-0.5 text-xs rounded bg-green-500/10 text-green-300">
+                                    v{s.version}
                                 </span>
                             )}
                         </p>
@@ -65,62 +89,159 @@ const MongoDBDetail = () => {
                 </div>
             </div>
 
+            {/* Stats Row 1 */}
             <div className="grid grid-cols-4 gap-4">
-                <StatCard title="Connections" value={stats?.connections || 0}
-                    max={stats?.max_connections} icon={Activity} />
-                <StatCard title="Documents" value={(stats?.doc_count || 0).toLocaleString()}
-                    icon={FileText} />
-                <StatCard title="Data Size" value={(stats?.data_size / 1024 / 1024 / 1024 || 0).toFixed(2)}
-                    unit="GB" icon={HardDrive} />
-                <StatCard title="Storage Size" value={(stats?.storage_size / 1024 / 1024 / 1024 || 0).toFixed(2)}
-                    unit="GB" icon={HardDrive} />
+                <StatCard title="Connections" value={s.connections || 0}
+                    max={s.max_connections} icon={Activity} />
+                <StatCard title="Total Operations" value={totalOps.toLocaleString()} icon={Zap} />
+                <StatCard title="Documents" value={(s.doc_count || 0).toLocaleString()} icon={FileText} />
+                <StatCard title="Memory Used" value={((s.memory_used || 0) / 1024 / 1024).toFixed(0)}
+                    unit="MB" icon={HardDrive} />
             </div>
 
+            {/* Stats Row 2 */}
+            <div className="grid grid-cols-4 gap-4">
+                <StatCard title="Data Size" value={((s.data_size || 0) / 1024 / 1024 / 1024).toFixed(2)}
+                    unit="GB" icon={HardDrive} />
+                <StatCard title="Storage Size" value={((s.storage_size || 0) / 1024 / 1024 / 1024).toFixed(2)}
+                    unit="GB" icon={HardDrive} />
+                <StatCard title="Index Size" value={((s.index_size || 0) / 1024 / 1024).toFixed(2)}
+                    unit="MB" icon={HardDrive} />
+                <StatCard title="Replication Lag" value={s.replication_lag || 0}
+                    unit="sec" icon={Clock} status={s.replication_lag > 10 ? 'warning' : 'ok'} />
+            </div>
+
+            {/* Op Counters & Server Info */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="glass-panel p-4">
                     <h3 className="text-lg font-semibold text-cyber-text mb-4">Operation Counters</h3>
                     <div className="space-y-3">
-                        <div className="flex justify-between">
-                            <span className="text-cyber-muted">Queries</span>
-                            <span className="text-cyber-text font-semibold">{stats?.op_counters?.query?.toLocaleString() || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-cyber-muted">Inserts</span>
-                            <span className="text-cyber-text font-semibold">{stats?.op_counters?.insert?.toLocaleString() || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-cyber-muted">Updates</span>
-                            <span className="text-cyber-text font-semibold">{stats?.op_counters?.update?.toLocaleString() || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-cyber-muted">Deletes</span>
-                            <span className="text-cyber-text font-semibold">{stats?.op_counters?.delete?.toLocaleString() || 0}</span>
-                        </div>
+                        {['query', 'insert', 'update', 'delete', 'command', 'getmore'].map(op => (
+                            <div key={op} className="flex justify-between items-center">
+                                <span className="text-cyber-muted capitalize">{op}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-32 h-2 bg-cyber-gray/50 rounded-full overflow-hidden">
+                                        <div className="h-full bg-green-400 rounded-full"
+                                            style={{ width: `${totalOps > 0 ? ((opCounters[op] || 0) / totalOps * 100) : 0}%` }} />
+                                    </div>
+                                    <span className="text-cyber-text font-semibold font-mono w-24 text-right">
+                                        {(opCounters[op] || 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
                 <div className="glass-panel p-4">
-                    <h3 className="text-lg font-semibold text-cyber-text mb-4">Server Info</h3>
+                    <h3 className="text-lg font-semibold text-cyber-text mb-4">Server & Replication Info</h3>
                     <div className="space-y-3">
                         <div className="flex justify-between">
                             <span className="text-cyber-muted">Version</span>
-                            <span className="text-cyber-text font-mono">{stats?.version || 'N/A'}</span>
+                            <span className="text-cyber-text font-mono">{s.version || 'N/A'}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-cyber-muted">Uptime</span>
-                            <span className="text-cyber-text">{Math.floor((stats?.uptime || 0) / 3600)}h</span>
+                            <span className="text-cyber-text">{Math.floor((s.uptime || 0) / 3600)}h {Math.floor(((s.uptime || 0) % 3600) / 60)}m</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-cyber-muted">Memory Used</span>
-                            <span className="text-cyber-text">{(stats?.memory_used / 1024 / 1024 || 0).toFixed(2)} MB</span>
+                            <span className="text-cyber-muted">Role</span>
+                            <span className={`font-semibold ${s.role === 'primary' ? 'text-green-400' : s.role === 'secondary' ? 'text-yellow-400' : 'text-cyber-text'}`}>
+                                {s.role || 'standalone'}
+                            </span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-cyber-muted">Index Size</span>
-                            <span className="text-cyber-text">{(stats?.index_size / 1024 / 1024 || 0).toFixed(2)} MB</span>
+                            <span className="text-cyber-muted">Replica Set</span>
+                            <span className="text-cyber-text">{s.replica_set_name || 'None'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-cyber-muted">Replication Lag</span>
+                            <span className={`font-semibold ${s.replication_lag > 5 ? 'text-red-400' : 'text-green-400'}`}>
+                                {s.replication_lag || 0}s
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-cyber-muted">Memory</span>
+                            <span className="text-cyber-text">{((s.memory_used || 0) / 1024 / 1024).toFixed(0)} MB</span>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Performance Diagnostics */}
+            <SetupInstructionBanner
+                database="MongoDB"
+                prerequisite="Database Profiler"
+                enabled={s.profiling_enabled}
+                setupInstructions={`1. Enable profiling for slow operations (>100ms):
+   db.setProfilingLevel(1, { slowms: 100 })
+
+2. Enable full profiling (all operations):
+   db.setProfilingLevel(2)
+
+3. Check profiling status:
+   db.getProfilingStatus()
+
+4. View profiled operations:
+   db.system.profile.find().limit(10).sort({ ts: -1 })`}
+            />
+
+            {/* Diagnostic Sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <TablesWithoutIndexes tables={s.collections_without_indexes || []} />
+                <SlowQueries queries={s.slow_operations || []} />
+            </div>
+
+            {/* Current Operations */}
+            {currentOps.length > 0 && (
+                <div className="glass-panel p-4">
+                    <h3 className="text-lg font-semibold text-cyber-text mb-4 flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-green-400" />
+                        Current Operations
+                        <span className="ml-auto text-sm font-normal text-cyber-muted">{currentOps.length} ops</span>
+                    </h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-cyber-dim">
+                                    <th className="text-left py-2 px-3 text-cyber-muted font-medium">Op ID</th>
+                                    <th className="text-left py-2 px-3 text-cyber-muted font-medium">Operation</th>
+                                    <th className="text-left py-2 px-3 text-cyber-muted font-medium">Namespace</th>
+                                    <th className="text-left py-2 px-3 text-cyber-muted font-medium">Running (s)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {currentOps.slice(0, 20).map((op, idx) => (
+                                    <tr key={idx} className={`border-b border-cyber-gray hover:bg-cyber-gray/30 ${(op.secs_running || 0) > 5 ? 'bg-yellow-500/5' : ''}`}>
+                                        <td className="py-2 px-3 text-cyber-text font-mono text-sm">{op.opid || '-'}</td>
+                                        <td className="py-2 px-3 text-green-400 text-sm">{op.op || '-'}</td>
+                                        <td className="py-2 px-3 text-cyber-cyan text-sm font-mono">{op.ns || '-'}</td>
+                                        <td className={`py-2 px-3 text-sm font-mono ${(op.secs_running || 0) > 5 ? 'text-yellow-400 font-bold' : 'text-cyber-text'}`}>
+                                            {op.secs_running || 0}s
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {!stats && (
+                <div className="bg-cyber-yellow/10 border border-cyber-yellow/30 rounded-lg p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-cyber-yellow mt-0.5" />
+                    <div>
+                        <p className="text-cyber-text font-medium">No Data Available</p>
+                        <p className="text-cyber-muted text-sm mt-1">MongoDB monitoring requires the agent to have access on port 27017.</p>
+                    </div>
+                </div>
+            )}
+
+            {lastUpdated && (
+                <div className="text-right text-cyber-muted text-xs">
+                    Last updated: {new Date(lastUpdated).toLocaleString()}
+                </div>
+            )}
         </div>
     );
 };

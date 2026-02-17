@@ -18,6 +18,8 @@ const ServiceDetail = () => {
         'apache2': ApacheDetail,
         'nginx': ApacheDetail,
         'httpd': ApacheDetail,
+        'caddy': ApacheDetail,
+        'traefik': ApacheDetail,
         'mysql': MySQLDetail,
         'mariadb': MySQLDetail,
         'postgresql': PostgreSQLDetail,

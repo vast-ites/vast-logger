@@ -169,6 +169,43 @@ DataVast has specialized collectors that go beyond simple log tailing. To enable
 
 ---
 
+### 3.4 Advanced Database Diagnostics
+
+To unlock deep performance insights (slow queries, index usage, I/O stats), specific database configurations are required.
+
+#### MySQL / MariaDB
+Enable `performance_schema` to track index usage and I/O latency.
+1.  Edit `my.cnf` (or `mysqld.cnf`):
+    ```ini
+    [mysqld]
+    performance_schema=ON
+    ```
+2.  Restart MySQL: `sudo systemctl restart mysql`
+
+#### PostgreSQL
+Enable `pg_stat_statements` to track slow queries and execution statistics.
+1.  Edit `postgresql.conf`:
+    ```ini
+    shared_preload_libraries = 'pg_stat_statements'
+    pg_stat_statements.track = all
+    ```
+2.  Restart PostgreSQL: `sudo systemctl restart postgresql`
+3.  Enable extension in your database:
+    ```sql
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+    ```
+
+#### MongoDB
+Enable the Database Profiler to track slow operations.
+1.  Connect to your MongoDB instance.
+2.  Run the following command (enables profiling for all operations > 100ms):
+    ```javascript
+    db.setProfilingLevel(2, { slowms: 100 })
+    ```
+    *Note: Level 2 profiles all operations. Use Level 1 to profile only slow operations.*
+
+---
+
 ## 4. Features
 
 ### 4.1 Dashboard & Infrastructure

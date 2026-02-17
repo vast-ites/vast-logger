@@ -9,6 +9,10 @@ type AgentConfig struct {
     ServerURL   string          `json:"server_url"`
     AgentID     string          `json:"agent_id"`
     AgentSecret string          `json:"agent_secret"`
+    MySQLUser        string          `json:"mysql_user,omitempty"`
+    MySQLPassword    string          `json:"mysql_password,omitempty"`
+    PostgresUser     string          `json:"postgres_user,omitempty"`
+    PostgresPassword string          `json:"postgres_password,omitempty"`
     Collectors  CollectorConfig `json:"collectors"`
     LogConfig   LogStrategy     `json:"log_config"`
 }

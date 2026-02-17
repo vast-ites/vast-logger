@@ -32,6 +32,26 @@ type MongoDBStats struct {
 	DataSize           int64
 	StorageSize        int64
 	IndexSize          int64
+	
+	// Performance diagnostics
+	CollectionsWithoutIndexes []string            `json:"collections_without_indexes,omitempty"`
+	SlowOperations            []MongoSlowOp       `json:"slow_operations,omitempty"`
+	CollectionStats           []MongoCollStats    `json:"collection_stats,omitempty"`
+	ProfilingEnabled          bool                `json:"profiling_enabled"`
+}
+
+type MongoSlowOp struct {
+	Op        string `json:"op"`
+	Namespace string `json:"ns"`
+	Millis    int64  `json:"millis"`
+	Command   string `json:"command"`
+}
+
+type MongoCollStats struct {
+	Collection string  `json:"collection"`
+	Size       int64   `json:"size"`
+	Count      int64   `json:"count"`
+	AvgObjSize int64   `json:"avg_obj_size"`
 }
 
 // NewMongoDBCollector creates a MongoDB collector
@@ -151,6 +171,9 @@ func (c *MongoDBCollector) GetStats() (*MongoDBStats, error) {
 			stats.DocCount = int64(objects)
 		}
 	}
+	
+	// Collect performance diagnostics
+	c.CollectDiagnosticsMongo(stats)
 
 	return stats, nil
 }

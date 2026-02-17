@@ -79,7 +79,6 @@
     background-color: var(--glass-bg);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
-    contain: layout style paint;
   }
 
   /* Optimize scroll container for compositor */

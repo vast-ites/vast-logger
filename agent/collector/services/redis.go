@@ -37,6 +37,25 @@ type RedisStats struct {
 	ExpiredKeys        int64
 	Role               string
 	ReplicationLag     int
+	
+	// Performance diagnostics
+	LargestKeys       []RedisKeyInfo      `json:"largest_keys,omitempty"`
+	ExpensiveCommands []RedisCommandStat  `json:"expensive_commands,omitempty"`
+	EvictionRate      float64             `json:"eviction_rate_per_sec"`
+}
+
+type RedisKeyInfo struct {
+	Key       string `json:"key"`
+	SizeBytes int64  `json:"size_bytes"`
+	Type      string `json:"type"`
+	TTL       int64  `json:"ttl_seconds"`
+}
+
+type RedisCommandStat struct {
+	Command     string  `json:"command"`
+	Calls       int64   `json:"calls"`
+	TotalUsec   int64   `json:"total_usec"`
+	UsecPerCall float64 `json:"usec_per_call"`
 }
 
 // NewRedisCollector creates a Redis collector
@@ -111,6 +130,9 @@ func (c *RedisCollector) GetStats() (*RedisStats, error) {
 	if stats.Role == "slave" {
 		stats.ReplicationLag = parseInt(infoMap["master_repl_offset"]) - parseInt(infoMap["slave_repl_offset"])
 	}
+	
+	// Collect performance diagnostics
+	c.CollectDiagnosticsRedis(stats)
 
 	return stats, nil
 }

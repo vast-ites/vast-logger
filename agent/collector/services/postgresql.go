@@ -28,6 +28,12 @@ type PostgreSQLStats struct {
 	ReplicationLag      int
 	LocksCount          int
 	LongRunningQueries  int
+	
+	// Performance diagnostics
+	TablesWithoutIndexes []PgTableInfo       `json:"tables_without_indexes,omitempty"`
+	HighIOTables         []PgTableIOStats    `json:"high_io_tables,omitempty"`
+	SlowQueries          []PgSlowQueryInfo   `json:"slow_queries,omitempty"`
+	PgStatStatements     PgStatementsInfo    `json:"pg_stat_statements"`
 }
 
 // PostgreSQLActivity represents an active query
@@ -128,6 +134,9 @@ func (c *PostgreSQLCollector) GetStats() (*PostgreSQLStats, error) {
 		SELECT COALESCE(EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp())::int, 0)
 	`)
 	row.Scan(&stats.ReplicationLag)
+	
+	// Collect performance diagnostics
+	c.CollectDiagnosticsPg(stats)
 
 	return stats, nil
 }

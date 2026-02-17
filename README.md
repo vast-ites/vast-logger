@@ -13,13 +13,13 @@
 ### 📊 **Advanced Log Management**
 - **Smart Log Discovery**: Automatic detection of system, application, and service logs
 - **Full-Text Search**: Regex-based search with advanced filtering
-- **Service Categorization**: Auto-categorize logs by service (Apache, Nginx, MySQL, etc.)
+- **Service Categorization**: Auto-categorize logs by service (Apache, Nginx, Caddy, Traefik, MySQL, PostgreSQL, Redis, MongoDB, etc.)
 - **Real-Time Streaming**: Live log tailing with configurable refresh rates
 - **Export Capabilities**: Download filtered logs in JSON format
 
 ### 🎯 **Services & Integrations Hub**
 - **Service Discovery**: Automatic detection of running services across all hosts
-- **Integration Wizard**: Quick setup for Apache, Nginx, PM2, and custom log files
+- **Integration Wizard**: Quick setup for Apache, Nginx, Caddy, Traefik, PM2, and custom log files
 - **Deep-Linking**: Click services to view filtered logs instantly
 - **Multi-Host Aggregation**: Services from all agents in one unified view
 
@@ -129,7 +129,7 @@ Open your browser and navigate to:
 
 **Agent**:
 - Multi-strategy log discovery (filesystem, /proc, manual)
-- Smart service tagging (Apache, Nginx, PM2, etc.)
+- Smart service tagging (Apache, Nginx, Caddy, Traefik, MySQL, PostgreSQL, Redis, MongoDB, PM2)
 - Docker log streaming
 - System metric collection (CPU, RAM, Disk, Network)
 - Container metric collection
@@ -284,11 +284,7 @@ Create `/opt/datavast/agent-config.json`:
     "apache": true
   },
   "log_config": {
-    "mode": "selected",
-    "selected_logs": [
-      "/var/log/apache2/access.log",
-      "/var/log/apache2/error.log"
-    ]
+    "mode": "all"
   }
 }
 ```
@@ -325,7 +321,7 @@ Create `/opt/datavast/agent-config.json`:
 ## 🎯 Use Cases
 
 ### Web Application Monitoring
-Monitor Apache/Nginx access logs, error logs, and application logs in real-time. Set alerts for HTTP 500 errors or traffic spikes.
+Monitor Apache/Nginx/Caddy/Traefik access logs, error logs, and application logs in real-time. Set alerts for HTTP 500 errors or traffic spikes.
 
 ### Infrastructure Monitoring
 Track CPU, memory, disk usage across multiple servers. Get alerted when thresholds are exceeded.
@@ -506,7 +502,7 @@ This project is proprietary software. All rights reserved.
 <summary><strong>🔬 Deep Monitoring (Phases 30–31)</strong></summary>
 
 #### Phase 30: Per-Service Deep Monitoring ✅
-- [x] Apache/Nginx access log forensics with GeoIP enrichment
+- [x] Apache/Nginx/Caddy/Traefik access log forensics with GeoIP enrichment
 - [x] MySQL/MariaDB connection & slow query auditing
 - [x] PostgreSQL performance introspection (`pg_stat_activity`)
 - [x] Redis memory & hit-rate analysis
@@ -522,7 +518,7 @@ This project is proprietary software. All rights reserved.
 </details>
 
 <details>
-<summary><strong>🚀 Advanced Platform (Phases 32–39)</strong></summary>
+<summary><strong>🚀 Advanced Platform (Phases 32–40)</strong></summary>
 
 #### Phase 32: Historical Network Analytics ✅
 - [x] InfluxDB derivative rate calculation (B/s)
@@ -571,9 +567,37 @@ This project is proprietary software. All rights reserved.
 - [x] Hardcoded InfluxDB token fallback removed (fatal if `INFLUX_TOKEN` unset)
 - [x] Production `.env` file with `600` permissions and `EnvironmentFile` in systemd
 
+#### Phase 40: Service Auto-Discovery & Multi-Format Log Parsing 🔄
+- [x] Path-based service type inference (`inferServiceType()`) for auto-discovered logs
+- [x] Caddy JSON access log parser in server ingestion handler
+- [x] Traefik CLF access log parsing with web service detection
+- [x] Web server detail pages verified (Nginx, Caddy, Traefik, Apache — 9,475+ access log entries)
+- [x] Service categorization UI support for Caddy/Traefik (Web Servers) and ClickHouse/InfluxDB (Databases)
+- [x] MySQL detail page metrics (Active Connections, QPS, Slow Queries, I/O Stats)
+- [x] PostgreSQL detail page metrics (TPS, Cache Hit Ratio, Index Usage, Slow Queries)
+- [x] MongoDB detail page metrics (Ops/sec, Connections, Profiling, Collection Stats)
+- [x] MySQL `performance_schema` integration for index usage and I/O analysis
+- [x] PostgreSQL `pg_stat_statements` integration for slow query analysis
+- [x] MongoDB Database Profiler integration for operation analysis
+- [x] Agent-side payload enhancement to support diagnostic flags
+- [x] Frontend diagnostic sections (`TablesWithoutIndexes`, `HighIOTables`, `SlowQueries`)
+- [ ] Redis detail page metrics (API error — needs direct connection from server)
+- [ ] ClickHouse dedicated detail page component (`ClickHouseDetail.jsx`)
+- [ ] InfluxDB dedicated detail page component (`InfluxDBDetail.jsx`)
+- [ ] PM2 service installation and testing (requires Node.js on agent)
+
 </details>
 
 ### Upcoming
+
+#### Service Detail Pages (Priority)
+- [ ] MySQL detail page: direct DB stats from agent (Active Connections, QPS, Slow Queries)
+- [ ] PostgreSQL detail page: `pg_stat_activity` metrics from agent
+- [ ] Redis detail page: memory usage, connected clients, hit rate from agent
+- [ ] MongoDB detail page: document stats, connections from agent
+- [ ] ClickHouse premium detail page with real-time query metrics
+- [ ] InfluxDB premium detail page with write/query throughput
+- [ ] PM2 process monitoring (requires Node.js on datavast-agent-1)
 
 #### Observability Enhancements
 - [ ] Resource speedometer gauges (RAM, Disk, CPU)
