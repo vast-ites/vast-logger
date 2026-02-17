@@ -703,6 +703,9 @@ func collectRedisStats() (string, error) {
         "replication_lag":      stats.ReplicationLag,
         "keyspace":             keyspace,
         "slow_log":             slowLog,
+        "largest_keys":         stats.LargestKeys,
+        "expensive_commands":   stats.ExpensiveCommands,
+        "eviction_rate_per_sec": stats.EvictionRate,
     }
 
     data, err := json.Marshal(result)
