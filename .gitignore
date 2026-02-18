@@ -22,7 +22,7 @@ web/*.tar.gz
 server/*.gz
 server/*_chunk_*
 server/*_part_*
-
+contrib/*
 # Sensitive
 id_ed25519
 id_ed25519.pub
@@ -55,3 +55,9 @@ walkthrough.md
 task.md
 walkthrough.md
 agent-config.json
+
+# Python Patch Scripts
+patch_services.py
+patch_services_v2.py
+patch_host_context.py
+patch_host_context_v2.py

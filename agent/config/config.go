@@ -13,6 +13,8 @@ type AgentConfig struct {
     MySQLPassword    string          `json:"mysql_password,omitempty"`
     PostgresUser     string          `json:"postgres_user,omitempty"`
     PostgresPassword string          `json:"postgres_password,omitempty"`
+    ClickHouseUser   string          `json:"clickhouse_user,omitempty"`
+    ClickHousePass   string          `json:"clickhouse_password,omitempty"`
     Collectors  CollectorConfig `json:"collectors"`
     LogConfig   LogStrategy     `json:"log_config"`
 }

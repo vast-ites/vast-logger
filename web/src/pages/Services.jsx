@@ -124,7 +124,7 @@ const Services = () => {
                                 items.map((item, idx) => (
                                     <div
                                         key={idx}
-                                        onClick={() => navigate(`/services/${item.name}`)}
+                                        onClick={() => navigate(`/services/${item.name}?host=${item.host}`)}
                                         className="flex items-center justify-between p-3 rounded-lg bg-cyber-gray/30 hover:bg-cyber-gray/60 border border-transparent hover:border-cyber-cyan/30 cursor-pointer group transition-all"
                                     >
                                         <div className="flex items-center gap-3">
