@@ -46,3 +46,7 @@ server/server-config.json
 deployment/.env
 server-config.json
 *.gz
+
+# Artifacts
+task.md
+walkthrough.md
