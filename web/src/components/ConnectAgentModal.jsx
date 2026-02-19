@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Terminal, CheckCircle, Smartphone } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 
 const ConnectAgentModal = ({ isOpen, onClose }) => {
     const [apiKey, setApiKey] = useState('LOADING...');
@@ -25,7 +26,7 @@ const ConnectAgentModal = ({ isOpen, onClose }) => {
     const installCommand = `curl -sL ${window.location.origin}/install.sh | sudo bash -s -- --api-key=${apiKey} --host=${hostInput}`;
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(installCommand);
+        copyToClipboard(installCommand);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

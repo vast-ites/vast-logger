@@ -2,6 +2,7 @@ package collector
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -28,6 +29,7 @@ type ConnectionCollector struct {
 	AgentSecret  string
 	Interval     time.Duration
 	ProcessCache map[int32]string
+	httpClient   *http.Client
 }
 
 func NewConnectionCollector(serverURL, host, agentSecret string) *ConnectionCollector {
@@ -37,6 +39,12 @@ func NewConnectionCollector(serverURL, host, agentSecret string) *ConnectionColl
 		AgentSecret:  agentSecret,
 		Interval:     1 * time.Second, // 1s Interval (High Frequency)
 		ProcessCache: make(map[int32]string),
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		},
 	}
 }
 
@@ -120,7 +128,7 @@ func (c *ConnectionCollector) send(entries []ConnectionEntry) {
 		req.Header.Set("X-Agent-Secret", c.AgentSecret)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		log.Printf("[WARN] Failed to send connections: %v", err)
 		return

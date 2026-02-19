@@ -545,6 +545,7 @@ func SetupRoutes(r *gin.Engine, h *IngestionHandler) {
             
             adminRoutes.POST("/alerts/silence", h.HandleSilenceAlert)
             adminRoutes.POST("/alerts/unsilence", h.HandleUnsilenceAlert)
+            adminRoutes.GET("/alerts/fired", h.HandleGetFiredAlerts)
 
             // User Management
             adminRoutes.GET("/users", h.HandleGetUsers)
@@ -1578,6 +1579,51 @@ func (h *IngestionHandler) HandleUnsilenceAlert(c *gin.Context) {
     
     h.Config.Save(cfg)
     c.Status(http.StatusOK)
+}
+
+func (h *IngestionHandler) HandleGetFiredAlerts(c *gin.Context) {
+    limitStr := c.DefaultQuery("limit", "10")
+    limit := 10
+    if v, err := strconv.Atoi(limitStr); err == nil && v > 0 && v <= 100 {
+        limit = v
+    }
+
+    alerts, err := h.Logs.GetRecentAlerts(limit)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query alerts"})
+        return
+    }
+    if alerts == nil {
+        alerts = []storage.AlertEntry{}
+    }
+
+    // Transform to frontend-friendly format
+    type FiredAlert struct {
+        ID        string  `json:"id"`
+        FiredAt   string  `json:"fired_at"`
+        RuleName  string  `json:"rule_name"`
+        Host      string  `json:"host"`
+        Severity  string  `json:"severity"`
+        Message   string  `json:"message"`
+    }
+
+    result := make([]FiredAlert, 0, len(alerts))
+    for _, a := range alerts {
+        ruleName := a.Type
+        if strings.HasPrefix(ruleName, "Rule: ") {
+            ruleName = strings.TrimPrefix(ruleName, "Rule: ")
+        }
+        result = append(result, FiredAlert{
+            ID:       a.Timestamp.Format(time.RFC3339Nano),
+            FiredAt:  a.Timestamp.Format(time.RFC3339),
+            RuleName: ruleName,
+            Host:     a.Host,
+            Severity: a.Severity,
+            Message:  a.Message,
+        })
+    }
+
+    c.JSON(http.StatusOK, result)
 }
 
 func (h *IngestionHandler) HandleIngestConnections(c *gin.Context) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BellRing, Plus, Trash2, VolumeX, Volume2, Save, X, Pencil } from 'lucide-react';
+import { BellRing, Plus, Trash2, VolumeX, Volume2, Save, X, Pencil, Eye, EyeOff, Copy } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 
 export const Alerts = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -17,6 +18,7 @@ export const Alerts = () => {
     const [editingRuleId, setEditingRuleId] = useState(null); // For editing
     const [customPort, setCustomPort] = useState('');
     const [isCustomPort, setIsCustomPort] = useState(false);
+    const [revealedChannelUrls, setRevealedChannelUrls] = useState({});
 
     // Form States
     const [newRule, setNewRule] = useState({ name: '', metric: 'cpu_percent', host: '*', operator: '>', threshold: 80, channels: [], enabled: true });
@@ -232,18 +234,47 @@ export const Alerts = () => {
                         </div>
                     )}
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                        {channels.map(ch => (
-                            <div key={ch.id} className="glass-panel p-4 border border-cyber-gray/20 rounded-lg">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-cyber-text">{ch.name}</h3>
-                                        <div className="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-1 uppercase">{ch.type}</div>
-                                        <div className="text-sm text-gray-500 mt-2 break-all">{ch.config.url || ch.config.email}</div>
+                        {channels.map(ch => {
+                            const urlValue = ch.config?.url || ch.config?.email || '';
+                            const isUrl = !!ch.config?.url;
+                            const isRevealed = revealedChannelUrls[ch.id];
+                            const maskUrl = () => '•••••••••••••••••••••••••••••••••••••';
+
+                            return (
+                                <div key={ch.id} className="glass-panel p-4 border border-cyber-gray/20 rounded-lg">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-cyber-text">{ch.name}</h3>
+                                            <div className="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-1 uppercase">{ch.type}</div>
+                                            {urlValue && (
+                                                <div className="flex items-center gap-2 mt-2 bg-cyber-gray/20 px-3 py-2 rounded">
+                                                    <span className="truncate flex-1 font-mono text-xs text-cyber-text">
+                                                        {isUrl ? (isRevealed ? urlValue : maskUrl(urlValue)) : urlValue}
+                                                    </span>
+                                                    {isUrl && (
+                                                        <button
+                                                            onClick={() => setRevealedChannelUrls(prev => ({ ...prev, [ch.id]: !prev[ch.id] }))}
+                                                            className="p-1 hover:bg-cyber-gray/30 rounded text-cyber-muted hover:text-cyber-text transition-colors flex-shrink-0"
+                                                            title={isRevealed ? 'Hide URL' : 'Reveal URL'}
+                                                        >
+                                                            {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => copyToClipboard(urlValue)}
+                                                        className="p-1 hover:bg-cyber-gray/30 rounded text-cyber-muted hover:text-cyber-text transition-colors flex-shrink-0"
+                                                        title="Copy"
+                                                    >
+                                                        <Copy size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {role === 'admin' && <button onClick={() => handleDeleteChannel(ch.id)} className="text-red-500 hover:text-red-400 ml-2 flex-shrink-0"><Trash2 size={16} /></button>}
                                     </div>
-                                    {role === 'admin' && <button onClick={() => handleDeleteChannel(ch.id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}

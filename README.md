@@ -1,6 +1,6 @@
 # DataVAST Observability Platform
 
-**DataVAST** is a modern, zero-config observability platform for Linux infrastructure. Built with Go, React, ClickHouse, and InfluxDB, it provides real-time monitoring, log aggregation, and intelligent alerting across your entire fleet.
+**DataVAST** is a modern, zero-config observability platform for Linux infrastructure. Built with Go, React, ClickHouse, and InfluxDB, it provides real-time monitoring, log aggregation, and intelligent alerting across your entire fleet — served over **HTTPS** with self-signed TLS support.
 
 ## ✨ Features
 
@@ -24,10 +24,12 @@
 - **Multi-Host Aggregation**: Services from all agents in one unified view
 
 ### 🚨 **Intelligent Alerting**
-- **Multi-Channel Notifications**: Email (SMTP) and Webhook support
+- **Multi-Channel Notifications**: Email (SMTP), Webhook, and **Browser Push Notifications**
 - **DDoS Detection**: Automatic threat detection and alerting
 - **Resource Thresholds**: Alert on CPU, Memory, Disk usage
 - **Customizable Rules**: Define your own alert conditions
+- **In-App Notification Bell**: Real-time alert feed with unread badge
+- **Browser Notifications**: Push alerts via the Notification API (requires HTTPS)
 
 ### 🎨 **Modern UI/UX**
 - **Sci-Fi Themed Dashboard**: Sleek, dark-mode interface
@@ -77,13 +79,15 @@ INFLUX_TOKEN=your-influxdb-token
 - **Password:** (whatever you set in `ADMIN_PASSWORD`)
 
 ### 3. Start Backend Server
-Runs on port `8080`. Connects to databases.
+Runs on port `8080`. Automatically serves HTTPS if certificates are found, otherwise falls back to HTTP.
 ```bash
 cd server
 go mod tidy
 go build -o datavast-server
 ./datavast-server
 ```
+
+> **HTTPS:** To enable TLS, place `server.crt` and `server.key` in a `certs/` directory next to the binary. See the [HTTPS/TLS Setup](#-httpstls-setup) section for details.
 
 **✅ Server will automatically load credentials from `.env` file**
 
@@ -106,11 +110,15 @@ npm run dev
 
 ### 6. Access the Platform
 Open your browser and navigate to:
-**http://localhost:5173**
+- **Development:** `http://localhost:5173`
+- **Production (HTTP):** `http://your-server:8080`
+- **Production (HTTPS):** `https://your-server:8080`
 
 **Login with the credentials you set in Step 2:**
 - **Username:** `admin`
 - **Password:** (the one you set in `.env` file)
+
+> **Note:** With self-signed certificates, your browser will show a security warning. Click **"Advanced" → "Proceed"** to continue. This is expected behavior for self-signed certs.
 
 ---
 
@@ -138,7 +146,7 @@ Open your browser and navigate to:
 - RESTful API (Gin framework)
 - ClickHouse for log storage (high-throughput writes)
 - InfluxDB for time-series metrics
-- HTTP polling for real-time updates
+- HTTPS with self-signed TLS certificates (auto-fallback to HTTP)
 - JWT-based authentication with session management
 
 **Frontend**:
@@ -147,16 +155,19 @@ Open your browser and navigate to:
 - Recharts for visualizations
 - Lucide React for icons
 - Tailwind CSS for styling
+- Browser Notification API integration (secure context aware)
 
 **Security**:
+- **TLS/HTTPS**: Self-signed certificate support with automatic fallback to HTTP.
 - **Authentication**: JWT-based auth with bcrypt password hashing.
 - **Agent Auth**: API key authentication (`X-Agent-Secret`) for all ingestion endpoints.
 - **Default State**: Secure by default (`AUTH_ENABLED=true`).
 - **Authorization**: Role-based access control (RBAC) with scoped user accounts.
-- **CORS**: Strict origin allowlisting (no wildcard).
+- **CORS**: Strict origin allowlisting (no wildcard), supports both HTTP and HTTPS origins.
 - **Secrets**: JWT secret and database tokens loaded from environment variables.
 - **Randomness**: Cryptographically secure random generation (`crypto/rand`).
 - **Frontend Security**: Automatic token injection and session management.
+- **Agent TLS**: Agents use `InsecureSkipVerify` for self-signed cert connections.
 
 ---
 
@@ -175,6 +186,40 @@ The platform uses a secure-by-default approach:
 **To change password:**
 1. Edit the `.env` file: update `ADMIN_PASSWORD=your-new-password`
 2. Restart the server (the new password is automatically bcrypt-hashed)
+
+---
+
+## 🔒 HTTPS/TLS Setup
+
+DataVAST supports serving over **HTTPS** using self-signed (or CA-signed) TLS certificates. The server automatically detects certificates and enables TLS, falling back to plain HTTP if no certificates are found.
+
+### Generate Self-Signed Certificates
+
+```bash
+sudo mkdir -p /opt/datavast/certs
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /opt/datavast/certs/server.key \
+  -out /opt/datavast/certs/server.crt \
+  -subj "/CN=your-server-ip" \
+  -addext "subjectAltName=IP:your-server-ip"
+sudo chmod 600 /opt/datavast/certs/server.key
+```
+
+The server looks for certificates at `certs/server.crt` and `certs/server.key` relative to its working directory. If found, it starts with `RunTLS`; otherwise, it uses `Run` (HTTP).
+
+### Agent Configuration for HTTPS
+
+When using self-signed certificates, agents automatically skip TLS verification (`InsecureSkipVerify: true`). Update the agent config to use the `https://` scheme:
+
+```json
+{
+  "server_url": "https://your-server-ip:8080"
+}
+```
+
+### CORS
+
+The server automatically allows both `http://` and `https://` origins for the configured server IP.
 
 ---
 
@@ -276,8 +321,9 @@ The platform uses a secure-by-default approach:
 Create `/opt/datavast/agent-config.json`:
 ```json
 {
-  "server_url": "http://your-server:8080",
+  "server_url": "https://your-server:8080",
   "agent_id": "production-web-1",
+  "agent_secret": "your-agent-secret-key",
   "collectors": {
     "system": true,
     "docker": true,
@@ -288,6 +334,8 @@ Create `/opt/datavast/agent-config.json`:
   }
 }
 ```
+
+> **Note:** Use `https://` for the `server_url` when TLS is enabled. The agent automatically handles self-signed certificate verification.
 
 ---
 
@@ -592,14 +640,38 @@ This project is proprietary software. All rights reserved.
   - Agent collector parses `pm2 jlist` for CPU, memory, uptime, restarts
   - Route registered in `ServiceDetail.jsx`
 
+<details>
+<summary>Phase 41 — Observability & Security Enhancements</summary>
+
+- [x] Resource speedometer gauges (CPU, RAM, DISK)
+  - Custom SVG-based `SpeedometerGauge.jsx` component with animated needle, color-coded zones (green/amber/red), glow effects
+  - Integrated into Dashboard (System Vitals panel), CPU, Memory, and Storage pages
+  - Smooth cubic easing animations on value transitions
+- [x] Webhook URL masking (click-to-reveal) in Settings
+  - URLs masked by default (showing only domain + first path segment)
+  - Eye icon toggle to reveal/hide full URL, plus copy-to-clipboard button
+- [x] Browser notification system
+  - `NotificationContext` provider with browser Notification API integration
+  - `NotificationBell` dropdown in TopBar with unread badge, notification feed, severity badges
+  - Backend `GET /api/v1/alerts/fired` endpoint querying ClickHouse `alerts` table
+  - Polls `/api/v1/alerts/fired` every 15 seconds for new alert events
+  - In-app notification feed (max 50 items) with mark-as-read, clear all
+  - Settings panel with separate controls for in-app vs. browser push notifications
+  - Secure context awareness: browser push requires HTTPS, in-app bell works on HTTP
+  - Test notification button in Settings → Browser Notifications
+- [x] HTTPS/TLS support
+  - Self-signed certificate generation with SAN (Subject Alternative Name) for IP
+  - Server auto-detects `certs/server.crt` and `certs/server.key`, falls back to HTTP
+  - `r.RunTLS()` with graceful fallback to `r.Run()`
+  - Agent HTTP clients configured with `InsecureSkipVerify` for self-signed certs
+  - CORS updated to allow both `http://` and `https://` origins
+  - Full fleet migration: all agents updated to `https://` server URLs
+
 </details>
 
 ### Upcoming
 
-#### Observability Enhancements
-- [ ] Resource speedometer gauges (RAM, Disk, CPU)
-- [ ] Webhook URL masking (click-to-reveal)
-- [ ] Browser notification system
+#### Observability Enhancements (Continued)
 - [ ] Mobile-native dashboard app
 
 #### Service Detail Pages (Enhancements)

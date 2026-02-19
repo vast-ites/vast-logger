@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertOctagon, Database, Zap, Clock, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { copyToClipboard } from '../../utils/clipboard';
 
 // Helper for duration formatting
 const formatDuration = (ms) => {
@@ -20,7 +21,7 @@ const CopyButton = ({ text }) => {
 
     const handleCopy = (e) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(text);
+        copyToClipboard(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

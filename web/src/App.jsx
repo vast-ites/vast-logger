@@ -22,6 +22,7 @@ import IpIntelligence from './pages/IpIntelligence';
 
 import { HostProvider } from './contexts/HostContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -38,141 +39,143 @@ function App() {
   return (
     <HostProvider>
       <ThemeProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+        <NotificationProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            <Route path="/" element={<Layout />}>
-              <Route
-                index
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="logs"
-                element={
-                  <PrivateRoute>
-                    <Logs />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="ip-intelligence"
-                element={
-                  <PrivateRoute>
-                    <IpIntelligence />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="services"
-                element={
-                  <PrivateRoute>
-                    <Services />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="services/:serviceName"
-                element={
-                  <PrivateRoute>
-                    <ServiceDetail />
-                  </PrivateRoute>
-                }
-              />
-
-              {/* Infrastructure Routes */}
-              <Route path="infrastructure">
+              <Route path="/" element={<Layout />}>
                 <Route
                   index
                   element={
                     <PrivateRoute>
-                      <Servers />
+                      <Dashboard />
                     </PrivateRoute>
                   }
                 />
                 <Route
-                  path="cpu"
+                  path="logs"
                   element={
                     <PrivateRoute>
-                      <CpuPage />
+                      <Logs />
                     </PrivateRoute>
                   }
                 />
                 <Route
-                  path="memory"
+                  path="ip-intelligence"
                   element={
                     <PrivateRoute>
-                      <MemoryPage />
+                      <IpIntelligence />
                     </PrivateRoute>
                   }
                 />
                 <Route
-                  path="storage"
+                  path="services"
                   element={
                     <PrivateRoute>
-                      <Storage />
+                      <Services />
                     </PrivateRoute>
                   }
                 />
                 <Route
-                  path="network"
+                  path="services/:serviceName"
                   element={
                     <PrivateRoute>
-                      <NetworkPage />
+                      <ServiceDetail />
+                    </PrivateRoute>
+                  }
+                />
+
+                {/* Infrastructure Routes */}
+                <Route path="infrastructure">
+                  <Route
+                    index
+                    element={
+                      <PrivateRoute>
+                        <Servers />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="cpu"
+                    element={
+                      <PrivateRoute>
+                        <CpuPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="memory"
+                    element={
+                      <PrivateRoute>
+                        <MemoryPage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="storage"
+                    element={
+                      <PrivateRoute>
+                        <Storage />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="network"
+                    element={
+                      <PrivateRoute>
+                        <NetworkPage />
+                      </PrivateRoute>
+                    }
+                  />
+                </Route>
+
+                <Route
+                  path="security"
+                  element={
+                    <PrivateRoute>
+                      <Security />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="alerts"
+                  element={
+                    <PrivateRoute>
+                      <Alerts />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <AdminRoute>
+                      <Settings />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="users"
+                  element={
+                    <AdminRoute>
+                      <UserManagement />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="connections"
+                  element={
+                    <PrivateRoute>
+                      <Connections />
                     </PrivateRoute>
                   }
                 />
               </Route>
 
-              <Route
-                path="security"
-                element={
-                  <PrivateRoute>
-                    <Security />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="alerts"
-                element={
-                  <PrivateRoute>
-                    <Alerts />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="settings"
-                element={
-                  <AdminRoute>
-                    <Settings />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="users"
-                element={
-                  <AdminRoute>
-                    <UserManagement />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="connections"
-                element={
-                  <PrivateRoute>
-                    <Connections />
-                  </PrivateRoute>
-                }
-              />
-            </Route>
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </NotificationProvider>
       </ThemeProvider>
     </HostProvider>
   );

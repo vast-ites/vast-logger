@@ -1,9 +1,7 @@
 import React from 'react';
 import { Cpu, HardDrive, Zap, Network } from 'lucide-react';
 import { OverviewCard } from '../components/widgets/OverviewCard';
-
-
-
+import SpeedometerGauge from '../components/widgets/SpeedometerGauge';
 import { useHost } from '../contexts/HostContext';
 
 const Dashboard = () => {
@@ -88,7 +86,10 @@ const Dashboard = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
 
-    const totalNetFlow = (metrics.net_sent_rate || 0) + (metrics.net_recv_rate || 0);
+    // API returns rates in MB/s — convert to bytes/s for formatNetRate
+    const netRecvBytes = (metrics.net_recv_rate || 0) * 1024 * 1024;
+    const netSentBytes = (metrics.net_sent_rate || 0) * 1024 * 1024;
+    const totalNetFlow = netSentBytes + netRecvBytes;
 
     // Alert State
     const isDDoS = metrics.ddos_status === 'CRITICAL';
@@ -112,25 +113,36 @@ const Dashboard = () => {
             )}
 
 
-
-            {/* Setup Guide */}
-            <div className={`border rounded-lg p-6 mb-8 relative overflow-hidden ${isDDoS ? 'border-red-500/20 bg-red-900/10' : 'border-cyber-cyan/20 bg-cyber-cyan/5'}`}>
-                <div className={`absolute -right-10 -top-10 transform rotate-12 ${isDDoS ? 'text-red-500/10' : 'text-cyber-cyan/10'}`}>
-                    <Zap size={200} />
-                </div>
-                <h2 className="text-xl font-bold text-cyber-text mb-2 font-display">
-                    {isDDoS ? 'SYSTEM UNDER ATTACK' : 'Zero-Config Agent Active'}
-                </h2>
-                <p className="text-cyber-muted mb-4 max-w-2xl">
-                    {isDDoS ? 'Traffic thresholds exceeded. Automatic mitigation protocols recommended.' : 'Receiving deep telemetry from host. Universal log discovery engaged.'}
-                </p>
-                <div className={`p-3 rounded font-mono text-sm border inline-block bg-cyber-black/50 ${isDDoS ? 'text-red-500 border-red-500 font-bold' : 'text-cyber-cyan border-cyber-gray'}`}>
-                    Status: {isDDoS ? 'CRITICAL WARN' : 'ONLINE'}
+            {/* Speedometer Gauges */}
+            <div className="glass-panel rounded-xl p-6 border border-cyber-gray/20">
+                <h3 className="font-mono text-sm text-cyber-cyan uppercase mb-6 tracking-widest">System Vitals</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 place-items-center">
+                    <SpeedometerGauge
+                        value={metrics.cpu_percent || 0}
+                        label="CPU"
+                        color="cyan"
+                        subtitle={metrics.cpu_model ? `${metrics.cpu_count || 0} Cores • ${metrics.cpu_model}` : `${metrics.cpu_count || 0} Cores`}
+                        size={200}
+                    />
+                    <SpeedometerGauge
+                        value={metrics.memory_usage || 0}
+                        label="RAM"
+                        color="violet"
+                        subtitle={`${((metrics.memory_total || 0) / 1024 / 1024 / 1024).toFixed(1)} GB Total`}
+                        size={200}
+                    />
+                    <SpeedometerGauge
+                        value={metrics.disk_usage || 0}
+                        label="DISK"
+                        color="amber"
+                        subtitle={`${((metrics.disk_total || 0) / 1024 / 1024 / 1024).toFixed(1)} GB Total`}
+                        size={200}
+                    />
                 </div>
             </div>
 
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Metrics Grid — complementary stats (gauges already show CPU/RAM/DISK) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <OverviewCard
                     label="SYSTEM UPTIME"
                     value={metrics.uptime ? `${(metrics.uptime / 3600 / 24).toFixed(1)}d` : "..."}
@@ -139,24 +151,40 @@ const Dashboard = () => {
                     color="cyan"
                 />
                 <OverviewCard
-                    label="AVG CPU LOAD"
-                    value={`${(metrics.cpu_percent || 0).toFixed(1)}%`}
-                    subValue={`${metrics.cpu_count || 0} Cores`}
-                    icon={Cpu}
+                    label="DISK I/O"
+                    value={`${((metrics.disk_read_rate || 0) + (metrics.disk_write_rate || 0)).toFixed(1)} MB/s`}
+                    subValue={`R: ${(metrics.disk_read_rate || 0).toFixed(1)}  W: ${(metrics.disk_write_rate || 0).toFixed(1)} MB/s`}
+                    icon={HardDrive}
                     color="green"
                 />
                 <OverviewCard
-                    label="MEMORY USAGE"
-                    value={`${(metrics.memory_usage || 0).toFixed(1)}%`}
-                    subValue={`${((metrics.memory_total || 0) / 1024 / 1024 / 1024).toFixed(1)} GB Total`}
+                    label="NETWORK I/O"
+                    value={formatNetRate(totalNetFlow)}
+                    subValue={`↓ ${formatNetRate(netRecvBytes)}  ↑ ${formatNetRate(netSentBytes)}`}
+                    icon={Network}
+                    color="cyan"
+                />
+                <OverviewCard
+                    label="ACTIVE PROCESSES"
+                    value={(() => {
+                        const raw = metrics.process_raw || '';
+                        const match = raw.match(/Tasks:\s*(\d+)\s*total/);
+                        return match ? match[1] : (processes.length > 0 ? `${processes.length}` : '...');
+                    })()}
+                    subValue={(() => {
+                        const raw = metrics.process_raw || '';
+                        const match = raw.match(/load average:\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+                        if (match) return `load: ${match[1]} / ${match[2]} / ${match[3]}`;
+                        return 'on host';
+                    })()}
                     icon={Zap}
                     color="violet"
                 />
                 <OverviewCard
-                    label="DISK USAGE"
-                    value={`${(metrics.disk_usage || 0).toFixed(1)}%`}
-                    subValue={`${((metrics.disk_total || 0) / 1024 / 1024 / 1024).toFixed(1)} GB Total`}
-                    icon={HardDrive}
+                    label="TOTAL TRAFFIC"
+                    value={(() => { const ifaces = (metrics.interfaces || []).filter(i => i.name !== 'lo'); const total = ifaces.reduce((s, i) => s + (i.bytes_recv || 0) + (i.bytes_sent || 0), 0); const gb = total / 1024 / 1024 / 1024; return `${gb.toFixed(1)} GB`; })()}
+                    subValue={(() => { const ifaces = (metrics.interfaces || []).filter(i => i.name !== 'lo'); const rx = ifaces.reduce((s, i) => s + (i.bytes_recv || 0), 0) / 1024 / 1024 / 1024; const tx = ifaces.reduce((s, i) => s + (i.bytes_sent || 0), 0) / 1024 / 1024 / 1024; return `↓ ${rx.toFixed(1)} GB  ↑ ${tx.toFixed(1)} GB`; })()}
+                    icon={Network}
                     color="green"
                 />
             </div>

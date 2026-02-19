@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Server, Cpu, HardDrive, Activity, Plus, Terminal, Trash2 } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import ConnectAgentModal from '../components/ConnectAgentModal';
-
+import SpeedometerGauge from '../components/widgets/SpeedometerGauge';
 import { useHost } from '../contexts/HostContext';
 
 export const Servers = () => {
@@ -179,23 +179,29 @@ export const Servers = () => {
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
-                            <div className="bg-cyber-gray/10 p-3 rounded-lg text-center">
-                                <span className="text-cyber-muted text-xs block mb-1">CPU</span>
-                                <span className={`text-lg font-bold font-mono ${agent.cpu_percent > 80 ? 'text-red-400' : 'text-cyber-text'}`}>
-                                    {agent.cpu_percent.toFixed(1)}%
-                                </span>
+                            <div className="flex flex-col items-center">
+                                <SpeedometerGauge
+                                    value={agent.cpu_percent}
+                                    label="CPU"
+                                    color="cyan"
+                                    size={100}
+                                />
                             </div>
-                            <div className="bg-cyber-gray/10 p-3 rounded-lg text-center">
-                                <span className="text-cyber-muted text-xs block mb-1">Memory</span>
-                                <span className={`text-lg font-bold font-mono ${agent.mem_percent > 80 ? 'text-red-400' : 'text-cyber-text'}`}>
-                                    {agent.mem_percent.toFixed(1)}%
-                                </span>
+                            <div className="flex flex-col items-center">
+                                <SpeedometerGauge
+                                    value={agent.mem_percent}
+                                    label="RAM"
+                                    color="violet"
+                                    size={100}
+                                />
                             </div>
-                            <div className="bg-cyber-gray/10 p-3 rounded-lg text-center">
-                                <span className="text-cyber-muted text-xs block mb-1">Disk</span>
-                                <span className={`text-lg font-bold font-mono ${agent.disk_percent > 80 ? 'text-red-400' : 'text-cyber-text'}`}>
-                                    {agent.disk_percent.toFixed(1)}%
-                                </span>
+                            <div className="flex flex-col items-center">
+                                <SpeedometerGauge
+                                    value={agent.disk_percent}
+                                    label="DISK"
+                                    color="amber"
+                                    size={100}
+                                />
                             </div>
                         </div>
 

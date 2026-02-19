@@ -1,7 +1,111 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Save, Database, Bell, Shield, Moon, Key, Eye, EyeOff, Copy } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Database, Bell, Shield, Moon, Key, Eye, EyeOff, Copy, BellRing } from 'lucide-react';
+import { useNotifications } from '../contexts/NotificationContext';
+import { copyToClipboard } from '../utils/clipboard';
 
 // import QRCode from 'react-qr-code';
+
+const BrowserNotificationSettings = () => {
+    const {
+        permission,
+        isEnabled,
+        toggleNotifications,
+        requestPermission,
+        showBrowserNotification,
+        addNotification,
+    } = useNotifications();
+
+    const supportsNotifications = 'Notification' in window;
+    const isSecure = window.isSecureContext;
+    const canUsePush = supportsNotifications && isSecure;
+
+    const handleTestNotification = () => {
+        // Always add to in-app bell
+        addNotification({
+            title: 'Test Notification',
+            message: 'This is a test notification to verify the system is working.',
+            severity: 'info',
+        });
+        // Try browser push too if available
+        if (canUsePush && permission === 'granted') {
+            showBrowserNotification('🔔 Test Alert', 'Browser notifications are working correctly!', {
+                tag: 'test-notification',
+            });
+        }
+    };
+
+    return (
+        <>
+            <h3 className="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                <BellRing size={18} /> Browser Notifications
+            </h3>
+
+            <div className="space-y-4">
+                {/* Enable/Disable - controls in-app notifications + polling */}
+                <div className="flex items-center justify-between p-4 bg-cyber-gray/10 rounded-lg border border-cyber-gray/20">
+                    <div>
+                        <span className="text-cyber-text font-bold block">Alert Notifications</span>
+                        <span className="text-xs text-cyber-muted">Get real-time alerts in the notification bell when rules fire</span>
+                    </div>
+                    <div
+                        onClick={() => {
+                            const newState = !isEnabled;
+                            toggleNotifications(newState);
+                            if (newState && canUsePush && permission === 'default') {
+                                requestPermission();
+                            }
+                        }}
+                        className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${isEnabled ? 'bg-cyber-green' : 'bg-cyber-gray/40'}`}
+                    >
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${isEnabled ? 'translate-x-6' : ''}`} />
+                    </div>
+                </div>
+
+                {/* Browser Push Status */}
+                <div className="flex items-center justify-between px-4 py-3 bg-cyber-gray/5 rounded-lg border border-cyber-gray/10">
+                    <span className="text-sm text-cyber-muted">Browser Push Notifications</span>
+                    {!canUsePush ? (
+                        <div className="flex flex-col items-end">
+                            <span className="text-xs font-mono text-yellow-400">HTTPS REQUIRED</span>
+                            <span className="text-[10px] text-cyber-muted mt-0.5">In-app bell still works</span>
+                        </div>
+                    ) : permission === 'granted' ? (
+                        <span className="text-xs font-mono text-green-400 flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse-subtle" />
+                            ACTIVE
+                        </span>
+                    ) : permission === 'denied' ? (
+                        <div className="flex flex-col items-end">
+                            <span className="text-xs font-mono text-red-400">BLOCKED</span>
+                            <span className="text-[10px] text-cyber-muted mt-0.5">Enable in browser site settings</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={requestPermission}
+                            className="text-xs font-mono text-cyber-cyan hover:text-white bg-cyber-cyan/10 px-3 py-1.5 rounded hover:bg-cyber-cyan/20 transition-all"
+                        >
+                            ENABLE PUSH
+                        </button>
+                    )}
+                </div>
+
+                {/* Test Button — always visible when enabled */}
+                {isEnabled && (
+                    <button
+                        onClick={handleTestNotification}
+                        className="w-full px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all flex items-center justify-center gap-2 text-sm font-semibold"
+                    >
+                        <BellRing size={16} /> Send Test Notification
+                    </button>
+                )}
+
+                <p className="text-xs text-cyber-muted">
+                    Alert notifications appear in the bell icon dropdown. {canUsePush ? 'Native browser push notifications are also supported.' : 'Native browser push requires HTTPS.'}
+                </p>
+            </div>
+        </>
+    );
+};
 
 const Settings = () => {
     const [retention, setRetention] = useState(7);
@@ -9,6 +113,7 @@ const Settings = () => {
     const [emailAlerts, setEmailAlerts] = useState(true);
     const [alertEmails, setAlertEmails] = useState([]);
     const [webhookURLs, setWebhookURLs] = useState([]);
+    const [revealedWebhooks, setRevealedWebhooks] = useState({});
     const [smtpServer, setSmtpServer] = useState("");
     const [smtpPort, setSmtpPort] = useState(587);
     const [smtpUser, setSmtpUser] = useState("");
@@ -376,12 +481,38 @@ const Settings = () => {
                                         </button>
                                     </div>
                                     <div className="space-y-1">
-                                        {webhookURLs.map((url, idx) => (
-                                            <div key={idx} className="flex justify-between items-center bg-cyber-gray/20 px-3 py-2 rounded text-sm text-cyber-text break-all">
-                                                <span className="truncate mr-2">{url}</span>
-                                                <button onClick={() => setWebhookURLs(webhookURLs.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300 flex-shrink-0">×</button>
-                                            </div>
-                                        ))}
+                                        {webhookURLs.map((url, idx) => {
+                                            const isRevealed = revealedWebhooks[idx];
+                                            const maskUrl = () => '•••••••••••••••••••••••••••••••••••••';
+
+                                            return (
+                                                <div key={idx} className="flex items-center gap-2 bg-cyber-gray/20 px-3 py-2 rounded text-sm text-cyber-text group">
+                                                    <span className="truncate flex-1 font-mono text-xs">
+                                                        {isRevealed ? url : maskUrl(url)}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => setRevealedWebhooks(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                                        className="p-1 hover:bg-cyber-gray/30 rounded text-cyber-muted hover:text-cyber-text transition-colors flex-shrink-0"
+                                                        title={isRevealed ? "Hide URL" : "Reveal URL"}
+                                                    >
+                                                        {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => copyToClipboard(url)}
+                                                        className="p-1 hover:bg-cyber-gray/30 rounded text-cyber-muted hover:text-cyber-text transition-colors flex-shrink-0"
+                                                        title="Copy URL"
+                                                    >
+                                                        <Copy size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setWebhookURLs(webhookURLs.filter((_, i) => i !== idx))}
+                                                        className="text-red-400 hover:text-red-300 flex-shrink-0"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
                                         {webhookURLs.length === 0 && <p className="text-xs text-cyber-muted italic">No webhooks configured.</p>}
                                     </div>
                                     <p className="text-xs text-cyber-muted mt-2">
@@ -392,6 +523,12 @@ const Settings = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Browser Notifications */}
+                <div className="glass-panel p-6 rounded-xl border border-cyber-gray md:col-span-2">
+                    <BrowserNotificationSettings />
+                </div>
+
                 {/* Agent Enrollment Keys */}
                 <div className="glass-panel p-6 rounded-xl border border-cyber-gray">
                     <h3 className="text-lg font-bold text-cyber-cyan mb-4 flex items-center gap-2">
@@ -407,7 +544,7 @@ const Settings = () => {
                                 <button onClick={() => setShowKey(!showKey)} className="p-2 bg-cyber-gray/20 rounded hover:bg-cyber-gray/30 text-cyber-text">
                                     {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
-                                <button onClick={() => navigator.clipboard.writeText(apiKey)} className="p-2 bg-cyber-gray/20 rounded hover:bg-cyber-gray/30 text-cyber-text">
+                                <button onClick={() => copyToClipboard(apiKey)} className="p-2 bg-cyber-gray/20 rounded hover:bg-cyber-gray/30 text-cyber-text">
                                     <Copy size={16} />
                                 </button>
                             </div>

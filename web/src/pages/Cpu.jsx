@@ -3,6 +3,7 @@ import { Cpu, Activity, Info } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useHost } from '../contexts/HostContext';
+import SpeedometerGauge from '../components/widgets/SpeedometerGauge';
 
 export const CpuPage = () => {
     const { selectedHost } = useHost();
@@ -52,11 +53,21 @@ export const CpuPage = () => {
                 <Cpu size={24} className="text-cyan-400" /> CPU Monitoring
             </h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <StatCard label="Cores (Phys/Log)" value={`${physCount} / ${coresCount}`} icon={Cpu} color="cyan" />
-                <StatCard label="Current Load" value={`${metrics.cpu_percent.toFixed(1)}%`} icon={Activity} trend="neutral" color="violet" />
-                <StatCard label="Clock Speed" value={metrics.cpu_freq ? `${metrics.cpu_freq.toFixed(2)} GHz` : "N/A"} icon={Activity} trend="neutral" color="amber" />
-                <StatCard label="Processor" value={metrics.cpu_model || "Scanning..."} icon={Info} trend="neutral" color="green" />
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-1 glass-panel p-4 flex items-center justify-center rounded-xl">
+                    <SpeedometerGauge
+                        value={metrics.cpu_percent}
+                        label="CPU"
+                        color="cyan"
+                        size={180}
+                    />
+                </div>
+                <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <StatCard label="Cores (Phys/Log)" value={`${physCount} / ${coresCount}`} icon={Cpu} color="cyan" />
+                    <StatCard label="Current Load" value={`${metrics.cpu_percent.toFixed(1)}%`} icon={Activity} trend="neutral" color="violet" />
+                    <StatCard label="Clock Speed" value={metrics.cpu_freq ? `${metrics.cpu_freq.toFixed(2)} GHz` : "N/A"} icon={Activity} trend="neutral" color="amber" />
+                    <StatCard label="Processor" value={metrics.cpu_model || "Scanning..."} icon={Info} trend="neutral" color="green" />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-80">
@@ -120,3 +131,4 @@ export const CpuPage = () => {
         </div>
     );
 };
+

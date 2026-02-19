@@ -3,6 +3,7 @@ import { Layers, Zap } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { useHost } from '../contexts/HostContext';
+import SpeedometerGauge from '../components/widgets/SpeedometerGauge';
 
 export const MemoryPage = () => {
     const { selectedHost } = useHost();
@@ -68,7 +69,15 @@ export const MemoryPage = () => {
                 <Layers size={24} className="text-violet-400" /> Memory Monitoring
             </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="glass-panel p-4 flex items-center justify-center rounded-xl">
+                    <SpeedometerGauge
+                        value={metrics.memory_usage}
+                        label="RAM"
+                        color="violet"
+                        size={180}
+                    />
+                </div>
                 <StatCard label="Total RAM" value={`${totalGB} GB`} icon={Layers} color="violet" />
                 <StatCard label="Used" value={`${toGBStr(usedGB)} GB`} subValue={`${usedPercent}%`} icon={Zap} trend="neutral" color="cyan" />
                 <StatCard label="Available" value={`${toGBStr(freeGB)} GB`} icon={Layers} color="green" />

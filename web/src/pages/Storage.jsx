@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HardDrive, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import { useHost } from '../contexts/HostContext';
+import SpeedometerGauge from '../components/widgets/SpeedometerGauge';
 
 export const Storage = () => {
     const { selectedHost } = useHost();
@@ -57,7 +58,15 @@ export const Storage = () => {
                 <HardDrive size={24} className="text-amber-400" /> Disk & Storage
             </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="glass-panel p-4 flex items-center justify-center rounded-xl">
+                    <SpeedometerGauge
+                        value={usedPercent}
+                        label="DISK"
+                        color="amber"
+                        size={180}
+                    />
+                </div>
                 <StatCard label="Total Storage" value={`${totalSizeDisplay} ${unitLabel}`} icon={HardDrive} color="amber" />
                 <StatCard label="Used Space" value={`${usedSizeDisplay} ${unitLabel}`} subValue={`${usedPercent.toFixed(1)}%`} icon={FileText} trend="neutral" color="cyan" />
                 <StatCard label="Read IOPS" value={(metrics.disk_read_iops || 0).toFixed(0)} icon={ArrowDown} trend="neutral" color="green" />

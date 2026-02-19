@@ -3,9 +3,10 @@ import { NavLink } from 'react-router-dom';
 import { Activity, Server, Shield, Globe, Terminal, Settings, Cpu, HardDrive, Zap, CircleDashed, LayoutDashboard, ScrollText, BellRing, Users, LogOut } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
-const SidebarItem = ({ path, label, icon: Icon }) => (
+const SidebarItem = ({ path, label, icon: Icon, end }) => (
     <NavLink
         to={path}
+        end={end}
         className={({ isActive }) => `
             flex items-center gap-3 p-3 mb-2 rounded-lg cursor-pointer transition-all duration-300
             ${isActive
@@ -50,7 +51,7 @@ export const Sidebar = () => {
 
                 <div className="mb-6">
                     <h3 className="text-[10px] text-cyber-muted font-mono uppercase tracking-widest mb-3 pl-3">Infrastructure</h3>
-                    <SidebarItem icon={Server} label="Servers" path="/infrastructure" />
+                    <SidebarItem icon={Server} label="Servers" path="/infrastructure" end />
                     <SidebarItem icon={Cpu} label="CPU" path="/infrastructure/cpu" />
                     <SidebarItem icon={CircleDashed} label="Memory" path="/infrastructure/memory" />
                     <SidebarItem icon={HardDrive} label="Storage" path="/infrastructure/storage" />

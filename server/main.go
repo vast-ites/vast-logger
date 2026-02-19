@@ -110,7 +110,7 @@ func main() {
 	// r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://<SERVER_IP>:8080"},
+		AllowOrigins:     []string{"http://localhost:5173", "https://<SERVER_IP>:8080", "http://<SERVER_IP>:8080"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Agent-Secret"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -181,8 +181,17 @@ func main() {
 	})
 
 	// 3. Start
-	log.Println(">> Ingestion API listening on :8080")
-	if err := r.Run(":8080"); err != nil {
-		log.Fatal(err)
+	certFile := "./certs/server.crt"
+	keyFile := "./certs/server.key"
+	if _, err := os.Stat(certFile); err == nil {
+		log.Println(">> Ingestion API listening on :8080 (HTTPS)")
+		if err := r.RunTLS(":8080", certFile, keyFile); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Println(">> Ingestion API listening on :8080 (HTTP - no certs found)")
+		if err := r.Run(":8080"); err != nil {
+			log.Fatal(err)
+		}
 	}
 }

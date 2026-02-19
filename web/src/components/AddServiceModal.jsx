@@ -3,6 +3,7 @@ import {
     X, Check, Copy, Server, FileText, Database,
     Terminal, Shield, Settings
 } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 
 const SERVICE_TEMPLATES = {
     'nginx': {
@@ -62,7 +63,7 @@ const AddServiceModal = ({ isOpen, onClose }) => {
     const handleCopy = () => {
         if (!selectedService) return;
         const snippet = JSON.stringify(SERVICE_TEMPLATES[selectedService].config, null, 2);
-        navigator.clipboard.writeText(snippet);
+        copyToClipboard(snippet);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

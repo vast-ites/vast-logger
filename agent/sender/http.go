@@ -2,6 +2,7 @@ package sender
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -21,6 +22,7 @@ func NewClient(backendURL, agentSecret, hostname string) *Client {
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 100, // Critical for reusing connections to backend
 		IdleConnTimeout:     90 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 	}
 	return &Client{
 		BackendURL:  backendURL,

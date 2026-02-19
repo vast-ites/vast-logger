@@ -3,6 +3,7 @@ import { Network, ArrowDown, ArrowUp, Shield } from 'lucide-react';
 import { StatCard } from '../components/widgets/StatCard';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useHost } from '../contexts/HostContext';
+import SpeedometerGauge from '../components/widgets/SpeedometerGauge';
 
 export const NetworkPage = () => {
     const { selectedHost } = useHost();
@@ -153,7 +154,15 @@ export const NetworkPage = () => {
                 <Network size={24} className="text-cyan-400" /> Network Traffic
             </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="glass-panel p-4 flex items-center justify-center rounded-xl">
+                    <SpeedometerGauge
+                        value={Math.min(100, (((metrics.net_recv_rate || 0) + (metrics.net_sent_rate || 0)) * 1024 * 1024 / (100 * 1024 * 1024 / 8)) * 100)}
+                        label="NET"
+                        color="cyan"
+                        size={180}
+                    />
+                </div>
                 <StatCard label="Active Interfaces" value={(metrics.interfaces || []).filter(i => i.is_up).length} icon={Network} color="cyan" />
                 <StatCard label="Total Download" value={formatSpeed((metrics.net_recv_rate || 0) * 1024 * 1024)} icon={ArrowDown} trend="neutral" color="green" />
                 <StatCard label="Total Upload" value={formatSpeed((metrics.net_sent_rate || 0) * 1024 * 1024)} icon={ArrowUp} trend="neutral" color="amber" />

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Bell, HelpCircle, LogOut, User, Settings, Shield } from 'lucide-react';
+import { Search, HelpCircle, LogOut, User, Settings, Shield } from 'lucide-react';
 import { useHost } from '../contexts/HostContext';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from './NotificationBell';
 
 export const TopBar = ({ onAddSource }) => {
     const { selectedHost, setSelectedHost, hosts, refreshInterval, setRefreshInterval } = useHost();
@@ -86,10 +87,7 @@ export const TopBar = ({ onAddSource }) => {
                 <div className="w-px h-6 bg-cyber-gray/20 mx-2"></div>
 
                 <div className="flex items-center gap-4 relative">
-                    <button className="text-cyber-muted hover:text-cyber-text transition-colors relative">
-                        <Bell size={18} />
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                    </button>
+                    <NotificationBell />
                     <button className="text-cyber-muted hover:text-cyber-text transition-colors">
                         <HelpCircle size={18} />
                     </button>
