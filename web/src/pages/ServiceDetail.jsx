@@ -1,6 +1,7 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useHost } from '../contexts/HostContext';
 
 // Service-specific components
 import ApacheDetail from './services/ApacheDetail';
@@ -15,6 +16,19 @@ import PM2Detail from './services/PM2Detail';
 const ServiceDetail = () => {
     const { serviceName } = useParams();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { selectedHost } = useHost();
+
+    // Keep URL ?host= param in sync with the SOURCE dropdown
+    useEffect(() => {
+        const urlHost = searchParams.get('host');
+        if (selectedHost && selectedHost !== urlHost) {
+            setSearchParams({ host: selectedHost }, { replace: true });
+        } else if (!selectedHost && urlHost) {
+            searchParams.delete('host');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [selectedHost]);
 
     const serviceComponents = {
         'apache': ApacheDetail,

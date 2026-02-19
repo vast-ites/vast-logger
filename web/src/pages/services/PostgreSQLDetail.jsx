@@ -29,7 +29,11 @@ const PostgreSQLDetail = () => {
                 if (data.stats) {
                     setStats(data.stats);
                     setLastUpdated(data.timestamp);
+                } else {
+                    setStats(null);
                 }
+            } else {
+                setStats(null);
             }
             setLoading(false);
         } catch (err) {
@@ -37,6 +41,12 @@ const PostgreSQLDetail = () => {
             setLoading(false);
         }
     };
+
+    // Reset state immediately when host changes to prevent stale data
+    useEffect(() => {
+        setStats(null);
+        setLoading(true);
+    }, [selectedHost]);
 
     useEffect(() => { fetchData(); }, [timeRange, selectedHost]);
     useEffect(() => {

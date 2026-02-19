@@ -52,6 +52,12 @@ const PM2Detail = () => {
         }
     };
 
+    // Reset state immediately when host changes to prevent stale data
+    useEffect(() => {
+        setStats(null);
+        setLoading(true);
+    }, [host]);
+
     useEffect(() => {
         fetchData();
         setLoading(true);

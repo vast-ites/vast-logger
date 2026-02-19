@@ -72,6 +72,13 @@ const ClickHouseDetail = () => {
         }
     };
 
+    // Reset state immediately when host changes to prevent stale data
+    useEffect(() => {
+        setStats(null);
+        setLogs([]);
+        setLoading(true);
+    }, [host]);
+
     useEffect(() => {
         fetchData();
         setLoading(true); // Reset loading on host change
