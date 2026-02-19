@@ -114,9 +114,9 @@ const Dashboard = () => {
 
 
             {/* Speedometer Gauges */}
-            <div className="glass-panel rounded-xl p-6 border border-cyber-gray/20">
-                <h3 className="font-mono text-sm text-cyber-cyan uppercase mb-6 tracking-widest">System Vitals</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 place-items-center">
+            <div className="glass-panel rounded-xl p-3 sm:p-6 border border-cyber-gray/20">
+                <h3 className="font-mono text-sm text-cyber-cyan uppercase mb-4 sm:mb-6 tracking-widest">System Vitals</h3>
+                <div className="grid grid-cols-3 md:grid-cols-3 gap-2 sm:gap-6 place-items-center">
                     <SpeedometerGauge
                         value={metrics.cpu_percent || 0}
                         label="CPU"
@@ -141,8 +141,8 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Metrics Grid — complementary stats (gauges already show CPU/RAM/DISK) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
                 <OverviewCard
                     label="SYSTEM UPTIME"
                     value={metrics.uptime ? `${(metrics.uptime / 3600 / 24).toFixed(1)}d` : "..."}

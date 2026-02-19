@@ -666,13 +666,21 @@ This project is proprietary software. All rights reserved.
   - Agent HTTP clients configured with `InsecureSkipVerify` for self-signed certs
   - CORS updated to allow both `http://` and `https://` origins
   - Full fleet migration: all agents updated to `https://` server URLs
+- [x] Mobile-native dashboard (PWA)
+  - Progressive Web App: `manifest.json`, service worker with offline caching, app icons (192/512)
+  - `index.html` with PWA meta tags: `viewport-fit=cover`, `apple-mobile-web-app-capable`, theme-color
+  - Responsive Layout: slide-in sidebar drawer with hamburger menu on mobile
+  - Mobile bottom navigation bar with 5 key pages (Home, Servers, Logs, Alerts, Settings)
+  - Glassmorphism bottom nav with backdrop blur, safe-area inset support for notched devices
+  - Touch-optimized CSS: larger tap targets, `-webkit-overflow-scrolling`, active states instead of hover
+  - Responsive speedometer gauges using `viewBox` scaling
+  - Responsive grid system for metric cards (2-column on mobile)
+  - Server-side PWA asset routes: manifest.json, sw.js, icons served as explicit static files
+  - Standalone display mode with iOS status bar handling
 
 </details>
 
 ### Upcoming
-
-#### Observability Enhancements (Continued)
-- [ ] Mobile-native dashboard app
 
 #### Service Detail Pages (Enhancements)
 - [ ] ClickHouse: query log analysis, mutation tracking, replica lag alerts

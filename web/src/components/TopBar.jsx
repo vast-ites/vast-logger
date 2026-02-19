@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Search, HelpCircle, LogOut, User, Settings, Shield } from 'lucide-react';
+import { Search, HelpCircle, LogOut, User, Settings, Shield, Menu } from 'lucide-react';
 import { useHost } from '../contexts/HostContext';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 
-export const TopBar = ({ onAddSource }) => {
+export const TopBar = ({ onAddSource, onMenuToggle }) => {
     const { selectedHost, setSelectedHost, hosts, refreshInterval, setRefreshInterval } = useHost();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const navigate = useNavigate();
@@ -14,9 +14,17 @@ export const TopBar = ({ onAddSource }) => {
     const initials = username.substring(0, 2).toUpperCase();
 
     return (
-        <header className="h-16 border-b border-cyber-gray/20 flex items-center justify-between px-6 glass-panel rounded-none border-t-0 border-l-0 border-r-0 z-[9999] relative">
-            {/* Search Bar */}
-            <div className="flex-1 max-w-xl">
+        <header className="h-14 sm:h-16 border-b border-cyber-gray/20 flex items-center justify-between px-3 sm:px-6 glass-panel rounded-none border-t-0 border-l-0 border-r-0 z-[9999] relative">
+            {/* Mobile Hamburger */}
+            <button
+                onClick={onMenuToggle}
+                className="lg:hidden p-2 -ml-1 mr-2 rounded-lg text-cyber-muted hover:text-cyber-cyan hover:bg-cyber-gray/20 transition-colors"
+            >
+                <Menu size={22} />
+            </button>
+
+            {/* Search Bar — hidden on mobile */}
+            <div className="flex-1 max-w-xl hidden sm:block">
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Search size={16} className="text-cyber-muted group-focus-within:text-cyan-400 transition-colors" />
@@ -32,9 +40,14 @@ export const TopBar = ({ onAddSource }) => {
                 </div>
             </div>
 
-            <div className="flex items-center gap-6 ml-6">
-                {/* Refresh Rate Selector */}
-                <div className="flex items-center gap-2">
+            {/* Mobile Logo */}
+            <div className="flex items-center gap-2 sm:hidden flex-1">
+                <span className="text-sm font-bold text-cyber-text tracking-widest font-display">DataVAST</span>
+            </div>
+
+            <div className="flex items-center gap-3 sm:gap-6 ml-2 sm:ml-6">
+                {/* Refresh Rate Selector — hidden on mobile */}
+                <div className="hidden md:flex items-center gap-2">
                     <span className="text-[10px] text-cyber-muted font-mono uppercase tracking-wider">REFRESH:</span>
                     <select
                         value={refreshInterval}
@@ -49,15 +62,15 @@ export const TopBar = ({ onAddSource }) => {
                     </select>
                 </div>
 
-                <div className="w-px h-6 bg-cyber-gray/20"></div>
+                <div className="w-px h-6 bg-cyber-gray/20 hidden md:block"></div>
 
                 {/* Host Selector */}
-                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-cyber-gray/20 bg-cyber-gray/10">
-                    <span className="text-[10px] text-cyber-muted font-mono uppercase tracking-wider">Source</span>
+                <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-lg border border-cyber-gray/20 bg-cyber-gray/10">
+                    <span className="text-[10px] text-cyber-muted font-mono uppercase tracking-wider hidden sm:inline">Source</span>
                     <select
                         value={selectedHost}
                         onChange={(e) => setSelectedHost(e.target.value)}
-                        className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer min-w-[120px]"
+                        className="bg-transparent text-xs font-mono text-cyan-400 focus:outline-none cursor-pointer min-w-[80px] sm:min-w-[120px]"
                     >
                         <option value="">ALL SYSTEMS</option>
                         {hosts.map(h => {
@@ -74,21 +87,21 @@ export const TopBar = ({ onAddSource }) => {
                     </select>
                 </div>
 
-                {/* Actions - Only visible to Admins */}
+                {/* Actions - Only visible to Admins, hidden on mobile */}
                 {role === 'admin' && (
                     <button
                         onClick={onAddSource}
-                        className="px-3 py-1.5 bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20 rounded text-xs font-bold tracking-wider hover:bg-cyber-cyan/20 hover:border-cyber-cyan/40 transition-all shadow-[0_0_10px_rgba(var(--cyber-cyan),0.1)]"
+                        className="hidden sm:inline-flex px-3 py-1.5 bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20 rounded text-xs font-bold tracking-wider hover:bg-cyber-cyan/20 hover:border-cyber-cyan/40 transition-all shadow-[0_0_10px_rgba(var(--cyber-cyan),0.1)]"
                     >
                         + ADD SOURCE
                     </button>
                 )}
 
-                <div className="w-px h-6 bg-cyber-gray/20 mx-2"></div>
+                <div className="w-px h-6 bg-cyber-gray/20 mx-1 sm:mx-2 hidden sm:block"></div>
 
-                <div className="flex items-center gap-4 relative">
+                <div className="flex items-center gap-2 sm:gap-4 relative">
                     <NotificationBell />
-                    <button className="text-cyber-muted hover:text-cyber-text transition-colors">
+                    <button className="text-cyber-muted hover:text-cyber-text transition-colors hidden sm:block">
                         <HelpCircle size={18} />
                     </button>
 

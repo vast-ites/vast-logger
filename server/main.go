@@ -168,6 +168,13 @@ func main() {
 	r.Static("/assets", "./dist/assets")
 	r.StaticFile("/vite.svg", "./dist/vite.svg")
 	r.StaticFile("/index.html", "./dist/index.html")
+
+	// PWA Assets
+	r.StaticFile("/manifest.json", "./dist/manifest.json")
+	r.StaticFile("/sw.js", "./dist/sw.js")
+	r.StaticFile("/icon-192.png", "./dist/icon-192.png")
+	r.StaticFile("/icon-512.png", "./dist/icon-512.png")
+	r.StaticFile("/apple-touch-icon.png", "./dist/apple-touch-icon.png")
     
     // Serve favicon if it exists (optional)
     if _, err := os.Stat("./dist/favicon.ico"); err == nil {

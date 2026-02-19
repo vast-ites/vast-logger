@@ -118,3 +118,118 @@
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════
+   MOBILE-NATIVE DASHBOARD STYLES
+   ═══════════════════════════════════════════ */
+
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+  background: rgba(10, 10, 31, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(0, 243, 255, 0.12);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.4);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root.light .mobile-bottom-nav {
+  background: rgba(255, 255, 255, 0.92);
+  border-top-color: #e2e8f0;
+  box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-nav-item {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Safe Area Insets (notched devices) */
+.h-safe-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+}
+
+/* PWA Standalone Mode Adjustments */
+@media (display-mode: standalone) {
+  body {
+    /* Account for iOS status bar in standalone mode */
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Touch-friendly improvements */
+@media (max-width: 1023px) {
+  /* Larger tap targets for mobile */
+  button, a, select, input {
+    min-height: 40px;
+  }
+
+  /* Smooth scrolling for touch */
+  .custom-scrollbar {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent text selection on interactive elements */
+  .mobile-nav-item,
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Mobile-optimized font sizing */
+  h1 { font-size: 1.25rem; }
+  h2 { font-size: 1.1rem; }
+  h3 { font-size: 0.95rem; }
+}
+
+/* Responsive grid utilities */
+@media (max-width: 640px) {
+  .grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-cols-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-cols-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-cols-5 { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* Pull-to-refresh visual indicator */
+@keyframes pullRefresh {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Smooth page transitions for mobile */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.mobile-page-enter {
+  animation: slideInRight 0.25s ease-out;
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:bg-cyber-cyan\/10:hover {
+    background-color: transparent;
+  }
+  
+  /* Active state instead of hover for touch */
+  button:active,
+  a:active {
+    opacity: 0.7;
+    transition: opacity 0.1s;
+  }
+}
+
+/* Landscape phone optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+  .mobile-bottom-nav {
+    display: none;
+  }
+}

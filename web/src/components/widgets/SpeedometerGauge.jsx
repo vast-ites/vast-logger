@@ -133,8 +133,8 @@ const SpeedometerGauge = ({ value = 0, label = '', icon: Icon, color = 'cyan', s
     const ticks = [0, 25, 50, 75, 100];
 
     return (
-        <div className="flex flex-col items-center" style={{ width: size, height: size + 30 }}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <div className="flex flex-col items-center w-full" style={{ maxWidth: size }}>
+            <svg width="100%" viewBox={`0 0 ${size} ${size}`} style={{ aspectRatio: '1/1' }}>
                 <defs>
                     {/* Gradient for active arc */}
                     <linearGradient id={`${gaugeId}-grad`} x1="0%" y1="0%" x2="100%" y2="0%">
