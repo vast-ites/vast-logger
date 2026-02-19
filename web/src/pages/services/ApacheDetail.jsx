@@ -49,17 +49,26 @@ const ApacheDetail = () => {
         }
     };
 
+    // Reset state immediately when host changes to prevent stale data flash
+    useEffect(() => {
+        setStats(null);
+        setAccessLogs([]);
+        setGeoStats(null);
+        setTopIPs([]);
+        setLoading(true);
+    }, [selectedHost]);
+
     useEffect(() => {
         fetchData();
     }, [timeRange, serviceName, selectedHost]);
 
-    // Auto-refresh
+    // Auto-refresh — must include selectedHost so the interval uses the correct closure
     useEffect(() => {
         if (refreshRate === 0) return;
 
         const interval = setInterval(fetchData, refreshRate * 1000);
         return () => clearInterval(interval);
-    }, [refreshRate, timeRange]);
+    }, [refreshRate, timeRange, selectedHost]);
 
     // Process status code data for pie chart
     const hasData = stats && (stats.total_requests > 0 || stats.total_bytes > 0);
