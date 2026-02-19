@@ -8,6 +8,9 @@ import MySQLDetail from './services/MySQLDetail';
 import PostgreSQLDetail from './services/PostgreSQLDetail';
 import RedisDetail from './services/RedisDetail';
 import MongoDBDetail from './services/MongoDBDetail';
+import ClickHouseDetail from './services/ClickHouseDetail';
+import InfluxDBDetail from './services/InfluxDBDetail';
+import PM2Detail from './services/PM2Detail';
 
 const ServiceDetail = () => {
     const { serviceName } = useParams();
@@ -27,6 +30,11 @@ const ServiceDetail = () => {
         'redis': RedisDetail,
         'mongodb': MongoDBDetail,
         'mongod': MongoDBDetail,
+        'clickhouse': ClickHouseDetail,
+        'datavast-clickhouse': ClickHouseDetail,
+        'influxdb': InfluxDBDetail,
+        'datavast-influxdb': InfluxDBDetail,
+        'pm2': PM2Detail,
     };
 
     const Component = serviceComponents[serviceName.toLowerCase()];

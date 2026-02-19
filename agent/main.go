@@ -16,6 +16,7 @@ import (
     "bytes"
     "sync/atomic"
     "context"
+    "os/exec"
 
 	"github.com/datavast/datavast/agent/collector"
 	"github.com/datavast/datavast/agent/collector/services"
@@ -287,8 +288,13 @@ func main() {
         }
     }()
 
-    // Start Service Collectors (MySQL, Redis, PostgreSQL, MongoDB)
+    // Start Service Collectors (MySQL, Redis, PostgreSQL, MongoDB, ClickHouse, InfluxDB)
     go startServiceCollectors(senderClient, cfg)
+
+    // Start PM2 Collector (CLI-based, not TCP-probed)
+    if cfg.Collectors.PM2 {
+        go startPM2Collector(senderClient)
+    }
 
     // Command Poll: Check for pending commands from server every 10s
     cmdTicker := time.NewTicker(10 * time.Second)
@@ -566,6 +572,8 @@ func startServiceCollectors(client *sender.Client, cfg *config.AgentConfig) {
         {"redis", "127.0.0.1:6379", "6379"},
         {"postgresql", "127.0.0.1:5432", "5432"},
         {"mongodb", "127.0.0.1:27017", "27017"},
+        {"clickhouse", "127.0.0.1:8123", "8123"},
+        {"influxdb", "127.0.0.1:8086", "8086"},
     }
 
     // Check which services are running
@@ -611,6 +619,10 @@ func collectDBStats(client *sender.Client, activeServices []dbProbe, cfg *config
             statsJSON, err = collectPostgreSQLStats(cfg)
         case "mongodb":
             statsJSON, err = collectMongoDBStats()
+        case "clickhouse":
+            statsJSON, err = collectClickHouseStats(cfg)
+        case "influxdb":
+            statsJSON, err = collectInfluxDBStats()
         }
 
         if err != nil {
@@ -798,3 +810,64 @@ func collectMongoDBStats() (string, error) {
     return string(data), err
 }
 
+func collectClickHouseStats(cfg *config.AgentConfig) (string, error) {
+    user := cfg.ClickHouseUser
+    pass := cfg.ClickHousePass
+    if user == "" {
+        user = "default"
+    }
+    col := services.NewClickHouseCollector("127.0.0.1", 8123, user, pass)
+    stats, err := col.GetStats()
+    if err != nil {
+        return "", err
+    }
+    data, err := json.Marshal(stats)
+    return string(data), err
+}
+
+func collectInfluxDBStats() (string, error) {
+    col := services.NewInfluxDBCollector("127.0.0.1", 8086)
+    stats, err := col.GetStats()
+    if err != nil {
+        return "", err
+    }
+    data, err := json.Marshal(stats)
+    return string(data), err
+}
+
+// startPM2Collector runs PM2 metric collection on a 30s interval
+func startPM2Collector(client *sender.Client) {
+    // Check if pm2 is available
+    if _, err := exec.LookPath("pm2"); err != nil {
+        log.Println(">> PM2 not found in PATH, skipping PM2 collector")
+        return
+    }
+    fmt.Println(">> PM2 Detected: Starting PM2 metrics collection (30s interval)")
+
+    // Collect immediately
+    collectPM2Stats(client)
+
+    ticker := time.NewTicker(30 * time.Second)
+    defer ticker.Stop()
+
+    for range ticker.C {
+        collectPM2Stats(client)
+    }
+}
+
+func collectPM2Stats(client *sender.Client) {
+    col := services.NewPM2Collector()
+    stats, err := col.GetStats()
+    if err != nil {
+        log.Printf("[pm2] Failed to collect stats: %v", err)
+        return
+    }
+    data, err := json.Marshal(stats)
+    if err != nil {
+        log.Printf("[pm2] Failed to marshal stats: %v", err)
+        return
+    }
+    if err := client.SendServiceStats("pm2", string(data)); err != nil {
+        log.Printf("[pm2] Failed to send stats: %v", err)
+    }
+}

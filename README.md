@@ -581,23 +581,25 @@ This project is proprietary software. All rights reserved.
 - [x] MongoDB Database Profiler integration for operation analysis
 - [x] Agent-side payload enhancement to support diagnostic flags
 - [x] Frontend diagnostic sections (`TablesWithoutIndexes`, `HighIOTables`, `SlowQueries`)
-- [ ] Redis detail page metrics (API error — needs direct connection from server)
-- [ ] ClickHouse dedicated detail page component (`ClickHouseDetail.jsx`)
-- [ ] InfluxDB dedicated detail page component (`InfluxDBDetail.jsx`)
-- [ ] PM2 service installation and testing (requires Node.js on agent)
+- [x] Redis detail page metrics (fixed host parameter passing & ghost dashboard)
+- [x] ClickHouse dedicated detail page with system metrics (`ClickHouseDetail.jsx`)
+  - HTTP-based collector with Basic Auth, querying `system.metrics`, `system.events`, `system.parts`
+  - Verified: 714M rows, 23 GB storage, 337K inserts, 15K selects tracked
+- [x] InfluxDB dedicated detail page with internal metrics (`InfluxDBDetail.jsx`)
+  - Prometheus `/metrics` parser with NaN/Inf safety guards
+  - Verified: 154K queries, 1,227 goroutines, 5h uptime tracked
+- [x] PM2 process monitoring collector and frontend (`PM2Detail.jsx`)
+  - Agent collector parses `pm2 jlist` for CPU, memory, uptime, restarts
+  - Route registered in `ServiceDetail.jsx`
 
 </details>
 
 ### Upcoming
 
-#### Service Detail Pages (Priority)
-- [ ] MySQL detail page: direct DB stats from agent (Active Connections, QPS, Slow Queries)
-- [ ] PostgreSQL detail page: `pg_stat_activity` metrics from agent
-- [ ] Redis detail page: memory usage, connected clients, hit rate from agent
-- [ ] MongoDB detail page: document stats, connections from agent
-- [ ] ClickHouse premium detail page with real-time query metrics
-- [ ] InfluxDB premium detail page with write/query throughput
-- [ ] PM2 process monitoring (requires Node.js on datavast-agent-1)
+#### Service Detail Pages (Enhancements)
+- [ ] ClickHouse: query log analysis, mutation tracking, replica lag alerts
+- [ ] InfluxDB: per-bucket write rates, cardinality tracking
+- [ ] PM2: live testing on Node.js host, restart alerting
 
 #### Observability Enhancements
 - [ ] Resource speedometer gauges (RAM, Disk, CPU)
