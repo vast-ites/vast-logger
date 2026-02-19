@@ -596,16 +596,16 @@ This project is proprietary software. All rights reserved.
 
 ### Upcoming
 
-#### Service Detail Pages (Enhancements)
-- [ ] ClickHouse: query log analysis, mutation tracking, replica lag alerts
-- [ ] InfluxDB: per-bucket write rates, cardinality tracking
-- [ ] PM2: live testing on Node.js host, restart alerting
-
 #### Observability Enhancements
 - [ ] Resource speedometer gauges (RAM, Disk, CPU)
 - [ ] Webhook URL masking (click-to-reveal)
 - [ ] Browser notification system
 - [ ] Mobile-native dashboard app
+
+#### Service Detail Pages (Enhancements)
+- [ ] ClickHouse: query log analysis, mutation tracking, replica lag alerts
+- [ ] InfluxDB: per-bucket write rates, cardinality tracking
+- [ ] PM2: live testing on Node.js host, restart alerting
 
 #### Architecture
 - [ ] Extensible agent module loading
